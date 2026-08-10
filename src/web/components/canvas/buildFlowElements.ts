@@ -11,6 +11,13 @@ import type { LayoutResult } from "./layout";
 import { effectiveDepthForStep, stepHasMissingSource } from "./nodeContent";
 import type { OutcomeFlowNode, StepFlowNode, WorkflowFlowEdge } from "./types";
 
+export function restoreGeneratedNodePositions<
+  NodeType extends { id: string; position: { x: number; y: number } },
+>(nodes: NodeType[], generatedNodes: NodeType[]): NodeType[] {
+  const generatedPositions = new Map(generatedNodes.map((node) => [node.id, node.position]));
+  return nodes.map((node) => ({ ...node, position: generatedPositions.get(node.id) ?? node.position }));
+}
+
 function isStepExpanded(expandedStepIds: Record<string, true>, stepId: string): boolean {
   return expandedStepIds[stepId] === true;
 }

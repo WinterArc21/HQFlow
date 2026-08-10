@@ -1,6 +1,7 @@
 .header {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
@@ -10,7 +11,7 @@
 }
 
 .identity {
-  flex: 1;
+  flex: 1 1 280px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -43,11 +44,46 @@
   color: var(--text-tertiary);
 }
 
+.detailsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
 .purpose {
+  flex: 1;
+  min-width: 48px;
   margin: 0;
   font-size: var(--fs-tiny);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.trust {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.freshness {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .detailsRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .trust {
+    flex-wrap: wrap;
+  }
 }

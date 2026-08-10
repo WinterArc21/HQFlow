@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import type { Depth } from "../../store/useCodeHQStore";
-import { computeFitViewport } from "./fitViewport";
+import { computeFitViewport, computeViewportOverflow, type Viewport } from "./fitViewport";
 import type { LayoutNode } from "./layout";
 
 /** Small margin around the fitted graph — kept tight deliberately: a generous margin here is
@@ -34,8 +34,10 @@ export interface UseCanvasFitParams {
 
 export interface UseCanvasFitResult {
   containerRef: RefObject<HTMLDivElement | null>;
+  overflowsRight: boolean;
   overflowsBottom: boolean;
   fitToViewport: (duration: number) => void;
+  updateOverflow: (viewport: Pick<Viewport, "x" | "y" | "zoom">) => void;
 }
 
 function computeGraphBounds(nodes: LayoutNode[]): { minX: number; minY: number; maxX: number; maxY: number } | null {
@@ -58,6 +60,27 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
   // minimum legible zoom allows. Drives the "more below" affordance so a reader never mistakes a
   // cut-off last card for the end of the workflow.
   const [overflowsBottom, setOverflowsBottom] = useState(false);
+  const [overflowsRight, setOverflowsRight] = useState(false);
+
+  const updateOverflow = useCallback(
+    (viewport: Pick<Viewport, "x" | "y" | "zoom">) => {
+      const container = containerRef.current;
+      const bounds = computeGraphBounds(layoutNodes);
+      if (container === null || bounds === null) {
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      const overflow = computeViewportOverflow({
+        containerWidth: rect.width,
+        containerHeight: rect.height,
+        bounds,
+        viewport,
+      });
+      setOverflowsRight(overflow.overflowsRight);
+      setOverflowsBottom(overflow.overflowsBottom);
+    },
+    [layoutNodes],
+  );
 
   const fitToViewport = useCallback(
     (duration: number) => {
@@ -77,6 +100,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
       });
       if (viewport !== null) {
         void reactFlowInstance.setViewport(viewport, { duration });
+        setOverflowsRight(viewport.overflowsRight);
         setOverflowsBottom(viewport.overflowsBottom);
       }
     },
@@ -121,5 +145,5 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { containerRef, overflowsBottom, fitToViewport };
+  return { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow };
 }

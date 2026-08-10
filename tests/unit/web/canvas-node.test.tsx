@@ -4,8 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ReactFlowProvider, type NodeProps } from "@xyflow/react";
 import type { WorkflowStep } from "@schema/workflow";
-import { buildFlowEdges, chooseCardinalHandles } from "@web/components/canvas/buildFlowElements";
+import { buildFlowEdges, chooseCardinalHandles, restoreGeneratedNodePositions } from "@web/components/canvas/buildFlowElements";
 import { CanvasLegend } from "@web/components/canvas/CanvasLegend";
+import { CanvasOverflowIndicator } from "@web/components/canvas/CanvasOverflowIndicator";
 import { computeLayout } from "@web/components/canvas/layout";
 import { OutcomeNode } from "@web/components/canvas/nodes/OutcomeNode";
 import { StepNode } from "@web/components/canvas/nodes/StepNode";
@@ -73,6 +74,24 @@ function makeProps(data: StepNodeData): NodeProps<StepFlowNode> {
     positionAbsoluteY: 0,
   };
 }
+
+describe("restoreGeneratedNodePositions", () => {
+  it("restores generated positions while preserving current node state", () => {
+    const current = [
+      { id: "a", position: { x: 500, y: 600 }, selected: true },
+      { id: "b", position: { x: 700, y: 800 }, selected: false },
+    ];
+    const generated = [
+      { id: "a", position: { x: 10, y: 20 }, selected: false },
+      { id: "b", position: { x: 30, y: 40 }, selected: false },
+    ];
+
+    expect(restoreGeneratedNodePositions(current, generated)).toEqual([
+      { id: "a", position: { x: 10, y: 20 }, selected: true },
+      { id: "b", position: { x: 30, y: 40 }, selected: false },
+    ]);
+  });
+});
 
 describe("StepNode", () => {
   it("declares hidden anchors on every side for dynamic edge attachment", () => {
@@ -225,6 +244,15 @@ describe("chooseCardinalHandles", () => {
 });
 
 describe("canvas outcome and legend semantics", () => {
+  it.each([
+    ["right", "More"],
+    ["bottom", "More below"],
+  ] as const)("keeps the %s overflow cue decorative", (direction, label) => {
+    render(<CanvasOverflowIndicator direction={direction} />);
+
+    expect(screen.getByText(label).closest("div")).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("keeps initial outcome edges on their semantic branch handles", () => {
     const workflow = {
       schemaVersion: "0.1" as const,
@@ -311,6 +339,7 @@ describe("canvas outcome and legend semantics", () => {
       />,
     );
     const legend = screen.getByRole("group", { name: /connection legend/i });
+    expect(screen.getByRole("heading", { name: "Connections", level: 2 })).toBeInTheDocument();
     expect(legend).toHaveTextContent("Failure");
     expect(legend).toHaveTextContent("Retry");
     expect(legend).not.toHaveTextContent("Conditional");

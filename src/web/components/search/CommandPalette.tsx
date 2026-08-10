@@ -25,8 +25,11 @@ export function CommandPalette({ snapshot, onRecheck }: CommandPaletteProps) {
   const closeSearch = useCodeHQStore((state) => state.closeSearch);
   const searchQuery = useCodeHQStore((state) => state.searchQuery);
   const setSearchQuery = useCodeHQStore((state) => state.setSearchQuery);
+  const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
   const selectStep = useCodeHQStore((state) => state.selectStep);
+  const selectStepAndPan = useCodeHQStore((state) => state.selectStepAndPan);
+  const resetLayout = useCodeHQStore((state) => state.resetLayout);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -69,17 +72,27 @@ export function CommandPalette({ snapshot, onRecheck }: CommandPaletteProps) {
   const handleActivateResult = useCallback(
     (result: SearchResult) => {
       selectWorkflow(result.workflowId);
-      selectStep(result.kind !== "workflow" && result.stepId !== undefined ? result.stepId : null);
+      if (result.kind !== "workflow" && result.stepId !== undefined) {
+        selectStepAndPan(result.workflowId, result.stepId);
+      } else {
+        selectStep(null);
+      }
       closeSearch();
     },
-    [selectWorkflow, selectStep, closeSearch],
+    [selectWorkflow, selectStep, selectStepAndPan, closeSearch],
   );
+
+  const handleResetLayout = useCallback(() => {
+    resetLayout();
+    closeSearch();
+  }, [closeSearch, resetLayout]);
 
   if (!searchOpen) {
     return null;
   }
 
-  const actions = buildPaletteActions(onRecheck);
+  const canResetLayout = selectedWorkflowId !== null && snapshot?.workflows.some((record) => record.id === selectedWorkflowId) === true;
+  const actions = buildPaletteActions(onRecheck, canResetLayout ? handleResetLayout : undefined);
   const groups = snapshot !== null ? buildPaletteGroups(searchQuery, snapshot, actions, handleActivateResult) : [];
 
   let cursor = 0;

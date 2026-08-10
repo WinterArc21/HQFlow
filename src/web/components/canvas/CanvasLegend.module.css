@@ -20,6 +20,15 @@
   opacity: 0.35;
 }
 
+.heading {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .row {
   display: flex;
   align-items: center;

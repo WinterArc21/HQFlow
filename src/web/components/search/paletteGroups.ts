@@ -56,9 +56,26 @@ export function buildPaletteGroups(
     return groups;
   }
 
-  return groupResults(search(snapshot, trimmed)).map((group) => ({
+  const groups: PaletteGroup[] = groupResults(search(snapshot, trimmed)).map((group) => ({
     key: group.kind,
     label: `${group.label} (${group.items.length})`,
     rows: group.items.map((result) => resultToRow(result, onActivateResult)),
   }));
+  const normalizedQuery = trimmed.toLocaleLowerCase();
+  const matchingActions = actions.filter((action) =>
+    `${action.label} ${action.detail}`.toLocaleLowerCase().includes(normalizedQuery),
+  );
+  if (matchingActions.length > 0) {
+    groups.push({
+      key: "actions",
+      label: `Actions (${matchingActions.length})`,
+      rows: matchingActions.map((action) => ({
+        id: action.id,
+        label: action.label,
+        detail: action.detail,
+        onActivate: () => void action.run(),
+      })),
+    });
+  }
+  return groups;
 }

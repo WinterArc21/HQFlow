@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFitViewport } from "@web/components/canvas/fitViewport";
+import { computeFitViewport, computeViewportOverflow } from "@web/components/canvas/fitViewport";
 
 const BASE = {
   containerWidth: 1000,
@@ -24,6 +24,16 @@ describe("computeFitViewport", () => {
     // Vertically centred: the content's vertical midpoint lands on the container's midpoint.
     const contentMidY = result!.y + (100 * result!.zoom);
     expect(contentMidY).toBeCloseTo(400, 1);
+    expect(result!.overflowsRight).toBe(false);
+    expect(result!.overflowsBottom).toBe(false);
+  });
+
+  it("clamps to minZoom and left-aligns when content is too wide to fit", () => {
+    const result = computeFitViewport({ ...BASE, bounds: { minX: 0, minY: 0, maxX: 4000, maxY: 200 } });
+    expect(result).not.toBeNull();
+    expect(result!.zoom).toBe(BASE.minZoom);
+    expect(result!.x).toBeCloseTo(1000 * 0.05, 1);
+    expect(result!.overflowsRight).toBe(true);
     expect(result!.overflowsBottom).toBe(false);
   });
 
@@ -53,5 +63,22 @@ describe("computeFitViewport", () => {
     expect(offset).not.toBeNull();
     // Same-sized bounds should produce the same zoom regardless of where they sit in graph space.
     expect(offset!.zoom).toBeCloseTo(atOrigin!.zoom, 5);
+  });
+
+  it("clears directional overflow after the user pans to the graph end", () => {
+    const bounds = { minX: 0, minY: 0, maxX: 4000, maxY: 1200 };
+    expect(computeViewportOverflow({
+      containerWidth: 1000,
+      containerHeight: 800,
+      bounds,
+      viewport: { x: 50, y: 50, zoom: 0.5 },
+    })).toEqual({ overflowsRight: true, overflowsBottom: false });
+
+    expect(computeViewportOverflow({
+      containerWidth: 1000,
+      containerHeight: 800,
+      bounds,
+      viewport: { x: -1000, y: 200, zoom: 0.5 },
+    })).toEqual({ overflowsRight: false, overflowsBottom: false });
   });
 });

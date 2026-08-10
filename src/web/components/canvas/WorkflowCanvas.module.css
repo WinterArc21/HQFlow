@@ -148,23 +148,36 @@
   max-width: none;
 }
 
-/* A quiet "more below" affordance (contract mandate: a user must never believe they're seeing
- * the whole graph when they aren't). Shown only when the fitted graph's bottom edge still falls
- * below the stage after top-anchoring — see `fitViewport.ts`'s `overflowsBottom`. Purely a fade
- * plus a small label, not a scrollbar or a button: panning/scrolling already works, this only
- * needs to say that panning further is worth doing. */
+/* Quiet overflow affordances (contract mandate: a user must never believe they're seeing the
+ * whole graph when they aren't). Shown when the fitted graph still extends below or to the right
+ * of the stage. These are fades plus small labels, not scrollbars or buttons: panning already
+ * works, and these only say that panning further is worth doing. */
 .overflowFade {
   position: absolute;
+  display: flex;
+  pointer-events: none;
+}
+
+.overflowFadeBottom {
   left: 0;
   right: 0;
   bottom: 0;
   height: 56px;
-  display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: var(--space-2);
   background-image: linear-gradient(to bottom, transparent, var(--bg-canvas) 85%);
-  pointer-events: none;
+}
+
+.overflowFadeRight {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 64px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+  background-image: linear-gradient(to right, transparent, var(--bg-canvas) 85%);
 }
 
 .overflowLabel {

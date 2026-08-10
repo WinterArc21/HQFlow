@@ -25,13 +25,16 @@ describe("CopyButton", () => {
     expect(writeText).toHaveBeenCalledWith("hello world");
   });
 
-  it("falls back to a manual-selection state, without throwing, when the Clipboard API is unavailable", async () => {
+  it("copies in one click with the embedded-browser fallback when the Clipboard API is unavailable", async () => {
     Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, "execCommand", { value: execCommand, configurable: true });
 
     render(<CopyButton value="hello world" label="Copy" />);
 
     expect(() => fireEvent.click(screen.getByRole("button", { name: "Copy" }))).not.toThrow();
 
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/ctrl\+c/i));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Copied"));
+    expect(execCommand).toHaveBeenCalledWith("copy");
   });
 });
