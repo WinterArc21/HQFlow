@@ -144,7 +144,7 @@ export function createCodeHQStore(root: string): CodeHQStore {
     snapshot = {
       generatedAt: new Date().toISOString(),
       status: result.status,
-      repository: { name: repositoryName(root), root, codeHQDir: paths.dir },
+      repository: { name: repositoryName(root, result.project), root, codeHQDir: paths.dir },
       project: result.project,
       workflows: records,
       diagnostics,

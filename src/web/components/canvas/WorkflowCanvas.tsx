@@ -98,7 +98,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const handleClearSelection = useCallback(() => selectStep(null), [selectStep]);
 
   const { containerRef, overflowsRight, overflowsBottom, updateOverflow } = useCanvasFit({
-    layoutNodes: layout.nodes,
+    layoutBounds: layout.bounds,
     workflowId: workflow.id,
     workflowRevision,
     depth,

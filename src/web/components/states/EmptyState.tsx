@@ -1,4 +1,4 @@
-import { AGENT_PROMPT, AGENT_PROMPT_EXAMPLES } from "../shell/CopyAgentPrompt";
+import { AGENT_PROMPT, AGENT_PROMPT_EXAMPLES } from "../../lib/agentPrompt";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { Button, CopyButton } from "../primitives";
 import { StateLayout } from "./StateLayout";

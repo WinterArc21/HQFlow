@@ -5,10 +5,7 @@
  * long-running; `index.ts` simply awaits it and exits with the resolved code.
  */
 
-import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { pathExists } from "@core/fs-utils";
 import { codeHQPaths, repositoryName } from "@core/repository";
 import { createCodeHQServer, type CodeHQServer } from "@server/app";
@@ -25,8 +22,6 @@ export interface OpenResult {
 }
 
 const DEFAULT_PORT = 4310;
-const WEB_CHECK_DEPTH = 6;
-
 interface BrowserCommand {
   command: string;
   args: string[];
@@ -59,22 +54,6 @@ function openBrowser(url: string): Promise<void> {
   });
 }
 
-/** Best-effort check for a built `dist/web/index.html`, walking up from this module. */
-function isWebBuilt(): boolean {
-  let dir = path.dirname(fileURLToPath(import.meta.url));
-  for (let depth = 0; depth <= WEB_CHECK_DEPTH; depth += 1) {
-    if (existsSync(path.join(dir, "dist", "web", "index.html"))) {
-      return true;
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) {
-      break;
-    }
-    dir = parent;
-  }
-  return false;
-}
-
 function waitForStopSignal(server: CodeHQServer): Promise<OpenResult> {
   return new Promise((resolve) => {
     let settled = false;
@@ -105,10 +84,6 @@ export async function runOpen(options: OpenOptions): Promise<OpenResult> {
   if (!(await pathExists(paths.dir))) {
     console.warn(`No .codehq/ found at '${root}' — showing the uninitialized state. Run \`hqflow init\` to scaffold it.`);
   }
-  if (!isWebBuilt()) {
-    console.warn("dist/web has not been built yet. Run `pnpm build` (or `pnpm build:web`), then restart.");
-  }
-
   let server: CodeHQServer;
   try {
     server = await createCodeHQServer({ root, port: requestedPort, serveWeb: true });

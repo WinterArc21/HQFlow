@@ -1,5 +1,5 @@
 /**
- * `codehq validate` — loads and validates `.codehq/`, writes
+ * `hqflow validate` — loads and validates `.codehq/`, writes
  * `diagnostics.json`, and reports the result (contract §9, product brief §E).
  */
 

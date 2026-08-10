@@ -1,5 +1,5 @@
 import { copyToClipboard } from "../primitives/clipboard";
-import { AGENT_PROMPT } from "../shell/CopyAgentPrompt";
+import { AGENT_PROMPT } from "../../lib/agentPrompt";
 
 export interface PaletteAction {
   id: string;

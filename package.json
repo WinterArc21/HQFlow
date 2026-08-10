@@ -55,6 +55,7 @@
     "lint:fix": "eslint . --fix",
     "pretest": "pnpm run build:export",
     "test": "vitest run",
+    "test:ci": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
@@ -66,7 +67,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@dagrejs/dagre": "^3.0.0",
     "@phosphor-icons/react": "^2.1.10",
     "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "^7.0.0",

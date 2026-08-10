@@ -10,21 +10,10 @@
  * `sourceChecks` status map.
  */
 import type { Workflow } from "@schema/workflow";
-import type { SourceStatus } from "@core/source-check";
+import type { ExportPayload, SourceStatus } from "@schema/wire";
 import type { WorkflowRecord } from "@core/types";
 
-export interface ExportPayload {
-  workflow: Workflow;
-  sourceChecks: Record<string, SourceStatus>;
-  /** Whether structured file references were redacted before this payload was created. */
-  hideFilePaths: boolean;
-  workflowName: string;
-  workflowId: string;
-  /** ISO timestamp of when the export was generated. */
-  exportedAt: string;
-  /** Repository display name only — never the root path or codehq directory. */
-  repositoryName: string;
-}
+export type { ExportPayload } from "@schema/wire";
 
 export interface SanitizeExportPayloadOptions {
   exportedAt?: string;
@@ -114,19 +103,6 @@ function redactSourceChecks(
   );
 }
 
-function normalizeSanitizeOptions(
-  exportedAtOrOptions: string | boolean | SanitizeExportPayloadOptions | undefined,
-  hideFilePaths: boolean,
-): SanitizeExportPayloadOptions {
-  if (typeof exportedAtOrOptions === "string") {
-    return { exportedAt: exportedAtOrOptions, hideFilePaths };
-  }
-  if (typeof exportedAtOrOptions === "boolean") {
-    return { hideFilePaths: exportedAtOrOptions };
-  }
-  return { ...exportedAtOrOptions, hideFilePaths: exportedAtOrOptions?.hideFilePaths ?? hideFilePaths };
-}
-
 /**
  * Strips machine-local data from a `WorkflowRecord` and its repository context, producing
  * the minimal payload the export viewer needs. `record.file` (the workflow JSON's own path,
@@ -136,10 +112,8 @@ function normalizeSanitizeOptions(
 export function sanitizeExportPayload(
   record: WorkflowRecord,
   repositoryName: string,
-  exportedAtOrOptions?: string | boolean | SanitizeExportPayloadOptions,
-  hideFilePaths = false,
+  options: SanitizeExportPayloadOptions = {},
 ): ExportPayload {
-  const options = normalizeSanitizeOptions(exportedAtOrOptions, hideFilePaths);
   const shouldHideFilePaths = options.hideFilePaths === true;
   const knownFiles = collectWorkflowFiles(record.workflow);
   const redactedFiles = new Map<string, string>();

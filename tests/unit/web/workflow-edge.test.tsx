@@ -57,7 +57,7 @@ function makeLayout(): LayoutResult {
       { id: "success-edge", source: "a", target: "success", connection: makeConnection({ to: "success", type: "success" }) },
       { id: "failure-edge", source: "a", target: "failure", connection: makeConnection({ to: "failure", type: "success" }) },
     ],
-    bounds: { width: 300, height: 240 },
+    bounds: { minX: 0, minY: -120, maxX: 300, maxY: 160, width: 300, height: 280 },
   };
 }
 

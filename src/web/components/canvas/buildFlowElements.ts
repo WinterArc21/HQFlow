@@ -134,6 +134,47 @@ export interface BuildFlowNodesParams extends TraceHandlers {
 export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode | OutcomeFlowNode> {
   const stepById = new Map(params.workflow.steps.map((step) => [step.id, step] as const));
   const incomingTypesByStep = computeIncomingTypes(params.workflow);
+  const outcomeNodeById = new Map(
+    params.layout.nodes.filter((node) => node.isOutcome).map((node) => [node.id, node] as const),
+  );
+  const flagsByStepId = new Map<string, {
+    hasFailureOutcome: boolean;
+    hasSuccessOutcome: boolean;
+    hasRetry: boolean;
+    hasReturnIn: boolean;
+    hasReturnOut: boolean;
+  }>(
+    params.layout.nodes.map((node) => [node.id, {
+      hasFailureOutcome: false,
+      hasSuccessOutcome: false,
+      hasRetry: false,
+      hasReturnIn: false,
+      hasReturnOut: false,
+    }]),
+  );
+  params.workflow.connections.forEach((edge, index) => {
+    const sourceFlags = flagsByStepId.get(edge.from);
+    const targetFlags = flagsByStepId.get(edge.to);
+    const outcomeBand = outcomeNodeById.get(edge.to)?.outcomeBand;
+    if (sourceFlags !== undefined && outcomeBand === "failure") {
+      sourceFlags.hasFailureOutcome = true;
+    }
+    if (sourceFlags !== undefined && outcomeBand === "success") {
+      sourceFlags.hasSuccessOutcome = true;
+    }
+    if (sourceFlags !== undefined && edge.from === edge.to) {
+      sourceFlags.hasRetry = true;
+    }
+    const id = edge.id ?? `${edge.from}->${edge.to}#${index}`;
+    if (edge.from !== edge.to && params.backEdgeIds.has(id)) {
+      if (sourceFlags !== undefined) {
+        sourceFlags.hasReturnOut = true;
+      }
+      if (targetFlags !== undefined) {
+        targetFlags.hasReturnIn = true;
+      }
+    }
+  });
 
   return params.layout.nodes.map((layoutNode): StepFlowNode | OutcomeFlowNode => {
     const step = stepById.get(layoutNode.id);
@@ -187,19 +228,8 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
       };
     }
 
-    const outcomeNodeById = new Map(params.layout.nodes.filter((node) => node.isOutcome).map((node) => [node.id, node] as const));
-    const outcomeEdges = params.workflow.connections.filter((edge) => edge.from === step.id && outcomeNodeById.has(edge.to));
-    const hasFailureOutcome = outcomeEdges.some((edge) => outcomeNodeById.get(edge.to)?.outcomeBand === "failure");
-    const hasSuccessOutcome = outcomeEdges.some((edge) => outcomeNodeById.get(edge.to)?.outcomeBand === "success");
-    const hasRetry = params.workflow.connections.some((edge) => edge.from === step.id && edge.to === step.id);
-    const hasReturnIn = params.workflow.connections.some((edge, index) => {
-      const id = edge.id ?? `${edge.from}->${edge.to}#${index}`;
-      return edge.to === step.id && edge.from !== edge.to && params.backEdgeIds.has(id);
-    });
-    const hasReturnOut = params.workflow.connections.some((edge, index) => {
-      const id = edge.id ?? `${edge.from}->${edge.to}#${index}`;
-      return edge.from === step.id && edge.from !== edge.to && params.backEdgeIds.has(id);
-    });
+    const flags = flagsByStepId.get(step.id)!;
+    const { hasFailureOutcome, hasSuccessOutcome, hasRetry, hasReturnIn, hasReturnOut } = flags;
     return {
       id: layoutNode.id,
       type: "step",

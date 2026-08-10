@@ -28,7 +28,7 @@ function formatTimestamp(iso: string): string {
 }
 
 /**
- * The thin top bar of an exported snapshot: identifies the file as a CodeHQ export,
+ * The thin top bar of an exported snapshot: identifies the file as an HQFlow export,
  * shows the workflow name and generation timestamp, displays the privacy choice, and provides
  * the theme switcher as the snapshot's only extra control beyond the canvas.
  */

@@ -9,11 +9,10 @@ import type { SourceStatus } from "../../api/types";
 import type { Depth } from "../../store/useCodeHQStore";
 
 /** Fixed node width across every depth — only height grows with content (contract §10/§11).
- * Wider than the original 300/340px: the spine layout (see layout.ts) no longer needs dagre's
- * horizontal room to route long branch edges through intermediate ranks, which freed up canvas
- * width for the card itself — spent here on the purpose line and the in/out tags, which were
- * truncating too aggressively to read as the comprehension surface the product needs them to
- * be. */
+ * Wider than the original 300/340px: the spine layout (see layout.ts) reserves enough horizontal
+ * room for long branch edges while keeping more canvas width for the card itself. That space is
+ * spent on the purpose line and the in/out tags, which were truncating too aggressively to read
+ * as the comprehension surface the product needs them to be. */
 export const NODE_WIDTH = 380;
 
 export const MAX_MODULE_ROWS = 5;
@@ -85,15 +84,6 @@ export interface StepIoSummary {
  * "surfacing them, even compactly, is a big comprehension win"). */
 export function stepIoSummary(step: WorkflowStep): StepIoSummary {
   return { inputs: step.inputs ?? [], outputs: step.outputs ?? [] };
-}
-
-/** Whether the card's single "facts" row has anything at all to show. Inputs/outputs only: the
- * source/edge-case/test counts that used to share this row moved to the drawer's section
- * headings (see `StepNode`'s own comment), so a step with sources but no declared I/O now
- * correctly reserves no row instead of an empty one. */
-export function stepHasFacts(step: WorkflowStep): boolean {
-  const io = stepIoSummary(step);
-  return io.inputs.length > 0 || io.outputs.length > 0;
 }
 
 /**

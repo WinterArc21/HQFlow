@@ -37,18 +37,8 @@
   border-color: color-mix(in srgb, var(--accent-output) 75%, var(--canvas-port-ring));
 }
 
-.returnInHandle {
-  left: 30%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
-}
-
 .returnOutHandle {
   left: 70%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
-}
-
-.retryInHandle {
-  top: 28%;
   border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
 }
 

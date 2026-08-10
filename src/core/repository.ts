@@ -5,6 +5,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import type { CodeHQProject } from "@schema/project";
 
 const CODEHQ_DIR_NAME = ".codehq";
 
@@ -63,16 +64,29 @@ function tryReadJsonName(filePath: string, pick: (data: unknown) => unknown): st
 /**
  * Best-effort, human-readable repository name: `.codehq/project.json`'s
  * `project.name`, else `package.json`'s `name`, else the root directory's basename.
- * Never throws — a malformed or unreadable file is silently skipped in favor of the
- * next fallback.
+ * Pass a validated project to avoid reading project.json again. Pass null when validation
+ * failed or the file is absent; this explicitly uses the package/directory fallback.
+ * With no second argument, malformed or unreadable files also fall through without throwing.
  */
-export function repositoryName(root: string): string {
+export function repositoryName(root: string, validatedProject?: CodeHQProject | null): string {
+  if (validatedProject !== undefined) {
+    if (validatedProject !== null) {
+      return validatedProject.project.name;
+    }
+    return repositoryFallbackName(root);
+  }
+
   const paths = codeHQPaths(root);
   const fromProject = tryReadJsonName(paths.projectFile, (data) => (data as MinimalProjectFile).project?.name);
   if (fromProject !== null) {
     return fromProject;
   }
 
+  return repositoryFallbackName(root);
+}
+
+/** Package name, then directory basename. Used when project.json is absent or invalid. */
+function repositoryFallbackName(root: string): string {
   const fromPackageJson = tryReadJsonName(path.join(root, "package.json"), (data) => (data as MinimalPackageJson).name);
   if (fromPackageJson !== null) {
     return fromPackageJson;

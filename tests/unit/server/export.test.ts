@@ -37,7 +37,7 @@ const RECORD: WorkflowRecord = {
 
 describe("sanitizeExportPayload", () => {
   it("strips repository.root, codeHQDir, absolutePath, and the workflow file path", () => {
-    const payload = sanitizeExportPayload(RECORD, "my-repo", "2025-06-01T12:00:00.000Z");
+    const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
     const json = JSON.stringify(payload);
 
     // Machine-local data must never appear in the payload.
@@ -51,7 +51,7 @@ describe("sanitizeExportPayload", () => {
   });
 
   it("keeps the workflow data, source checks, name, id, timestamp, and repository name", () => {
-    const payload = sanitizeExportPayload(RECORD, "my-repo", "2025-06-01T12:00:00.000Z");
+    const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
 
     expect(payload.workflow).toEqual(WORKFLOW);
     expect(payload.workflowName).toBe("Checkout Flow");
@@ -63,7 +63,7 @@ describe("sanitizeExportPayload", () => {
   });
 
   it("includes repository-relative source file paths (allowed by spec)", () => {
-    const payload = sanitizeExportPayload(RECORD, "my-repo", "2025-06-01T12:00:00.000Z");
+    const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
     expect(JSON.stringify(payload)).toContain("app/api/checkout/route.ts");
   });
 

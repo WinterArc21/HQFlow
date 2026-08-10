@@ -170,11 +170,10 @@ describe("parseWorkflow — shape and semantic rules", () => {
     if (result.ok) {
       throw new Error("expected failure");
     }
-    expect(
-      result.issues.some(
-        (issue) => issue.message === "Visual properties are owned by HQFlow and must not appear in workflow files.",
-      ),
-    ).toBe(true);
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      path: "steps[0].color",
+      message: "Visual properties are owned by HQFlow and must not appear in workflow files.",
+    }));
   });
 
   it("rejects line > endLine on a SourceReference", () => {

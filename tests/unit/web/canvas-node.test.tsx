@@ -3,10 +3,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ReactFlowProvider, type NodeProps } from "@xyflow/react";
-import type { WorkflowStep } from "@schema/workflow";
-import { buildFlowEdges, chooseCardinalHandles, restoreGeneratedNodePositions } from "@web/components/canvas/buildFlowElements";
+import type { Workflow, WorkflowStep } from "@schema/workflow";
+import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "@web/components/canvas/buildFlowElements";
 import { CanvasLegend } from "@web/components/canvas/CanvasLegend";
 import { CanvasOverflowIndicator } from "@web/components/canvas/CanvasOverflowIndicator";
+import { computeBackEdgeIds } from "@web/components/canvas/graph";
 import { computeLayout } from "@web/components/canvas/layout";
 import { OutcomeNode } from "@web/components/canvas/nodes/OutcomeNode";
 import { StepNode } from "@web/components/canvas/nodes/StepNode";
@@ -244,6 +245,70 @@ describe("chooseCardinalHandles", () => {
 });
 
 describe("canvas outcome and legend semantics", () => {
+  it("preserves retry, return, and both outcome classifications in one preparation pass", () => {
+    const workflow: Workflow = {
+      schemaVersion: "0.1",
+      id: "combined-edges",
+      name: "Combined edges",
+      purpose: "Exercises every special node connection flag together.",
+      steps: [
+        makeStep({ id: "first" }),
+        makeStep({ id: "source" }),
+        makeStep({ id: "success-outcome", category: "output" }),
+        makeStep({ id: "failure-outcome", category: "output" }),
+      ],
+      connections: [
+        { id: "forward", from: "first", to: "source", type: "success" },
+        { id: "return", from: "source", to: "first", type: "conditional" },
+        { id: "retry", from: "source", to: "source", type: "conditional" },
+        { id: "success", from: "source", to: "success-outcome", type: "success" },
+        { id: "failure", from: "source", to: "failure-outcome", type: "failure" },
+      ],
+    };
+    const layout = computeLayout(workflow, { depth: "workflow", expandedStepIds: {} });
+    const backEdgeIds = computeBackEdgeIds(workflow);
+    const nodes = buildFlowNodes({
+      workflow,
+      layout,
+      backEdgeIds,
+      depth: "workflow",
+      expandedStepIds: {},
+      sourceChecks: {},
+      selectedStepId: null,
+      traceStepIds: null,
+      getTabIndex: () => -1,
+      onToggleExpand: () => {},
+      onNodeKeyDown: () => {},
+      onHoverStart: () => {},
+      onHoverEnd: () => {},
+      onFocusStep: () => {},
+      onBlurStep: () => {},
+    });
+    const source = nodes.find((node) => node.id === "source");
+
+    expect(source?.data).toMatchObject({
+      hasFailureOutcome: true,
+      hasSuccessOutcome: true,
+      hasRetry: true,
+      hasReturnOut: true,
+    });
+    expect(source?.handles?.map((handle) => handle.id)).toEqual(expect.arrayContaining([
+      "failure",
+      "success",
+      "retry-in",
+      "retry-out",
+      "return-out",
+    ]));
+    expect(nodes.find((node) => node.id === "first")?.data).toMatchObject({ hasReturnIn: true });
+
+    const edges = buildFlowEdges(layout, backEdgeIds, null);
+    expect(edges.map((edge) => edge.id)).toEqual(["forward", "return", "retry", "success", "failure"]);
+    expect(edges.find((edge) => edge.id === "return")?.data).toMatchObject({ returnEdge: true, retry: false });
+    expect(edges.find((edge) => edge.id === "retry")?.data).toMatchObject({ returnEdge: false, retry: true });
+    expect(edges.find((edge) => edge.id === "success")?.data).toMatchObject({ branch: true, outcomeBand: "success" });
+    expect(edges.find((edge) => edge.id === "failure")?.data).toMatchObject({ branch: true, outcomeBand: "failure" });
+  });
+
   it.each([
     ["right", "More"],
     ["bottom", "More below"],

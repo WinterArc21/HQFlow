@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Issue } from "@schema/diagnostics";
-import { bold, cyan, dim, green, pluralize, printIssues, red, yellow } from "../../../src/cli/output";
+import { bold, dim, pluralize, printIssues, red, yellow } from "../../../src/cli/output";
 
 const ESC = String.fromCharCode(27);
 
@@ -33,9 +33,7 @@ describe("color helpers", () => {
       expect(bold("x")).toBe("x");
       expect(dim("x")).toBe("x");
       expect(red("x")).toBe("x");
-      expect(green("x")).toBe("x");
       expect(yellow("x")).toBe("x");
-      expect(cyan("x")).toBe("x");
     });
   });
 

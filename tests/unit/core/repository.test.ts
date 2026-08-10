@@ -87,6 +87,26 @@ describe("repositoryName", () => {
 
     expect(repositoryName(base)).toBe("fallback-name");
   });
+
+  it("uses validated project data without reparsing project.json", () => {
+    mkdirSync(path.join(base, ".codehq"));
+    writeFileSync(path.join(base, ".codehq", "project.json"), "{ not valid json");
+
+    expect(
+      repositoryName(base, {
+        schemaVersion: "0.1",
+        project: { id: "validated", name: "Validated Project" },
+      }),
+    ).toBe("Validated Project");
+  });
+
+  it("uses the documented fallback when validated project data is absent", () => {
+    mkdirSync(path.join(base, ".codehq"));
+    writeFileSync(path.join(base, ".codehq", "project.json"), JSON.stringify({ project: { name: "Unvalidated Name" } }));
+    writeFileSync(path.join(base, "package.json"), JSON.stringify({ name: "fallback-name" }));
+
+    expect(repositoryName(base, null)).toBe("fallback-name");
+  });
 });
 
 describe("codeHQPaths", () => {

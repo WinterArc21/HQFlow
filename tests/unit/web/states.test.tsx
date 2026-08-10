@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyState } from "@web/components/states/EmptyState";
 import { UninitializedState } from "@web/components/states/UninitializedState";
-import { AGENT_PROMPT } from "@web/components/shell/CopyAgentPrompt";
+import { AGENT_PROMPT } from "@web/lib/agentPrompt";
 
 describe("EmptyState", () => {
   beforeEach(() => {

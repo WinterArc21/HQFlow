@@ -1,7 +1,7 @@
 /**
  * Pure graph queries over a `Workflow`'s `connections`, used by keyboard navigation (contract
  * §11), the edge-grammar retry/outcome derivation, and path tracing. Kept separate from
- * `layout.ts` (which asks dagre to *position* the graph) because these answer a different
+ * `layout.ts` (which positions the graph deterministically) because these answer a different
  * question: given the current step, where does "next"/"previous" go, what is a stable first/last
  * step for Home/End, which connections loop back on the graph, and what does a step's full
  * upstream/downstream trace look like. Never throws or hangs on a cycle.

@@ -179,7 +179,7 @@ you run `init`.
 ```sh
 pnpm install
 pnpm dev            # web (Vite) + API server, in parallel
-pnpm build          # dist/node (CLI + server) and dist/web
+pnpm build          # dist/node, dist/web, and dist/export-viewer
 pnpm test           # vitest
 ```
 

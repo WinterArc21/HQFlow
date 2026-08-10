@@ -7,12 +7,8 @@ import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } fr
 import { computeNodeHeight, computeOutcomeNodeWidth, effectiveDepthForStep, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
 
 export const LAYOUT_RANK_SEP = 132;
-export const MIN_FAN_RANK_GAP = 132;
-export const LAYOUT_NODE_SEP = 28;
 export const LAYOUT_MARGIN_X = 48;
 export const LAYOUT_MARGIN_Y = 48;
-export const LAYOUT_BRANCH_OFFSET = NODE_WIDTH + LAYOUT_RANK_SEP;
-export const OUTCOME_COLUMN_GAP = 72;
 const OUTCOME_GAP = 30;
 const FAILURE_TO_WORK_GAP = 128;
 const WORK_LANE_GAP = 88;
@@ -39,6 +35,10 @@ export interface LayoutEdge {
   connection: WorkflowConnection;
 }
 export interface LayoutBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
   width: number;
   height: number;
 }
@@ -260,11 +260,17 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     connection,
   }));
   if (nodes.length === 0) {
-    return { nodes, edges, bounds: { width: 0, height: 0 } };
+    return { nodes, edges, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 } };
   }
-  const minX = Math.min(...nodes.map((node) => node.x));
-  const minY = Math.min(...nodes.map((node) => node.y));
-  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
-  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
-  return { nodes, edges, bounds: { width: maxX - minX, height: maxY - minY } };
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    minX = Math.min(minX, node.x);
+    minY = Math.min(minY, node.y);
+    maxX = Math.max(maxX, node.x + node.width);
+    maxY = Math.max(maxY, node.y + node.height);
+  }
+  return { nodes, edges, bounds: { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY } };
 }

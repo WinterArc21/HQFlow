@@ -65,6 +65,16 @@ describe("computeFitViewport", () => {
     expect(offset!.zoom).toBeCloseTo(atOrigin!.zoom, 5);
   });
 
+  it("accounts for a negative bounds origin without changing fit size", () => {
+    const atOrigin = computeFitViewport({ ...BASE, bounds: { minX: 0, minY: 0, maxX: 200, maxY: 200 } });
+    const negative = computeFitViewport({ ...BASE, bounds: { minX: -500, minY: -300, maxX: -300, maxY: -100 } });
+    expect(atOrigin).not.toBeNull();
+    expect(negative).not.toBeNull();
+    expect(negative!.zoom).toBeCloseTo(atOrigin!.zoom, 5);
+    expect(negative!.x + (-400 * negative!.zoom)).toBeCloseTo(BASE.containerWidth / 2, 1);
+    expect(negative!.y + (-200 * negative!.zoom)).toBeCloseTo(BASE.containerHeight / 2, 1);
+  });
+
   it("clears directional overflow after the user pans to the graph end", () => {
     const bounds = { minX: 0, minY: 0, maxX: 4000, maxY: 1200 };
     expect(computeViewportOverflow({

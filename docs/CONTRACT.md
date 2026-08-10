@@ -27,8 +27,8 @@ workflow canvas in the browser. **HQFlow contains no LLM and never uploads code.
 | Web build | Vite 7 + React 19 |
 | Server | Fastify 5 |
 | Validation | Zod (v4 API) |
-| Watching | Chokidar 4 |
-| Canvas | `@xyflow/react` (React Flow 12) + `dagre` for layout |
+| Watching | Chokidar 5 |
+| Canvas | `@xyflow/react` (React Flow 12) + HQFlow's deterministic layout |
 | Client state | Zustand |
 | Icons | `@phosphor-icons/react` |
 | Unit tests | Vitest |
@@ -83,9 +83,10 @@ tests/
 
 ### Build outputs
 
-- `dist/node/cli.js` — CLI entry, has the shebang. `package.json` → `"bin": { "codehq": "dist/node/cli.js" }`
+- `dist/node/cli.js` — CLI entry, has the shebang. `package.json` → `"bin": { "hqflow": "dist/node/cli.js" }`
 - `dist/node/server.js` — programmatic server entry
 - `dist/web/` — Vite output, served statically by the server in production
+- `dist/export-viewer/` — browser-safe `export-viewer.js` and `export-viewer.css`, inlined into self-contained export files
 
 ---
 
@@ -217,8 +218,10 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
+| DELETE | `/api/workflows/:id` | Delete a verified workflow; returns the refreshed snapshot. |
 | GET | `/api/diagnostics` | `DiagnosticsReport` |
-| GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, lines? }`. **Never returns file contents.** |
+| GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, line? }`. **Never returns file contents.** |
+| GET | `/api/export/:id?hideFilePaths=<bool>` | Self-contained HTML export; `hideFilePaths` defaults to `false`. |
 | POST | `/api/recheck` | Force a full reload; returns the new snapshot |
 | GET | `/api/events` | SSE |
 
@@ -379,7 +382,7 @@ src/web/
     search/     CommandPalette
     diagnostics/ DiagnosticsPanel, DiagnosticsBanner
     states/     EmptyState, UninitializedState, LoadingState, ErrorState
-    primitives/ Button, IconButton, Badge, Kbd, Panel, SectionLabel, CopyButton, Tooltip
+    primitives/ Button, IconButton, Badge, Kbd, SectionLabel, CopyButton, Tooltip
 ```
 
 Client state holds **only** UI state. Workflow data always comes from the server snapshot.
