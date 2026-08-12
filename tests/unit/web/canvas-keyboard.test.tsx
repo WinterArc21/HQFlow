@@ -1,9 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Workflow } from "@schema/workflow";
 import { WorkflowCanvas } from "@web/components/canvas";
+import { useCanvasKeyboardNav } from "@web/components/canvas/useCanvasKeyboardNav";
 import { resetCodeHQStore, useCodeHQStore } from "@web/store/useCodeHQStore";
 
 const WORKFLOW: Workflow = {
@@ -47,6 +48,24 @@ async function tabToFirstStepNode(user: ReturnType<typeof userEvent.setup>): Pro
 }
 
 describe("WorkflowCanvas keyboard navigation", () => {
+  it("centers a requested node in the canvas area left visible by the drawer", () => {
+    const setCenter = vi.fn();
+    const { result } = renderHook(() => useCanvasKeyboardNav({
+      workflow: WORKFLOW,
+      layoutNodes: [{ id: "validate", x: 100, y: 20, width: 200, height: 160, index: 1, isOutcome: false }],
+      containerRef: { current: null },
+      reactFlowInstance: { setCenter, getZoom: () => 2 },
+      selectedStepId: null,
+      onSelect: vi.fn(),
+      onClear: vi.fn(),
+      reducedMotion: false,
+    }));
+
+    act(() => result.current.panToNode("validate", 420));
+
+    expect(setCenter).toHaveBeenCalledWith(305, 100, { zoom: 2, duration: 300 });
+  });
+
   it("is reachable by Tab and exposes an accessible name", async () => {
     render(<WorkflowCanvas workflow={WORKFLOW} sourceChecks={{}} />);
     expect(await screen.findByRole("application", { name: /checkout workflow canvas/i })).toBeInTheDocument();

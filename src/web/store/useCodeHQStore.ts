@@ -9,15 +9,24 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 export type Depth = "workflow" | "modules" | "symbols";
 export type Theme = "dark" | "light";
 
+export interface StepPanRequest {
+  workflowId: string;
+  stepId: string;
+}
+
 /** Persist schema version — bump when migrating stored UI preferences. */
 const PERSIST_VERSION = 1;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
   selectedStepId: string | null;
+  /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
+  stepPanRequest: StepPanRequest | null;
   depth: Depth;
   /** Per-step expansion overriding the global `depth` for that one step; `true` = expanded. */
   expandedStepIds: Record<string, true>;
+  /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
+  layoutResetRevision: number;
   searchQuery: string;
   searchOpen: boolean;
   diagnosticsOpen: boolean;
@@ -27,9 +36,11 @@ interface CodeHQUiState {
 interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
+  selectStepAndPan: (workflowId: string, stepId: string) => void;
   setDepth: (depth: Depth) => void;
   toggleStepExpanded: (stepId: string) => void;
   collapseAllSteps: () => void;
+  resetLayout: () => void;
   setSearchQuery: (query: string) => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -41,6 +52,18 @@ interface CodeHQUiActions {
 export type CodeHQStore = CodeHQUiState & CodeHQUiActions;
 
 const STORAGE_KEY = "codehq.ui";
+const LIGHT_THEME_QUERY = "(prefers-color-scheme: light)";
+
+function getInitialTheme(): Theme {
+  try {
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      return window.matchMedia(LIGHT_THEME_QUERY).matches ? "light" : "dark";
+    }
+  } catch {
+    // Browser policy and incomplete test environments can make matchMedia unavailable.
+  }
+  return "dark";
+}
 
 /**
  * Wraps `window.localStorage` so a failure (quota exceeded, private browsing, storage
@@ -74,12 +97,14 @@ const safeStorage: StateStorage = {
 const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
   selectedStepId: null,
+  stepPanRequest: null,
   depth: "workflow",
   expandedStepIds: {},
+  layoutResetRevision: 0,
   searchQuery: "",
   searchOpen: false,
   diagnosticsOpen: false,
-  theme: "dark",
+  theme: getInitialTheme(),
 };
 
 export const useCodeHQStore = create<CodeHQStore>()(
@@ -88,7 +113,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
       ...INITIAL_STATE,
 
       selectWorkflow: (workflowId) =>
-        set({ selectedWorkflowId: workflowId, selectedStepId: null, expandedStepIds: {} }),
+        set({ selectedWorkflowId: workflowId, selectedStepId: null, stepPanRequest: null, expandedStepIds: {} }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes
@@ -97,8 +122,16 @@ export const useCodeHQStore = create<CodeHQStore>()(
       selectStep: (stepId) =>
         set((state) => ({
           selectedStepId: stepId,
+          stepPanRequest: null,
           diagnosticsOpen: stepId !== null ? false : state.diagnosticsOpen,
         })),
+
+      selectStepAndPan: (workflowId, stepId) =>
+        set({
+          selectedStepId: stepId,
+          stepPanRequest: { workflowId, stepId },
+          diagnosticsOpen: false,
+        }),
 
       setDepth: (depth) => set({ depth }),
 
@@ -114,6 +147,8 @@ export const useCodeHQStore = create<CodeHQStore>()(
         }),
 
       collapseAllSteps: () => set({ expandedStepIds: {} }),
+
+      resetLayout: () => set((state) => ({ layoutResetRevision: state.layoutResetRevision + 1 })),
 
       setSearchQuery: (searchQuery) => set({ searchQuery }),
 

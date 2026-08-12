@@ -84,6 +84,27 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Checkout")).toBeInTheDocument();
     expect(screen.getByText("Copy agent prompt")).toBeInTheDocument();
     expect(screen.getByText("Recheck files")).toBeInTheDocument();
+    expect(screen.queryByText("Reset layout")).not.toBeInTheDocument();
+  });
+
+  it("offers a searchable layout reset only for the selected workflow and preserves selection", async () => {
+    useCodeHQStore.getState().selectWorkflow("site-flow");
+    useCodeHQStore.getState().selectStep("scrape");
+    useCodeHQStore.getState().openSearch();
+    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("combobox"), "reset layout");
+    const command = screen.getByRole("option", { name: /Reset layout/ });
+
+    expect(command).toHaveTextContent("Restores dragged nodes to their generated positions.");
+    await user.click(command);
+
+    expect(useCodeHQStore.getState().layoutResetRevision).toBe(1);
+    expect(useCodeHQStore.getState().selectedWorkflowId).toBe("site-flow");
+    expect(useCodeHQStore.getState().selectedStepId).toBe("scrape");
+    expect(useCodeHQStore.getState().searchOpen).toBe(false);
+    expect(screen.queryByRole("dialog", { name: "Search HQFlow" })).not.toBeInTheDocument();
   });
 
   it("filters as the user types", async () => {
@@ -131,6 +152,7 @@ describe("CommandPalette", () => {
 
     expect(useCodeHQStore.getState().selectedWorkflowId).toBe("site-flow");
     expect(useCodeHQStore.getState().selectedStepId).toBe("scrape");
+    expect(useCodeHQStore.getState().stepPanRequest).toEqual({ workflowId: "site-flow", stepId: "scrape" });
     expect(useCodeHQStore.getState().searchOpen).toBe(false);
   });
 

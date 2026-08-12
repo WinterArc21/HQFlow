@@ -3,9 +3,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ReactFlowProvider, type NodeProps } from "@xyflow/react";
-import type { WorkflowStep } from "@schema/workflow";
-import { buildFlowEdges, chooseCardinalHandles } from "@web/components/canvas/buildFlowElements";
+import type { Workflow, WorkflowStep } from "@schema/workflow";
+import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "@web/components/canvas/buildFlowElements";
 import { CanvasLegend } from "@web/components/canvas/CanvasLegend";
+import { CanvasOverflowIndicator } from "@web/components/canvas/CanvasOverflowIndicator";
+import { computeBackEdgeIds } from "@web/components/canvas/graph";
 import { computeLayout } from "@web/components/canvas/layout";
 import { OutcomeNode } from "@web/components/canvas/nodes/OutcomeNode";
 import { StepNode } from "@web/components/canvas/nodes/StepNode";
@@ -74,33 +76,43 @@ function makeProps(data: StepNodeData): NodeProps<StepFlowNode> {
   };
 }
 
+describe("restoreGeneratedNodePositions", () => {
+  it("restores generated positions while preserving current node state", () => {
+    const current = [
+      { id: "a", position: { x: 500, y: 600 }, selected: true },
+      { id: "b", position: { x: 700, y: 800 }, selected: false },
+    ];
+    const generated = [
+      { id: "a", position: { x: 10, y: 20 }, selected: false },
+      { id: "b", position: { x: 30, y: 40 }, selected: false },
+    ];
+
+    expect(restoreGeneratedNodePositions(current, generated)).toEqual([
+      { id: "a", position: { x: 10, y: 20 }, selected: true },
+      { id: "b", position: { x: 30, y: 40 }, selected: false },
+    ]);
+  });
+});
+
 describe("StepNode", () => {
-  it("declares hidden anchors on every side for dynamic edge attachment", () => {
+  it("renders collapsed card chrome and hidden anchors on every side", () => {
     const { container } = renderStepNode(makeProps(makeData()));
     for (const handleId of ["in", "in-right", "in-top", "in-bottom", "out", "out-left", "out-top", "out-bottom"]) {
       expect(container.querySelector(`[data-handleid="${handleId}"]`), handleId).toBeInTheDocument();
     }
-  });
-
-  it("renders the name, one-line purpose, category, and index when collapsed", () => {
-    renderStepNode(makeProps(makeData()));
     expect(screen.getByText("Scrape Website")).toBeInTheDocument();
     expect(screen.getByText("Fetches the submitted pages and extracts useful text.")).toBeInTheDocument();
     expect(screen.getByText("Logic")).toBeInTheDocument();
     expect(screen.getByText("03")).toBeInTheDocument();
   });
 
-  it("never badges confidence on the card, at any confidence level", () => {
+  it("keeps confidence accessible without rendering visual badges", () => {
     for (const confidence of ["verified", "inferred", "human-confirmed"] as const) {
       const { unmount } = renderStepNode(makeProps(makeData({ step: makeStep({ confidence }) })));
       expect(screen.queryByText(/^(Verified|Inferred|Human-confirmed)$/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: new RegExp(`${confidence} confidence`, "i") })).toBeInTheDocument();
       unmount();
     }
-  });
-
-  it("keeps confidence in the card's accessible name even though no badge shows it", () => {
-    renderStepNode(makeProps(makeData({ step: makeStep({ confidence: "inferred" }) })));
-    expect(screen.getByRole("button", { name: /inferred confidence/i })).toBeInTheDocument();
   });
 
   it("does not put source, edge-case, or test counts on the card", () => {
@@ -115,13 +127,7 @@ describe("StepNode", () => {
     expect(screen.queryByText(/\d+ (source|edge case|test)/)).not.toBeInTheDocument();
   });
 
-  it("renders no facts row at all when there are no inputs/outputs", () => {
-    renderStepNode(makeProps(makeData()));
-    expect(screen.queryByText("in")).not.toBeInTheDocument();
-    expect(screen.queryByText("out")).not.toBeInTheDocument();
-  });
-
-  it("keeps inputs and outputs off the Story card", () => {
+  it("keeps implementation facts off the Story card", () => {
     const data = makeData({
       effectiveDepth: "workflow",
       step: makeStep({
@@ -192,12 +198,10 @@ describe("StepNode", () => {
     expect(screen.getByRole("button", { name: /collapse scrape website/i })).toBeInTheDocument();
   });
 
-  it("surfaces a missing-sources warning affordance when a source check is missing", () => {
-    renderStepNode(makeProps(makeData({ hasMissingSource: true })));
+  it("shows the missing-source affordance only when needed", () => {
+    const { unmount } = renderStepNode(makeProps(makeData({ hasMissingSource: true })));
     expect(screen.getByText("Missing sources")).toBeInTheDocument();
-  });
-
-  it("does not surface the warning affordance when nothing is missing", () => {
+    unmount();
     renderStepNode(makeProps(makeData()));
     expect(screen.queryByText("Missing sources")).not.toBeInTheDocument();
   });
@@ -206,16 +210,16 @@ describe("StepNode", () => {
 describe("chooseCardinalHandles", () => {
   const source = { x: 100, y: 100, width: 100, height: 80 };
 
-  it.each([
+  it("uses facing sides in every cardinal direction and horizontal ties", () => {
+    const cases = [
     ["right", { x: 300, y: 100, width: 100, height: 80 }, { sourceHandle: "out", targetHandle: "in" }],
     ["left", { x: -100, y: 100, width: 100, height: 80 }, { sourceHandle: "out-left", targetHandle: "in-right" }],
     ["below", { x: 100, y: 300, width: 100, height: 80 }, { sourceHandle: "out-bottom", targetHandle: "in-top" }],
     ["above", { x: 100, y: -100, width: 100, height: 80 }, { sourceHandle: "out-top", targetHandle: "in-bottom" }],
-  ])("uses facing sides when the target is %s", (_direction, target, expected) => {
-    expect(chooseCardinalHandles(source, target)).toEqual(expected);
-  });
-
-  it("keeps horizontal anchors on an exact diagonal or overlapping centres", () => {
+    ] as const;
+    for (const [direction, target, expected] of cases) {
+      expect(chooseCardinalHandles(source, target), direction).toEqual(expected);
+    }
     expect(chooseCardinalHandles(source, { ...source, x: 200, y: 200 })).toEqual({
       sourceHandle: "out",
       targetHandle: "in",
@@ -225,6 +229,78 @@ describe("chooseCardinalHandles", () => {
 });
 
 describe("canvas outcome and legend semantics", () => {
+  it("preserves retry, return, and both outcome classifications in one preparation pass", () => {
+    const workflow: Workflow = {
+      schemaVersion: "0.1",
+      id: "combined-edges",
+      name: "Combined edges",
+      purpose: "Exercises every special node connection flag together.",
+      steps: [
+        makeStep({ id: "first" }),
+        makeStep({ id: "source" }),
+        makeStep({ id: "success-outcome", category: "output" }),
+        makeStep({ id: "failure-outcome", category: "output" }),
+      ],
+      connections: [
+        { id: "forward", from: "first", to: "source", type: "success" },
+        { id: "return", from: "source", to: "first", type: "conditional" },
+        { id: "retry", from: "source", to: "source", type: "conditional" },
+        { id: "success", from: "source", to: "success-outcome", type: "success" },
+        { id: "failure", from: "source", to: "failure-outcome", type: "failure" },
+      ],
+    };
+    const layout = computeLayout(workflow, { depth: "workflow", expandedStepIds: {} });
+    const backEdgeIds = computeBackEdgeIds(workflow);
+    const nodes = buildFlowNodes({
+      workflow,
+      layout,
+      backEdgeIds,
+      depth: "workflow",
+      expandedStepIds: {},
+      sourceChecks: {},
+      selectedStepId: null,
+      traceStepIds: null,
+      getTabIndex: () => -1,
+      onToggleExpand: () => {},
+      onNodeKeyDown: () => {},
+      onHoverStart: () => {},
+      onHoverEnd: () => {},
+      onFocusStep: () => {},
+      onBlurStep: () => {},
+    });
+    const source = nodes.find((node) => node.id === "source");
+
+    expect(source?.data).toMatchObject({
+      hasFailureOutcome: true,
+      hasSuccessOutcome: true,
+      hasRetry: true,
+      hasReturnOut: true,
+    });
+    expect(source?.handles?.map((handle) => handle.id)).toEqual(expect.arrayContaining([
+      "failure",
+      "success",
+      "retry-in",
+      "retry-out",
+      "return-out",
+    ]));
+    expect(nodes.find((node) => node.id === "first")?.data).toMatchObject({ hasReturnIn: true });
+
+    const edges = buildFlowEdges(layout, backEdgeIds, null);
+    expect(edges.map((edge) => edge.id)).toEqual(["forward", "return", "retry", "success", "failure"]);
+    expect(edges.find((edge) => edge.id === "return")?.data).toMatchObject({ returnEdge: true, retry: false });
+    expect(edges.find((edge) => edge.id === "retry")?.data).toMatchObject({ returnEdge: false, retry: true });
+    expect(edges.find((edge) => edge.id === "success")?.data).toMatchObject({ branch: true, outcomeBand: "success" });
+    expect(edges.find((edge) => edge.id === "failure")?.data).toMatchObject({ branch: true, outcomeBand: "failure" });
+  });
+
+  it("keeps every overflow cue decorative", () => {
+    for (const [direction, label] of [["right", "More"], ["bottom", "More below"]] as const) {
+      const { unmount } = render(<CanvasOverflowIndicator direction={direction} />);
+      expect(screen.getByText(label).closest("div")).toHaveAttribute("aria-hidden", "true");
+      unmount();
+    }
+  });
+
   it("keeps initial outcome edges on their semantic branch handles", () => {
     const workflow = {
       schemaVersion: "0.1" as const,
@@ -244,11 +320,9 @@ describe("canvas outcome and legend semantics", () => {
     });
   });
 
-  it.each([
-    ["success", "success"],
-    ["failure", "failure"],
-  ] as const)("declares cardinal target anchors for a %s outcome", (_label, band) => {
-    const data: OutcomeNodeData = {
+  it("declares cardinal target anchors for every outcome band", () => {
+    for (const band of ["success", "failure"] as const) {
+      const data: OutcomeNodeData = {
       step: makeStep({ id: "done-" + band, name: "Done " + band }),
       tone: band,
       band,
@@ -260,14 +334,16 @@ describe("canvas outcome and legend semantics", () => {
       onFocusStep: () => {},
       onBlurStep: () => {},
     };
-    const props = { ...makeProps(makeData()), id: data.step.id, type: "outcome", data } as NodeProps<OutcomeFlowNode>;
-    const { container } = render(
-      <ReactFlowProvider>
-        <OutcomeNode {...props} />
-      </ReactFlowProvider>,
-    );
-    for (const handleId of ["in", "in-right", "in-top", "in-bottom", "outcome-in"]) {
-      expect(container.querySelector("[data-handleid=\"" + handleId + "\"]"), band + "/" + handleId).toBeInTheDocument();
+      const props = { ...makeProps(makeData()), id: data.step.id, type: "outcome", data } as NodeProps<OutcomeFlowNode>;
+      const { container, unmount } = render(
+        <ReactFlowProvider>
+          <OutcomeNode {...props} />
+        </ReactFlowProvider>,
+      );
+      for (const handleId of ["in", "in-right", "in-top", "in-bottom", "outcome-in"]) {
+        expect(container.querySelector("[data-handleid=\"" + handleId + "\"]"), band + "/" + handleId).toBeInTheDocument();
+      }
+      unmount();
     }
   });
 
@@ -311,6 +387,7 @@ describe("canvas outcome and legend semantics", () => {
       />,
     );
     const legend = screen.getByRole("group", { name: /connection legend/i });
+    expect(screen.getByRole("heading", { name: "Connections", level: 2 })).toBeInTheDocument();
     expect(legend).toHaveTextContent("Failure");
     expect(legend).toHaveTextContent("Retry");
     expect(legend).not.toHaveTextContent("Conditional");

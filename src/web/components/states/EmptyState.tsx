@@ -1,4 +1,4 @@
-import { AGENT_PROMPT, AGENT_PROMPT_EXAMPLES } from "../shell/CopyAgentPrompt";
+import { AGENT_PROMPT, AGENT_PROMPT_EXAMPLES } from "../../lib/agentPrompt";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { Button, CopyButton } from "../primitives";
 import { StateLayout } from "./StateLayout";
@@ -18,8 +18,7 @@ export function EmptyState({ onRecheck }: EmptyStateProps) {
   return (
     <StateLayout title="No workflows mapped yet">
       <p>
-        Ask your coding agent to read <code>.codehq/SKILL.md</code> and map any product workflow
-        as a workflow.
+        Ask your coding agent to read <code>.codehq/SKILL.md</code> and map a product workflow.
       </p>
       <div className={styles.actionRow}>
         <CopyButton value={AGENT_PROMPT} label="Copy prompt" />

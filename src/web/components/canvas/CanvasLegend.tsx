@@ -63,6 +63,7 @@ export function CanvasLegend({ workflow, dimmed = false }: CanvasLegendProps) {
 
   return (
     <div className={`${styles.legend} ${dimmed ? styles.dimmed : ""}`} role="group" aria-label="Connection legend">
+      <h2 className={styles.heading}>Connections</h2>
       {rows.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />

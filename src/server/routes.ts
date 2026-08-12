@@ -7,8 +7,9 @@ import { unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import type { SourceLookup } from "@schema/wire";
 import { pathExists } from "@core/fs-utils";
-import { codeHQPaths, repositoryName } from "@core/repository";
+import { codeHQPaths } from "@core/repository";
 import { resolveInsideRepository } from "@core/safe-path";
 import type { CodeHQStore } from "@core/store";
 import { buildExportHtml, buildContentDisposition, sanitizeExportPayload } from "./export";
@@ -57,13 +58,14 @@ function registerSourceRoute(app: FastifyInstance, root: string): void {
     const exists = await pathExists(resolved.absolutePath);
     const line = parsed.data.line !== undefined ? Number(parsed.data.line) : undefined;
 
-    await reply.send({
+    const lookup: SourceLookup = {
       file: parsed.data.file,
       absolutePath: resolved.absolutePath,
       exists,
       editorUrl: buildEditorUrl(resolved.absolutePath, line),
       ...(line !== undefined ? { line } : {}),
-    });
+    };
+    await reply.send(lookup);
   });
 }
 
@@ -125,7 +127,7 @@ async function loadExportViewerAssets(): Promise<ExportViewerAssets> {
   return cachedExportViewerAssets;
 }
 
-function registerExportRoute(app: FastifyInstance, root: string, store: CodeHQStore): void {
+function registerExportRoute(app: FastifyInstance, store: CodeHQStore): void {
   app.get<{ Params: { id: string } }>("/api/export/:id", async (request, reply) => {
     const parsedQuery = exportQuerySchema.safeParse(request.query);
     if (!parsedQuery.success) {
@@ -149,8 +151,9 @@ function registerExportRoute(app: FastifyInstance, root: string, store: CodeHQSt
       return;
     }
 
-    const repoName = repositoryName(root);
-    const payload = sanitizeExportPayload(record, repoName, { hideFilePaths: parsedQuery.data.hideFilePaths === "true" });
+    const payload = sanitizeExportPayload(record, store.getSnapshot().repository.name, {
+      hideFilePaths: parsedQuery.data.hideFilePaths === "true",
+    });
     const html = buildExportHtml({ payload, viewerJs: assets.js, viewerCss: assets.css });
 
     await reply
@@ -229,5 +232,5 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
     await reply.send(snapshot);
   });
 
-  registerExportRoute(app, root, store);
+  registerExportRoute(app, store);
 }

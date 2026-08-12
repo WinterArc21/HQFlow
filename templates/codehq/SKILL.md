@@ -1,7 +1,7 @@
 # HQFlow — Agent Skill
 
-You are documenting how this repository actually behaves, for a tool called **Code
-HQFlow**. HQFlow has no LLM of its own and never uploads code anywhere — it
+You are documenting how this repository actually behaves, for a tool called **HQFlow**.
+HQFlow has no LLM of its own and never uploads code anywhere — it
 only renders the structured JSON files you write here, in `.codehq/`, as an interactive
 workflow canvas that a human can explore in their browser. Your job is to read the real
 source code and describe real workflows accurately, honestly, and at the right altitude.

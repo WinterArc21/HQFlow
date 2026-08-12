@@ -18,10 +18,11 @@ test("Ctrl+K opens the palette, typing filters results, and Enter opens the matc
   const input = dialog.getByRole("combobox");
   await expect(input).toBeFocused();
 
-  // Empty query: the default listing is every workflow (2) plus the fixed action list (2).
-  await expect(dialog.getByRole("option")).toHaveCount(4);
+  // Empty query: the default listing is every workflow (2) plus the available actions (3).
+  await expect(dialog.getByRole("option")).toHaveCount(5);
   await expect(dialog.getByRole("option").filter({ hasText: "Generate Video Prompt" })).toBeVisible();
   await expect(dialog.getByRole("option").filter({ hasText: "Upload Reference Asset" })).toBeVisible();
+  await expect(dialog.getByRole("option").filter({ hasText: "Reset layout" })).toBeVisible();
 
   // Search for a step that lives in the NON-default workflow, so activating it proves the
   // palette switches workflows, not just steps within the one already on screen.

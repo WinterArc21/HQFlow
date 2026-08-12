@@ -28,6 +28,8 @@ export interface UseCanvasKeyboardNavResult {
   handleNodeKeyDown: (event: ReactKeyboardEvent<HTMLElement>, stepId: string) => void;
   /** Called on pointer interaction so Tab-ing away and back resumes at the last-used node. */
   setRovingId: (stepId: string) => void;
+  /** Pans a node into the visible canvas, optionally accounting for a right-side overlay. */
+  panToNode: (stepId: string, rightOverlayWidth?: number) => void;
 }
 
 const ACTIVATION_KEYS = new Set(["Enter", " "]);
@@ -43,6 +45,25 @@ export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCan
     [effectiveRovingId],
   );
 
+  const panToNode = useCallback(
+    (stepId: string, rightOverlayWidth = 0): void => {
+      const node = layoutNodes.find((candidate) => candidate.id === stepId);
+      if (node === undefined) {
+        return;
+      }
+      const zoom = reactFlowInstance.getZoom();
+      void reactFlowInstance.setCenter(
+        node.x + node.width / 2 + rightOverlayWidth / (2 * zoom),
+        node.y + node.height / 2,
+        {
+          zoom,
+          duration: reducedMotion ? 0 : 300,
+        },
+      );
+    },
+    [layoutNodes, reactFlowInstance, reducedMotion],
+  );
+
   const focusAndCenter = useCallback(
     (stepId: string): void => {
       setRovingId(stepId);
@@ -55,15 +76,9 @@ export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCan
         }
       }
 
-      const node = layoutNodes.find((candidate) => candidate.id === stepId);
-      if (node !== undefined) {
-        void reactFlowInstance.setCenter(node.x + node.width / 2, node.y + node.height / 2, {
-          zoom: reactFlowInstance.getZoom(),
-          duration: reducedMotion ? 0 : 300,
-        });
-      }
+      panToNode(stepId);
     },
-    [containerRef, layoutNodes, reactFlowInstance, reducedMotion],
+    [containerRef, panToNode],
   );
 
   const handleNodeKeyDown = useCallback(
@@ -106,5 +121,5 @@ export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCan
     [workflow, focusAndCenter, onSelect, onClear],
   );
 
-  return { getTabIndex, handleNodeKeyDown, setRovingId };
+  return { getTabIndex, handleNodeKeyDown, setRovingId, panToNode };
 }

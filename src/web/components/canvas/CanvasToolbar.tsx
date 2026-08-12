@@ -1,4 +1,11 @@
-import { ArrowsInLineVertical, DownloadSimple, MagnifyingGlassMinus, MagnifyingGlassPlus, Trash } from "@phosphor-icons/react";
+import {
+  ArrowCounterClockwise,
+  ArrowsInLineVertical,
+  DownloadSimple,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
+  Trash,
+} from "@phosphor-icons/react";
 import type { Depth } from "../../store/useCodeHQStore";
 import { IconButton } from "../primitives";
 import { DepthControl } from "./DepthControl";
@@ -9,6 +16,7 @@ export interface CanvasToolbarProps {
   onDepthChange: (depth: Depth) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onResetLayout: () => void;
   onCollapseAll: () => void;
   collapseDisabled: boolean;
   /** When provided, an export button is shown. Omitted in the export viewer. */
@@ -23,6 +31,7 @@ export function CanvasToolbar({
   onDepthChange,
   onZoomIn,
   onZoomOut,
+  onResetLayout,
   onCollapseAll,
   collapseDisabled,
   onExport,
@@ -35,6 +44,12 @@ export function CanvasToolbar({
       <div className={styles.zoomGroup}>
         <IconButton label="Zoom in" icon={<MagnifyingGlassPlus size={16} />} size="sm" onClick={onZoomIn} />
         <IconButton label="Zoom out" icon={<MagnifyingGlassMinus size={16} />} size="sm" onClick={onZoomOut} />
+        <IconButton
+          label="Reset layout"
+          icon={<ArrowCounterClockwise size={16} />}
+          size="sm"
+          onClick={onResetLayout}
+        />
       </div>
       <div className={styles.divider} aria-hidden="true" />
       <IconButton

@@ -7,7 +7,7 @@
 import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
 import { buildDiagnostics } from "@core/diagnostics";
-import { pathExists, writeFileAtomic } from "@core/fs-utils";
+import { pathExists, toRepoRelativePosix, writeFileAtomic } from "@core/fs-utils";
 import { codeHQPaths } from "@core/repository";
 import { yellow } from "../output";
 import { resolveCliRoot } from "../resolve-root";
@@ -38,10 +38,6 @@ export interface InitResult {
 const EXAMPLE_WORKFLOW_TEMPLATE = "example-generate-video.json";
 const GITIGNORE_ENTRY = ".codehq/.runtime/";
 
-function toDisplayPath(root: string, absolute: string): string {
-  return path.relative(root, absolute).split(path.sep).join("/");
-}
-
 function looksLikeProjectRoot(root: string): boolean {
   return existsSync(path.join(root, ".git")) || existsSync(path.join(root, "package.json"));
 }
@@ -65,7 +61,7 @@ function jsonEscape(value: string): string {
  * human-edited `project.json`, `SKILL.md`, or workflow file from ever being clobbered.
  */
 async function writeManagedFile(root: string, targetPath: string, contents: string, force: boolean): Promise<FileOutcome> {
-  const displayPath = toDisplayPath(root, targetPath);
+  const displayPath = toRepoRelativePosix(root, targetPath);
   const alreadyExists = await pathExists(targetPath);
 
   if (alreadyExists && !force) {
@@ -152,7 +148,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
 
   // .codehq/workflows/ is a directory, not a versioned file: `mkdir recursive` above
   // already made it idempotent, so it is always reported as present under "Created:".
-  const workflowsDirOutcome: FileOutcome = { displayPath: `${toDisplayPath(root, paths.workflowsDir)}/`, action: "created" };
+  const workflowsDirOutcome: FileOutcome = { displayPath: `${toRepoRelativePosix(root, paths.workflowsDir)}/`, action: "created" };
 
   const fixedOutcomes = [projectOutcome, workflowsDirOutcome, skillOutcome];
   const created = fixedOutcomes.filter((o) => o.action !== "unchanged").map((o) => o.displayPath);

@@ -50,6 +50,7 @@ export function StepDrawer({ workflow, stepId, sourceChecks, onClose, onSelectSt
       <div
         ref={containerRef}
         className={styles.drawer}
+        data-step-drawer
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

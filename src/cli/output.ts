@@ -13,8 +13,6 @@ const ANSI_CODES = {
   dim: "[2m",
   red: "[31m",
   yellow: "[33m",
-  green: "[32m",
-  cyan: "[36m",
 } as const;
 
 /**
@@ -36,8 +34,6 @@ export const bold = wrap(ANSI_CODES.bold);
 export const dim = wrap(ANSI_CODES.dim);
 export const red = wrap(ANSI_CODES.red);
 export const yellow = wrap(ANSI_CODES.yellow);
-export const green = wrap(ANSI_CODES.green);
-export const cyan = wrap(ANSI_CODES.cyan);
 
 function severityColor(severity: Issue["severity"]): (text: string) => string {
   return severity === "error" ? red : yellow;

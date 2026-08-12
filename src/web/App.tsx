@@ -32,6 +32,7 @@ export function App() {
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const selectStep = useCodeHQStore((state) => state.selectStep);
+  const selectStepAndPan = useCodeHQStore((state) => state.selectStepAndPan);
   const openSearch = useCodeHQStore((state) => state.openSearch);
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
@@ -97,12 +98,14 @@ export function App() {
         }
       >
         <DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />
-        {displayedWorkflow !== null ? (
+        {selectedRecord !== null ? (
           <WorkflowCanvas
-            workflow={displayedWorkflow}
-            sourceChecks={displayedSourceChecks}
+            workflow={selectedRecord.workflow}
+            sourceChecks={selectedRecord.sourceChecks}
+            modifiedAt={selectedRecord.modifiedAt}
+            state={selectedRecord.state}
             onDeleteWorkflow={async () => {
-              await deleteWorkflow(displayedWorkflow.id);
+              await deleteWorkflow(selectedRecord.workflow.id);
               refetch();
             }}
           />
@@ -116,7 +119,7 @@ export function App() {
           stepId={selectedStepId}
           sourceChecks={displayedSourceChecks}
           onClose={() => selectStep(null)}
-          onSelectStep={selectStep}
+          onSelectStep={(stepId) => selectStepAndPan(displayedWorkflow.id, stepId)}
         />
       ) : null}
       {diagnosticsOpen ? (

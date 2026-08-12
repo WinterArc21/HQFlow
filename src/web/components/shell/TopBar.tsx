@@ -1,7 +1,7 @@
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
-import { Kbd } from "../primitives";
-import { CopyAgentPrompt } from "./CopyAgentPrompt";
+import { CopyButton, Kbd } from "../primitives";
 import { LocalOnlyBadge } from "./LocalOnlyBadge";
 import { StatusIndicator, type CodeHQStatus } from "./StatusIndicator";
 import styles from "./TopBar.module.css";
@@ -33,7 +33,7 @@ export function TopBar({ repositoryName, status, errorCount, onOpenSearch }: Top
           Search
           <Kbd>{searchShortcutLabel()}</Kbd>
         </button>
-        <CopyAgentPrompt />
+        <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
         <ThemeToggle />
       </div>
     </div>

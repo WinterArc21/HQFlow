@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Issue } from "@schema/diagnostics";
-import { bold, cyan, dim, green, pluralize, printIssues, red, yellow } from "../../../src/cli/output";
+import { bold, dim, pluralize, printIssues, red, yellow } from "../../../src/cli/output";
 
 const ESC = String.fromCharCode(27);
 
@@ -28,18 +28,13 @@ function withEnv(vars: Record<string, string | undefined>, run: () => void): voi
 }
 
 describe("color helpers", () => {
-  it("emit no ANSI escapes when NO_COLOR is set, even on a TTY", () => {
+  it("respects NO_COLOR and non-TTY output", () => {
     withEnv({ NO_COLOR: "1", isTTY: "true" }, () => {
       expect(bold("x")).toBe("x");
       expect(dim("x")).toBe("x");
       expect(red("x")).toBe("x");
-      expect(green("x")).toBe("x");
       expect(yellow("x")).toBe("x");
-      expect(cyan("x")).toBe("x");
     });
-  });
-
-  it("emit no ANSI escapes when stdout is not a TTY", () => {
     withEnv({ NO_COLOR: undefined, isTTY: "false" }, () => {
       expect(bold("x")).toBe("x");
       expect(red("x")).toBe("x");
@@ -55,12 +50,9 @@ describe("color helpers", () => {
 });
 
 describe("pluralize", () => {
-  it("uses the singular form for exactly 1", () => {
+  it("uses singular only for exactly one", () => {
     expect(pluralize(1, "error")).toBe("1 error");
     expect(pluralize(1, "workflow")).toBe("1 workflow");
-  });
-
-  it("uses the plural form for 0 and for more than 1", () => {
     expect(pluralize(0, "error")).toBe("0 errors");
     expect(pluralize(3, "error")).toBe("3 errors");
   });

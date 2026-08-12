@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyState } from "@web/components/states/EmptyState";
 import { UninitializedState } from "@web/components/states/UninitializedState";
-import { AGENT_PROMPT } from "@web/components/shell/CopyAgentPrompt";
+import { AGENT_PROMPT } from "@web/lib/agentPrompt";
 
 describe("EmptyState", () => {
   beforeEach(() => {
@@ -37,6 +37,9 @@ describe("EmptyState", () => {
     // fireEvent (not userEvent) here: userEvent.setup() installs its own Clipboard polyfill
     // whenever navigator.clipboard isn't already its own stub, which would shadow this mock.
     const clipboard = navigator.clipboard as unknown as { writeText: (text: string) => Promise<void> };
+    expect(AGENT_PROMPT).toBe(
+      "Read .codehq/SKILL.md and map the main product workflow.",
+    );
     render(<EmptyState onRecheck={() => Promise.resolve()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Copy prompt" }));

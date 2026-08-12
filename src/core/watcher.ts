@@ -1,10 +1,8 @@
 /**
  * Watches `.codehq/` for changes and debounces them into a single reload signal.
  *
- * NOTE ON VERSION: the contract specifies Chokidar 4, but the package actually installed
- * (and pinned in package.json) is Chokidar 5.0.0. This module targets the real, installed
- * v5 API, which is a near-superset of v4 for the options used here (`ignored` as a
- * function, `awaitWriteFinish`) — see the final report for details.
+ * The contract and package.json use Chokidar 5. This module uses its `ignored` function
+ * and `awaitWriteFinish` options.
  */
 
 import { watch, type FSWatcher } from "chokidar";

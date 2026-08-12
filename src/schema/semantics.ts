@@ -1,17 +1,14 @@
 import type { Issue } from "./diagnostics";
-import { describePathProblem } from "./paths";
-import type { SourceReference, Workflow } from "./workflow";
+import type { Workflow } from "./workflow";
 
 /**
  * Pure, isomorphic semantic validation for an already shape-valid `Workflow`.
  * Every function here returns `Issue[]` and never throws — see contract §5.
  */
 
-const WORKFLOW_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
-
 const MAX_RECOMMENDED_STEPS = 14;
 
-/** Visual/layout keys banned anywhere in workflow files — CodeHQ owns rendering. */
+/** Visual/layout keys banned anywhere in workflow files — HQFlow owns rendering. */
 export const VISUAL_KEYS = new Set([
   "x",
   "y",
@@ -46,38 +43,6 @@ export function formatIssuePath(path: ReadonlyArray<PropertyKey>): string {
     }
   }
   return result;
-}
-
-/**
- * Recursively scans raw, untrusted data for banned visual/layout keys at any depth and
- * reports them with the exact contract-mandated message. Safe to call on raw JSON before
- * (or instead of) shape validation, and on an already-parsed `Workflow` for defense in depth.
- */
-export function findVisualPropertyIssues(value: unknown, file: string, path = ""): Issue[] {
-  const issues: Issue[] = [];
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => {
-      issues.push(...findVisualPropertyIssues(item, file, `${path}[${index}]`));
-    });
-    return issues;
-  }
-  if (value !== null && typeof value === "object") {
-    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
-      const keyPath = path.length > 0 ? `${path}.${key}` : key;
-      if (VISUAL_KEYS.has(key)) {
-        issues.push({
-          severity: "error",
-          file,
-          path: keyPath,
-          message: VISUAL_PROPERTY_MESSAGE,
-          hint: "Remove this property. HQFlow computes layout, color, and styling automatically.",
-        });
-        continue;
-      }
-      issues.push(...findVisualPropertyIssues(nestedValue, file, keyPath));
-    }
-  }
-  return issues;
 }
 
 /** Rule 1 — step ids unique within a workflow. */
@@ -122,106 +87,6 @@ function checkConnectionReferences(workflow: Workflow, file: string): Issue[] {
   return issues;
 }
 
-/** Rule 3 — steps.length >= 1. */
-function checkHasSteps(workflow: Workflow, file: string): Issue[] {
-  if (workflow.steps.length > 0) {
-    return [];
-  }
-  return [
-    {
-      severity: "error",
-      file,
-      path: "steps",
-      message: "Workflow has no steps.",
-      hint: "Add at least one step describing what this workflow does.",
-    },
-  ];
-}
-
-/** Rule 4 — every SourceReference.file / TestReference.file is repository-relative. */
-function checkFilePaths(workflow: Workflow, file: string): Issue[] {
-  const issues: Issue[] = [];
-  const checkPath = (issuePath: string, value: string): void => {
-    const problem = describePathProblem(value);
-    if (problem) {
-      issues.push({
-        severity: "error",
-        file,
-        path: issuePath,
-        message: `Invalid path '${value}': ${problem}`,
-        hint: 'Use a path relative to the repository root, e.g. "src/server/orders.ts".',
-      });
-    }
-  };
-
-  if (workflow.entryPoint !== undefined) {
-    checkPath("entryPoint.file", workflow.entryPoint.file);
-  }
-
-  workflow.steps.forEach((step, stepIndex) => {
-    (step.sources ?? []).forEach((ref, refIndex) => {
-      checkPath(`steps[${stepIndex}].sources[${refIndex}].file`, ref.file);
-    });
-    (step.tests ?? []).forEach((ref, refIndex) => {
-      checkPath(`steps[${stepIndex}].tests[${refIndex}].file`, ref.file);
-    });
-    (step.edgeCases ?? []).forEach((edgeCase, edgeCaseIndex) => {
-      (edgeCase.sources ?? []).forEach((ref, refIndex) => {
-        checkPath(`steps[${stepIndex}].edgeCases[${edgeCaseIndex}].sources[${refIndex}].file`, ref.file);
-      });
-    });
-  });
-  return issues;
-}
-
-/** Rule 5 — line <= endLine when both are present on a SourceReference. */
-function checkLineRanges(workflow: Workflow, file: string): Issue[] {
-  const issues: Issue[] = [];
-  const checkRange = (issuePath: string, ref: SourceReference): void => {
-    if (ref.line !== undefined && ref.endLine !== undefined && ref.line > ref.endLine) {
-      issues.push({
-        severity: "error",
-        file,
-        path: `${issuePath}.line`,
-        message: `SourceReference.line (${ref.line}) must not be greater than endLine (${ref.endLine}).`,
-        hint: "Swap line and endLine, or correct the range.",
-      });
-    }
-  };
-
-  if (workflow.entryPoint !== undefined) {
-    checkRange("entryPoint", workflow.entryPoint);
-  }
-
-  workflow.steps.forEach((step, stepIndex) => {
-    (step.sources ?? []).forEach((ref, refIndex) => {
-      checkRange(`steps[${stepIndex}].sources[${refIndex}]`, ref);
-    });
-    (step.edgeCases ?? []).forEach((edgeCase, edgeCaseIndex) => {
-      (edgeCase.sources ?? []).forEach((ref, refIndex) => {
-        checkRange(`steps[${stepIndex}].edgeCases[${edgeCaseIndex}].sources[${refIndex}]`, ref);
-      });
-    });
-  });
-  return issues;
-}
-
-/** Rule 6 — workflow id matches ^[a-z0-9][a-z0-9-]*$. */
-function checkWorkflowIdPattern(workflow: Workflow, file: string): Issue[] {
-  if (WORKFLOW_ID_PATTERN.test(workflow.id)) {
-    return [];
-  }
-  return [
-    {
-      severity: "error",
-      file,
-      path: "id",
-      message: `Workflow.id '${workflow.id}' must match ^[a-z0-9][a-z0-9-]*$.`,
-      hint: "Use lowercase letters, digits, and hyphens only, starting with a letter or digit.",
-    },
-  ];
-}
-
 function computeEntryStepIds(workflow: Workflow): Set<string> {
   const categorizedEntries = workflow.steps.filter((step) => step.category === "entry").map((step) => step.id);
   if (categorizedEntries.length > 0) {
@@ -239,7 +104,7 @@ function computeEntryStepIds(workflow: Workflow): Set<string> {
 }
 
 /**
- * Rule 7 — warn (not error) on a step unreachable from any entry step, and on a workflow
+ * Warn (not error) on a step unreachable from any entry step, and on a workflow
  * with more than 14 steps. "Entry" steps are those categorized `entry`; if none are
  * categorized, steps with no incoming connection are treated as entries instead.
  */
@@ -294,7 +159,7 @@ function checkReachabilityAndSize(workflow: Workflow, file: string): Issue[] {
   return issues;
 }
 
-/** Rule 8 — warn (not error) on a duplicate connection (same from/to/type). */
+/** Warn (not error) on a duplicate connection (same from/to/type). */
 function checkDuplicateConnections(workflow: Workflow, file: string): Issue[] {
   const issues: Issue[] = [];
   const firstIndexByKey = new Map<string, number>();
@@ -316,17 +181,12 @@ function checkDuplicateConnections(workflow: Workflow, file: string): Issue[] {
   return issues;
 }
 
-/** Runs all 8 semantic rules from contract §5, plus the visual-key rejection, over `workflow`. */
+/** Runs relational and cross-object semantic rules over an already shape-valid `workflow`. */
 export function validateWorkflowSemantics(workflow: Workflow, file: string): Issue[] {
   return [
     ...checkUniqueStepIds(workflow, file),
     ...checkConnectionReferences(workflow, file),
-    ...checkHasSteps(workflow, file),
-    ...checkFilePaths(workflow, file),
-    ...checkLineRanges(workflow, file),
-    ...checkWorkflowIdPattern(workflow, file),
     ...checkReachabilityAndSize(workflow, file),
     ...checkDuplicateConnections(workflow, file),
-    ...findVisualPropertyIssues(workflow, file),
   ];
 }

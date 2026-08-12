@@ -1,12 +1,12 @@
-# CodeHQ — Agent Skill
+# HQFlow — Agent Skill
 
-You are documenting how this repository actually behaves, for a tool called **Code
-CodeHQ**. CodeHQ has no LLM of its own and never uploads code anywhere — it
+You are documenting how this repository actually behaves, for a tool called **HQFlow**.
+HQFlow has no LLM of its own and never uploads code anywhere — it
 only renders the structured JSON files you write here, in `.codehq/`, as an interactive
 workflow canvas that a human can explore in their browser. Your job is to read the real
 source code and describe real workflows accurately, honestly, and at the right altitude.
 
-Everything you write goes into `.codehq/workflows/<id>.json`. CodeHQ validates
+Everything you write goes into `.codehq/workflows/<id>.json`. HQFlow validates
 every file you write, watches this directory, and updates the canvas live. If you make a
 mistake, it will tell you exactly what is wrong in `.codehq/diagnostics.json` — read that
 file after every change and fix anything you broke.
@@ -28,7 +28,7 @@ file after every change and fix anything you broke.
 13. Edit only files inside `.codehq` unless the user explicitly asks for source-code changes.
 14. Follow the supplied JSON schema exactly.
 15. Never add layout coordinates, colors, styling, or visual instructions.
-16. Run `codehq validate` after making changes.
+16. Run `hqflow validate` after making changes.
 17. Read `.codehq/diagnostics.json` and repair any errors you introduced.
 18. Write step `name` and `purpose` in product language a non-author can understand (e.g. "Collect website data", not `pollFirecrawlBatch`). Keep type and symbol names in `inputs`/`outputs`/`sources` — the canvas shows Story by default and Code map on demand.
 
@@ -43,7 +43,7 @@ than one that is exhaustive and speculative.
 > "Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
 > `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
 > email, and write the result to `.codehq/workflows/checkout.json`. Then run
-> `codehq validate` and fix anything it flags."
+> `hqflow validate` and fix anything it flags."
 
 ## Workflow authoring loop
 
@@ -58,22 +58,43 @@ than one that is exhaustive and speculative.
 5. Do not touch anything outside `.codehq` unless the user explicitly asked you to change
    source code (rule 13). Follow the schema below exactly (rule 14) — do not invent fields,
    and never add layout, color, or styling (rule 15).
-6. Run `codehq validate` (rule 16).
+6. Run `hqflow validate` (rule 16).
 7. Open `.codehq/diagnostics.json`. If it reports any errors for files you touched, fix
    them and re-run `validate` until it is clean (rule 17). Warnings are not blocking, but they
    usually mean the workflow is more complex or less connected than it should be — consider
    whether they point at a real problem.
 
+## Incremental authoring — the map grows as you read
+
+HQFlow renders the canvas the moment a workflow file is complete and valid, and it
+watches the directory for changes — so you can build the map incrementally as you trace the
+code, not only at the end. Each saved version is a real checkpoint a human could open and
+explore.
+
+1. **Create the file early.** Once you have the entry point and the first verified step, write
+   a complete, valid workflow — schema-correct, with `schemaVersion`, `id`, `name`, `purpose`,
+   `steps` (one is enough), and `connections` (empty is fine). Run `hqflow validate`
+   immediately.
+2. **Save in complete, valid increments.** Every time you verify a new step or connection,
+   rewrite the file as the full, valid workflow — never a partial, malformed, or placeholder
+   version. The canvas only advances when the JSON parses and validates; a broken save leaves
+   the last valid map on screen and stale diagnostics in the banner.
+3. **Check diagnostics after each increment** (rule 17). Read `.codehq/diagnostics.json`
+   and repair anything you introduced before continuing to trace.
+4. **Never fabricate steps, connections, or categories to make the map move.** Every saved
+   version must describe real behavior you have verified — an unverified step that appears then
+   vanishes was never real, and a reader who saw it has been misled.
+
 ## JSON schema reference
 
 Every object below is validated strictly: **unknown keys are a hard error.** This is
-deliberate — CodeHQ owns all layout, color, and styling, and a field it does not
+deliberate — HQFlow owns all layout, color, and styling, and a field it does not
 recognize (especially something like `x`, `y`, `color`, or `style`) will be rejected with:
 
-> "Visual properties are owned by CodeHQ and must not appear in workflow files."
+> "Visual properties are owned by HQFlow and must not appear in workflow files."
 
 Never add coordinates, colors, fonts, CSS, icons, or any other visual/layout property,
-anywhere in these files. CodeHQ computes all of that automatically from the
+anywhere in these files. HQFlow computes all of that automatically from the
 `category`/`confidence`/connection `type` values below.
 
 All file paths (`SourceReference.file`, `TestReference.file`) **must be repository-relative**:

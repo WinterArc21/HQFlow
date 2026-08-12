@@ -8,10 +8,11 @@
 import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { Issue } from "@schema/diagnostics";
+import type { SourceStatus } from "@schema/wire";
 import type { Workflow } from "@schema/workflow";
 import { resolveInsideRepository } from "./safe-path";
 
-export type SourceStatus = "verified" | "file-only" | "missing";
+export type { SourceStatus } from "@schema/wire";
 
 const MAX_FILE_SIZE_BYTES = 1.5 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 5000;

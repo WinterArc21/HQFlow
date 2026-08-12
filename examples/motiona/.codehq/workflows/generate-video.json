@@ -186,6 +186,6 @@
     { "from": "save-result", "to": "outcome-generation-created", "type": "success" }
   ],
   "notes": [
-    "Reference implementation shipped as CodeHQ's example project; see examples/motiona."
+    "Reference implementation shipped as HQFlow's example project; see examples/motiona."
   ]
 }

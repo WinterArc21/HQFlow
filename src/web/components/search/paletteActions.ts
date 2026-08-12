@@ -1,5 +1,5 @@
 import { copyToClipboard } from "../primitives/clipboard";
-import { AGENT_PROMPT } from "../shell/CopyAgentPrompt";
+import { AGENT_PROMPT } from "../../lib/agentPrompt";
 
 export interface PaletteAction {
   id: string;
@@ -13,8 +13,8 @@ export interface PaletteAction {
  * (contract). Each wires to the exact same API functions the rest of the app already uses —
  * nothing here is a placeholder.
  */
-export function buildPaletteActions(onRecheck: () => Promise<void>): PaletteAction[] {
-  return [
+export function buildPaletteActions(onRecheck: () => Promise<void>, onResetLayout?: () => void): PaletteAction[] {
+  const actions: PaletteAction[] = [
     {
       id: "action:copy-prompt",
       label: "Copy agent prompt",
@@ -30,4 +30,15 @@ export function buildPaletteActions(onRecheck: () => Promise<void>): PaletteActi
       run: onRecheck,
     },
   ];
+  if (onResetLayout !== undefined) {
+    actions.push({
+      id: "action:reset-layout",
+      label: "Reset layout",
+      detail: "Restores dragged nodes to their generated positions.",
+      run: async () => {
+        onResetLayout();
+      },
+    });
+  }
+  return actions;
 }

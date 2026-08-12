@@ -9,8 +9,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import type { Depth } from "../../store/useCodeHQStore";
-import { computeFitViewport } from "./fitViewport";
-import type { LayoutNode } from "./layout";
+import { computeFitViewport, computeViewportOverflow, type Viewport } from "./fitViewport";
+import type { LayoutBounds } from "./layout";
 
 /** Small margin around the fitted graph — kept tight deliberately: a generous margin here is
  * exactly what produced the old "80% empty canvas" failure. */
@@ -22,7 +22,7 @@ const FIT_VIEW_MIN_ZOOM = 0.78;
 /** A small workflow should not zoom in past "designed", pixel-doubled scale. */
 const FIT_VIEW_MAX_ZOOM = 1.1;
 export interface UseCanvasFitParams {
-  layoutNodes: LayoutNode[];
+  layoutBounds: LayoutBounds;
   workflowId: string;
   /** Stable serialization of the valid workflow content. Changes when a live semantic edit can
    * alter graph bounds, but not for source-check-only snapshots or local expansion state. */
@@ -34,53 +34,63 @@ export interface UseCanvasFitParams {
 
 export interface UseCanvasFitResult {
   containerRef: RefObject<HTMLDivElement | null>;
+  overflowsRight: boolean;
   overflowsBottom: boolean;
   fitToViewport: (duration: number) => void;
-}
-
-function computeGraphBounds(nodes: LayoutNode[]): { minX: number; minY: number; maxX: number; maxY: number } | null {
-  if (nodes.length === 0) {
-    return null;
-  }
-  return {
-    minX: Math.min(...nodes.map((node) => node.x)),
-    minY: Math.min(...nodes.map((node) => node.y)),
-    maxX: Math.max(...nodes.map((node) => node.x + node.width)),
-    maxY: Math.max(...nodes.map((node) => node.y + node.height)),
-  };
+  updateOverflow: (viewport: Pick<Viewport, "x" | "y" | "zoom">) => void;
 }
 
 export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
-  const { layoutNodes, workflowId, workflowRevision, depth, reactFlowInstance, reducedMotion } = params;
+  const { layoutBounds, workflowId, workflowRevision, depth, reactFlowInstance, reducedMotion } = params;
   const containerRef = useRef<HTMLDivElement>(null);
   // Whether the fitted graph still has more content below the visible stage — a deeper depth
   // (`modules`/`symbols` grow every node) or a large workflow can be taller than even the
   // minimum legible zoom allows. Drives the "more below" affordance so a reader never mistakes a
   // cut-off last card for the end of the workflow.
   const [overflowsBottom, setOverflowsBottom] = useState(false);
+  const [overflowsRight, setOverflowsRight] = useState(false);
+
+  const updateOverflow = useCallback(
+    (viewport: Pick<Viewport, "x" | "y" | "zoom">) => {
+      const container = containerRef.current;
+      if (container === null) {
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      const overflow = computeViewportOverflow({
+        containerWidth: rect.width,
+        containerHeight: rect.height,
+        bounds: layoutBounds,
+        viewport,
+      });
+      setOverflowsRight(overflow.overflowsRight);
+      setOverflowsBottom(overflow.overflowsBottom);
+    },
+    [layoutBounds],
+  );
 
   const fitToViewport = useCallback(
     (duration: number) => {
       const container = containerRef.current;
-      const bounds = computeGraphBounds(layoutNodes);
-      if (container === null || bounds === null) {
+      if (container === null) {
         return;
       }
       const rect = container.getBoundingClientRect();
       const viewport = computeFitViewport({
         containerWidth: rect.width,
         containerHeight: rect.height,
-        bounds,
+        bounds: layoutBounds,
         minZoom: FIT_VIEW_MIN_ZOOM,
         maxZoom: FIT_VIEW_MAX_ZOOM,
         paddingRatio: FIT_VIEW_PADDING,
       });
       if (viewport !== null) {
         void reactFlowInstance.setViewport(viewport, { duration });
+        setOverflowsRight(viewport.overflowsRight);
         setOverflowsBottom(viewport.overflowsBottom);
       }
     },
-    [layoutNodes, reactFlowInstance],
+    [layoutBounds, reactFlowInstance],
   );
 
   // `useLayoutEffect`, not `useEffect`: the fit must be computed and applied before the browser
@@ -121,5 +131,5 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { containerRef, overflowsBottom, fitToViewport };
+  return { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow };
 }

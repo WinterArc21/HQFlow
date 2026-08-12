@@ -8,6 +8,17 @@ HQFlow validates those files, watches them, and renders them in your browser as 
 work. **It contains no LLM of its own and never uploads your code anywhere** — everything runs
 on `localhost`.
 
+## See HQFlow in action
+
+This is the real HQFlow canvas rendering the bundled **Generate Video Prompt** workflow from
+[`examples/motiona`](./examples/motiona). The image follows your light or dark system theme.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/hqflow-canvas-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="./docs/assets/hqflow-canvas-light.webp">
+  <img alt="HQFlow canvas showing the Generate Video Prompt workflow, including validation and quota failure branches" src="./docs/assets/hqflow-canvas-light.webp" width="1440" height="900">
+</picture>
+
 ## Privacy & security
 
 - Runs entirely on your machine (`localhost`)
@@ -60,18 +71,32 @@ Then paste this into your coding agent:
 
 ## Commands
 
-### `hqflow init [--force]`
+### `hqflow init [--force] [--example]`
 
 Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, an empty
 `workflows/`, and an initial `diagnostics.json`. Also appends `.codehq/.runtime/` to your
 `.gitignore` (creating it if needed, never duplicating the line).
 
-`workflows/` starts empty on purpose, so your first `validate` is clean and the board opens on
-its guided empty state — which includes a **Show example workflow** button if you want to see a
-populated board before mapping your own.
+By default, `workflows/` starts empty. The canvas then shows its guided empty state, where you can
+copy a prompt for your coding agent or recheck the files after the agent creates a workflow.
+
+To open a populated canvas before you map your own code, explicitly install the bundled example:
+
+```sh
+npx hqflow init --example
+npx hqflow open
+```
+
+`--example` copies `.codehq/workflows/generate-video.json`. It is a demonstration workflow, not
+documentation of your repository. Its source paths belong to the MotionA demo scenario, so
+`hqflow validate` can report missing-source warnings in your project. Remove the example when you
+are ready to map your real code.
 
 - `--force` — overwrite existing `.codehq` files. Without it, an existing file (for
   example a `SKILL.md` you have already edited) is left untouched and reported as unchanged.
+- `--example` — also copy the bundled Generate Video Prompt workflow into `workflows/`. Without
+  it, no workflow file is created.
+
 ### `hqflow open [--port <n>] [--no-open] [--root <path>]`
 
 Starts the local server and opens the workflow canvas in your browser.
@@ -154,7 +179,7 @@ you run `init`.
 ```sh
 pnpm install
 pnpm dev            # web (Vite) + API server, in parallel
-pnpm build          # dist/node (CLI + server) and dist/web
+pnpm build          # dist/node, dist/web, and dist/export-viewer
 pnpm test           # vitest
 ```
 

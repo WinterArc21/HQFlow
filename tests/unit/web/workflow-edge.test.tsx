@@ -57,7 +57,7 @@ function makeLayout(): LayoutResult {
       { id: "success-edge", source: "a", target: "success", connection: makeConnection({ to: "success", type: "success" }) },
       { id: "failure-edge", source: "a", target: "failure", connection: makeConnection({ to: "failure", type: "success" }) },
     ],
-    bounds: { width: 300, height: 240 },
+    bounds: { minX: 0, minY: -120, maxX: 300, maxY: 160, width: 300, height: 280 },
   };
 }
 
@@ -79,30 +79,15 @@ function edgePaths(container: HTMLElement): { semantic: SVGPathElement; halo: SV
 
 describe("WorkflowEdge visual grammar", () => {
   describe("stroke width per connection type", () => {
-    it("renders the primary (success/default) path at 2.75px", () => {
-      const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) })));
-      expect(semantic.style.strokeWidth).toBe("2.75");
-    });
-
-    it("renders an untyped (default) connection at the primary width", () => {
-      const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection() })));
-      expect(semantic.style.strokeWidth).toBe("2.75");
-    });
-
-    it("renders failure and conditional at 2px", () => {
+    it("renders primary edges at 2.75px and every branch edge at 2px", () => {
+      expect(edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) }))).semantic.style.strokeWidth).toBe("2.75");
+      expect(edgePaths(renderEdge(makeData({ connection: makeConnection() }))).semantic.style.strokeWidth).toBe("2.75");
       for (const type of ["failure", "conditional"] as const) {
         const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type }) })));
         expect(semantic.style.strokeWidth, type).toBe("2");
       }
-    });
-
-    it("renders async at 2px", () => {
-      const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "async" }) })));
-      expect(semantic.style.strokeWidth).toBe("2");
-    });
-
-    it("renders a retry self-loop at 2px", () => {
-      const { semantic } = edgePaths(
+      expect(edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "async" }) }))).semantic.style.strokeWidth).toBe("2");
+      const retry = edgePaths(
         renderEdge(
           makeData({
             connection: makeConnection({ from: "a", to: "a", type: "conditional", label: "retry" }),
@@ -110,7 +95,7 @@ describe("WorkflowEdge visual grammar", () => {
           }),
         ),
       );
-      expect(semantic.style.strokeWidth).toBe("2");
+      expect(retry.semantic.style.strokeWidth).toBe("2");
     });
   });
 
@@ -131,16 +116,13 @@ describe("WorkflowEdge visual grammar", () => {
       expect(retry.style.strokeDasharray).toBe("8 6");
     });
 
-    it("renders async as rounded beads: 1 6 dashes with round line-caps", () => {
+    it("uses the correct async and success stroke patterns", () => {
       const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "async" }) })));
       expect(semantic.style.strokeDasharray).toBe("1 6");
       expect(semantic.style.strokeLinecap).toBe("round");
-    });
-
-    it("leaves solid (success) edges undashed with rounded line-caps", () => {
-      const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) })));
-      expect(semantic.style.strokeDasharray).toBe("");
-      expect(semantic.style.strokeLinecap).toBe("round");
+      const success = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) }))).semantic;
+      expect(success.style.strokeDasharray).toBe("");
+      expect(success.style.strokeLinecap).toBe("round");
     });
 
     it("renders a terminal success edge as dashed green while ordinary success stays solid", () => {
@@ -171,14 +153,11 @@ describe("WorkflowEdge visual grammar", () => {
   });
 
   describe("resting opacity and path tracing", () => {
-    it("renders every edge at full resting opacity", () => {
+    it("renders every resting edge fully and dims unrelated traced paths", () => {
       for (const type of ["success", "failure", "conditional", "async"] as const) {
         const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type }) })));
         expect(semantic.style.opacity, type).toBe("1");
       }
-    });
-
-    it("dims an unrelated edge to the dimmed factor while tracing", () => {
       const { semantic, halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }), dimmed: true })));
       expect(semantic.style.opacity).toBe("0.25");
       expect(halo.style.opacity).toBe("0.25");
@@ -194,27 +173,15 @@ describe("WorkflowEdge visual grammar", () => {
       expect(halo.style.strokeWidth).toBe("7.75");
     });
 
-    it("does not strengthen an untraced edge", () => {
-      const { semantic } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) })));
-      expect(semantic.style.strokeWidth).toBe("2");
-    });
   });
 
   describe("edge casing / halo", () => {
-    it("paints a background-coloured underlay 4px wider than the semantic stroke", () => {
+    it("paints a non-interactive background underlay without stealing the arrowhead", () => {
       const { semantic, halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) })));
       expect(halo.getAttribute("fill")).toBe("none");
       expect(halo.style.stroke).toBe("var(--bg-canvas)");
       expect(Number(halo.style.strokeWidth)).toBe(Number(semantic.style.strokeWidth) + 4);
-    });
-
-    it("never captures pointer events", () => {
-      const { halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) })));
       expect(halo.style.pointerEvents).toBe("none");
-    });
-
-    it("keeps the arrowhead marker on the semantic stroke, not the halo", () => {
-      const { semantic, halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) })));
       expect(semantic.getAttribute("marker-end")).toBe("url(#codehq-arrow-failure)");
       expect(halo.getAttribute("marker-end")).toBeNull();
     });
