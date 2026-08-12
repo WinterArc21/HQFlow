@@ -72,55 +72,29 @@ const RICH_WORKFLOW: Workflow = {
 };
 
 describe("search", () => {
-  it("ranks an exact name match above a prefix match above a substring match", () => {
+  it("ranks name match quality first and name fields above body fields", () => {
     const snapshot = makeSnapshot([TIER_WORKFLOW]);
     const results = search(snapshot, "Login").filter((result) => result.kind === "step");
 
     expect(results.map((result) => result.title)).toEqual(["Login", "Login Flow", "User Login Handler"]);
+    const bodyResults = search(makeSnapshot([NAME_VS_BODY_WORKFLOW]), "widget").filter((result) => result.kind === "step");
+    expect(bodyResults.map((result) => result.title)).toEqual(["Render Widget Gallery", "Finish Setup"]);
   });
 
-  it("ranks a name match above a purpose match, even when the purpose match is exact", () => {
-    const snapshot = makeSnapshot([NAME_VS_BODY_WORKFLOW]);
-    const results = search(snapshot, "widget").filter((result) => result.kind === "step");
-
-    expect(results.map((result) => result.title)).toEqual(["Render Widget Gallery", "Finish Setup"]);
-  });
-
-  it("finds matches in source file paths and symbols", () => {
+  it("indexes source, edge-case, and test metadata", () => {
     const snapshot = makeSnapshot([RICH_WORKFLOW]);
-    const byFile = search(snapshot, "scraper.ts");
-    const bySymbol = search(snapshot, "scrapeWebsite");
-
-    expect(byFile.some((result) => result.kind === "source")).toBe(true);
-    expect(bySymbol.some((result) => result.kind === "source")).toBe(true);
+    expect(search(snapshot, "scraper.ts").some((result) => result.kind === "source")).toBe(true);
+    expect(search(snapshot, "scrapeWebsite").some((result) => result.kind === "source")).toBe(true);
+    expect(search(snapshot, "blocks automated").some((result) => result.kind === "edge-case")).toBe(true);
+    expect(search(snapshot, "scraper.test.ts").some((result) => result.kind === "test")).toBe(true);
+    expect(search(snapshot, "403 response").some((result) => result.kind === "test")).toBe(true);
   });
 
-  it("finds matches in edge case names", () => {
-    const snapshot = makeSnapshot([RICH_WORKFLOW]);
-    const results = search(snapshot, "blocks automated");
-
-    expect(results.some((result) => result.kind === "edge-case" && result.title.includes("blocks automated"))).toBe(true);
-  });
-
-  it("finds matches in test files, symbols, and descriptions", () => {
-    const snapshot = makeSnapshot([RICH_WORKFLOW]);
-    const byFile = search(snapshot, "scraper.test.ts");
-    const bySymbol = search(snapshot, "403 response");
-
-    expect(byFile.some((result) => result.kind === "test")).toBe(true);
-    expect(bySymbol.some((result) => result.kind === "test")).toBe(true);
-  });
-
-  it("returns every workflow, in snapshot order, for an empty query", () => {
+  it("handles empty and unmatched queries", () => {
     const snapshot = makeSnapshot([TIER_WORKFLOW, RICH_WORKFLOW]);
 
     expect(search(snapshot, "")).toEqual(defaultResults(snapshot));
     expect(defaultResults(snapshot).map((result) => result.workflowId)).toEqual(["checkout", "generate-video"]);
-  });
-
-  it("returns nothing for a query that matches no field", () => {
-    const snapshot = makeSnapshot([TIER_WORKFLOW, RICH_WORKFLOW]);
-
     expect(search(snapshot, "xyzzy-not-present-anywhere")).toEqual([]);
   });
 });

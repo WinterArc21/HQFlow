@@ -16,11 +16,11 @@ afterEach(() => {
 });
 
 describe("buildDiagnostics", () => {
-  it("is valid when there are no issues", () => {
-    expect(buildDiagnostics([]).valid).toBe(true);
-  });
-
-  it("is invalid iff at least one issue is an error", () => {
+  it("derives validity from errors and stamps an ISO timestamp", () => {
+    const before = Date.now();
+    const empty = buildDiagnostics([]);
+    expect(empty.valid).toBe(true);
+    expect(new Date(empty.generatedAt).getTime()).toBeGreaterThanOrEqual(before);
     const warningOnly: Issue[] = [{ severity: "warning", file: "a.json", message: "w" }];
     expect(buildDiagnostics(warningOnly).valid).toBe(true);
 
@@ -42,12 +42,6 @@ describe("buildDiagnostics", () => {
     expect(report.issues.map((i) => i.message)).toEqual(["4", "3", "2", "5", "1"]);
   });
 
-  it("stamps a fresh ISO generatedAt", () => {
-    const before = Date.now();
-    const report = buildDiagnostics([]);
-    const generatedAtMs = new Date(report.generatedAt).getTime();
-    expect(generatedAtMs).toBeGreaterThanOrEqual(before);
-  });
 });
 
 describe("writeDiagnostics", () => {
@@ -56,7 +50,7 @@ describe("writeDiagnostics", () => {
     expect(existsSync(path.join(root, ".codehq"))).toBe(false);
   });
 
-  it("writes valid, pretty-printed JSON with a trailing newline, atomically", async () => {
+  it("writes atomically formatted JSON and cleanly overwrites it", async () => {
     mkdirSync(path.join(root, ".codehq"));
     const report = buildDiagnostics([{ severity: "error", file: "x.json", message: "bad" }]);
 
@@ -72,14 +66,8 @@ describe("writeDiagnostics", () => {
     // No leftover .tmp staging files.
     const leftovers = readdirSync(path.join(root, ".codehq")).filter((name) => name.endsWith(".tmp"));
     expect(leftovers).toEqual([]);
-  });
-
-  it("overwrites a previous diagnostics.json cleanly", async () => {
-    mkdirSync(path.join(root, ".codehq"));
-    await writeDiagnostics(root, buildDiagnostics([{ severity: "error", file: "x.json", message: "first" }]));
     await writeDiagnostics(root, buildDiagnostics([]));
 
-    const filePath = path.join(root, ".codehq", "diagnostics.json");
     const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as { valid: boolean; issues: unknown[] };
     expect(parsed.valid).toBe(true);
     expect(parsed.issues).toEqual([]);

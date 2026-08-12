@@ -22,20 +22,14 @@ describe("categoryToken", () => {
     ["output", "--accent-output"],
   ];
 
-  it.each(cases)("maps category %s to %s", (category, varName) => {
-    expect(categoryToken(category).varName).toBe(varName);
-  });
-
-  it("gives entry and output the same colour, and gives it to nothing else", () => {
+  it("maps every category to the intended distinct design token", () => {
+    for (const [category, varName] of cases) {
+      expect(categoryToken(category).varName, category).toBe(varName);
+    }
     const shared = categoryToken("entry").varName;
-    expect(categoryToken("output").varName).toBe(shared);
-
-    const others = (["logic", "decision", "data", "external"] as const).map((c) => categoryToken(c).varName);
-    expect(others).not.toContain(shared);
-  });
-
-  it("keeps every other category on a colour of its own", () => {
     const middle = (["logic", "decision", "data", "external"] as const).map((c) => categoryToken(c).varName);
+    expect(categoryToken("output").varName).toBe(shared);
+    expect(middle).not.toContain(shared);
     expect(new Set(middle).size).toBe(middle.length);
   });
 
@@ -47,55 +41,30 @@ describe("categoryToken", () => {
 });
 
 describe("confidenceStyle", () => {
-  it("marks verified as a solid marker", () => {
+  it("maps every confidence state, including the default", () => {
     expect(confidenceStyle("verified").marker).toBe("solid");
-  });
-
-  it("marks inferred as a dashed marker", () => {
     expect(confidenceStyle("inferred").marker).toBe("dashed");
-  });
-
-  it("marks human-confirmed as a solid marker with a dot", () => {
     expect(confidenceStyle("human-confirmed").marker).toBe("solid-dot");
-  });
-
-  it("defaults to solid when confidence is unspecified", () => {
     expect(confidenceStyle(undefined).marker).toBe("solid");
   });
 });
 
 describe("connectionStyle", () => {
-  it("renders failure as muted red and dashed, with its short label shown", () => {
+  it("maps every connection type to its complete visual grammar", () => {
     const result = connectionStyle("failure");
     expect(result.varName).toBe("--accent-red");
     expect(result.dash).toBe("dashed");
     expect(result.showLabel).toBe(true);
-  });
-
-  it("renders conditional as amber, dashed, with the label shown", () => {
-    const result = connectionStyle("conditional");
-    expect(result.varName).toBe("--accent-amber");
-    expect(result.dash).toBe("dashed");
-    expect(result.showLabel).toBe(true);
-  });
-
-  it("renders async as blue and dotted, with its short label shown", () => {
-    const result = connectionStyle("async");
-    expect(result.varName).toBe("--accent-blue");
-    expect(result.dash).toBe("dotted");
-    expect(result.showLabel).toBe(true);
-  });
-
-  it("renders success (and the default) as neutral and solid, without a label", () => {
+    expect(connectionStyle("conditional")).toEqual(expect.objectContaining({ varName: "--accent-amber", dash: "dashed", showLabel: true }));
+    expect(connectionStyle("async")).toEqual(expect.objectContaining({ varName: "--accent-blue", dash: "dotted", showLabel: true }));
     const success = connectionStyle("success");
-    const fallback = connectionStyle(undefined);
     expect(success.varName).toBe("--accent-neutral");
     expect(success.dash).toBe("none");
     expect(success.showLabel).toBe(false);
-    expect(fallback).toEqual(success);
+    expect(connectionStyle(undefined)).toEqual(success);
   });
 
-  it("every branch connection type distinguishes itself by stroke pattern, not colour alone", () => {
+  it("does not rely on colour alone to distinguish branch types", () => {
     expect(connectionStyle("failure").dash).not.toBe("none");
     expect(connectionStyle("conditional").dash).not.toBe("none");
     expect(connectionStyle("async").dash).not.toBe("none");
@@ -115,7 +84,7 @@ describe("RETRY_EDGE_VISUAL", () => {
 });
 
 describe("outcomeEdgeStyle", () => {
-  it("renders a successful terminal as a green dashed branch, distinct from ordinary success", () => {
+  it("distinguishes terminal success while preserving terminal failure", () => {
     const outcome = outcomeEdgeStyle("success");
     const ordinary = connectionStyle("success");
 
@@ -124,32 +93,20 @@ describe("outcomeEdgeStyle", () => {
     expect(outcome.weight).toBe("branch");
     expect(outcome.varName).not.toBe(ordinary.varName);
     expect(outcome.dash).not.toBe(ordinary.dash);
-  });
-
-  it("keeps terminal failure red and dashed", () => {
     expect(outcomeEdgeStyle("failure")).toEqual(connectionStyle("failure"));
   });
 });
 
 describe("outcomeTone", () => {
-  it("reads as failure only when every incoming connection is exactly failure", () => {
+  it("classifies uniform, mixed, and empty incoming connections", () => {
     expect(outcomeTone(["failure"])).toBe("failure");
     expect(outcomeTone(["failure", "failure"])).toBe("failure");
-  });
-
-  it("reads as success only when every incoming connection is success/default", () => {
     expect(outcomeTone(["success"])).toBe("success");
     expect(outcomeTone([undefined])).toBe("success");
     expect(outcomeTone(["success", undefined])).toBe("success");
-  });
-
-  it("falls back to neutral for a genuinely mixed set of incoming types", () => {
     expect(outcomeTone(["success", "failure"])).toBe("neutral");
     expect(outcomeTone(["conditional", "failure"])).toBe("neutral");
     expect(outcomeTone(["async", "success"])).toBe("neutral");
-  });
-
-  it("falls back to neutral when nothing points at the step at all", () => {
     expect(outcomeTone([])).toBe("neutral");
   });
 });
@@ -161,11 +118,10 @@ describe("statusTone", () => {
     ["needs-review", "amber"],
   ];
 
-  it.each(cases)("maps workflow status %s to tone %s", (status, tone) => {
-    expect(statusTone(status).tone).toBe(tone);
-  });
-
-  it("falls back to neutral when status is unspecified", () => {
+  it("maps every workflow status and the default", () => {
+    for (const [status, tone] of cases) {
+      expect(statusTone(status).tone, status).toBe(tone);
+    }
     expect(statusTone(undefined).tone).toBe("neutral");
   });
 });
@@ -177,7 +133,9 @@ describe("sourceStatusTone", () => {
     ["missing", "red"],
   ];
 
-  it.each(cases)("maps source status %s to tone %s", (status, tone) => {
-    expect(sourceStatusTone(status).tone).toBe(tone);
+  it("maps every source status", () => {
+    for (const [status, tone] of cases) {
+      expect(sourceStatusTone(status).tone, status).toBe(tone);
+    }
   });
 });

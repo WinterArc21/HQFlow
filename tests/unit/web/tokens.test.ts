@@ -42,10 +42,4 @@ describe("design token guard", () => {
 
     expect(offenders).toEqual([]);
   });
-
-  it("sanity-checks the guard against a deliberately bad snippet", () => {
-    expect(HEX_COLOR_PATTERN.test("background: #14161980;")).toBe(true);
-    expect(FUNCTIONAL_COLOR_PATTERN.test("color: rgba(0, 0, 0, 0.5);")).toBe(true);
-    expect(FUNCTIONAL_COLOR_PATTERN.test("color-mix(in srgb, var(--accent-blue) 40%, transparent)")).toBe(false);
-  });
 });

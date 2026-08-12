@@ -36,7 +36,7 @@ const RECORD: WorkflowRecord = {
 };
 
 describe("sanitizeExportPayload", () => {
-  it("strips repository.root, codeHQDir, absolutePath, and the workflow file path", () => {
+  it("keeps portable workflow data while stripping machine-local metadata", () => {
     const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
     const json = JSON.stringify(payload);
 
@@ -48,11 +48,6 @@ describe("sanitizeExportPayload", () => {
     expect(json).not.toContain(".codehq/workflows/checkout.json");
     // modifiedAt is not carried into the snapshot.
     expect(json).not.toContain("2025-01-01T00:00:00.000Z");
-  });
-
-  it("keeps the workflow data, source checks, name, id, timestamp, and repository name", () => {
-    const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
-
     expect(payload.workflow).toEqual(WORKFLOW);
     expect(payload.workflowName).toBe("Checkout Flow");
     expect(payload.workflowId).toBe("checkout");
@@ -60,23 +55,7 @@ describe("sanitizeExportPayload", () => {
     expect(payload.repositoryName).toBe("my-repo");
     expect(payload.hideFilePaths).toBe(false);
     expect(payload.sourceChecks).toEqual({ "app/api/checkout/route.ts#POST": "verified" });
-  });
-
-  it("includes repository-relative source file paths (allowed by spec)", () => {
-    const payload = sanitizeExportPayload(RECORD, "my-repo", { exportedAt: "2025-06-01T12:00:00.000Z" });
-    expect(JSON.stringify(payload)).toContain("app/api/checkout/route.ts");
-  });
-
-  it("redacts every structured file reference before creating a private artifact", () => {
-    const privatePayload = sanitizeExportPayload(RECORD, "my-repo", { hideFilePaths: true });
-    const json = JSON.stringify(privatePayload);
-
-    expect(privatePayload.hideFilePaths).toBe(true);
-    expect(json).not.toContain("app/api/checkout/route.ts");
-    expect(json).not.toContain("app/api/checkout/route.ts#POST");
-    expect(privatePayload.workflow.entryPoint).toBeUndefined();
-    expect(privatePayload.sourceChecks).toEqual({ "redacted-file-1#POST": "verified" });
-    expect(privatePayload.workflow.steps[0]?.sources?.[0]?.file).toBe("redacted-file-1");
+    expect(json).toContain("app/api/checkout/route.ts");
   });
 
   it("redacts every structured file reference and matching source-check key when requested", () => {
@@ -126,27 +105,15 @@ describe("sanitizeExportPayload", () => {
 });
 
 describe("sanitizeFilename", () => {
-  it("produces a safe lowercased kebab-case slug", () => {
+  it("normalizes, sanitizes, truncates, and falls back safely", () => {
     expect(sanitizeFilename("Checkout Flow")).toBe("checkout-flow");
     expect(sanitizeFilename("My Cool Workflow!")).toBe("my-cool-workflow");
     expect(sanitizeFilename("  spaced  ")).toBe("spaced");
-  });
-
-  it("preserves hyphens and underscores", () => {
     expect(sanitizeFilename("already-clean")).toBe("already-clean");
     expect(sanitizeFilename("under_score")).toBe("under_score");
-  });
-
-  it("strips path separators and dots", () => {
     expect(sanitizeFilename("../etc/passwd")).toBe("etcpasswd");
-  });
-
-  it("truncates very long names", () => {
     const long = "a".repeat(200);
     expect(sanitizeFilename(long).length).toBe(80);
-  });
-
-  it("uses a stable fallback when a name has no filename-safe ASCII characters", () => {
     expect(sanitizeFilename("支払いフロー")).toBe("workflow");
   });
 });

@@ -6,7 +6,16 @@ const coreAlias = fileURLToPath(new URL("./src/core", import.meta.url));
 const serverAlias = fileURLToPath(new URL("./src/server", import.meta.url));
 const webAlias = fileURLToPath(new URL("./src/web", import.meta.url));
 
-const WEB_TEST_GLOBS = ["tests/unit/web/**/*.test.ts", "tests/unit/web/**/*.test.tsx", "**/*.web.test.ts", "**/*.web.test.tsx"];
+const DOM_WEB_TEST_GLOBS = ["tests/unit/web/**/*.test.tsx", "tests/unit/web/store.test.ts", "**/*.web.test.tsx"];
+const PURE_WEB_TEST_GLOBS = [
+  "tests/unit/web/fitViewport.test.ts",
+  "tests/unit/web/graph.test.ts",
+  "tests/unit/web/layout.test.ts",
+  "tests/unit/web/search-index.test.ts",
+  "tests/unit/web/semantics.test.ts",
+  "tests/unit/web/tokens.test.ts",
+  "**/*.web.test.ts",
+];
 
 export default defineConfig({
   resolve: {
@@ -28,16 +37,16 @@ export default defineConfig({
     // start, even though their request/response behavior is otherwise deterministic.
     testTimeout: 10_000,
     exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
-    // Split by environment: schema/core/server/cli tests run under plain Node, anything
-    // under tests/unit/web (or named *.web.test.ts[x]) runs under jsdom for DOM access.
+    // Split by capability: pure web logic stays in fast plain Node; only component/store
+    // tests that actually use browser globals pay the jsdom setup cost.
     projects: [
       {
         extends: true,
         test: {
           name: "node",
           environment: "node",
-          include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
-          exclude: [...WEB_TEST_GLOBS, "tests/e2e/**", "node_modules/**", "dist/**"],
+          include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts", ...PURE_WEB_TEST_GLOBS],
+          exclude: [...DOM_WEB_TEST_GLOBS, "tests/e2e/**", "node_modules/**", "dist/**"],
         },
       },
       {
@@ -45,7 +54,7 @@ export default defineConfig({
         test: {
           name: "web",
           environment: "jsdom",
-          include: WEB_TEST_GLOBS,
+          include: DOM_WEB_TEST_GLOBS,
           exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
           setupFiles: ["./tests/unit/web/setup.ts"],
         },

@@ -115,34 +115,15 @@ describe("parseWorkflow — shape and semantic rules", () => {
     expect(issue?.message).toBe("Connection references missing step 'no-such-step'.");
   });
 
-  it("rejects an absolute POSIX path in SourceReference.file", () => {
-    const data = loadFixture();
-    data.steps[0]!.sources![0]!.file = "/etc/passwd";
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
+  it("rejects absolute, drive-letter, and parent-traversal source paths", () => {
+    for (const unsafePath of ["/etc/passwd", "C:\\secrets\\file.ts", "../../etc/passwd"]) {
+      const data = loadFixture();
+      data.steps[0]!.sources![0]!.file = unsafePath;
+      expect(parseWorkflow(data, FILE).ok, unsafePath).toBe(false);
+    }
   });
 
-  it("rejects a windows drive-letter path in SourceReference.file", () => {
-    const data = loadFixture();
-    data.steps[0]!.sources![0]!.file = "C:\\secrets\\file.ts";
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("rejects a path containing a '..' segment in SourceReference.file", () => {
-    const data = loadFixture();
-    data.steps[0]!.sources![0]!.file = "../../etc/passwd";
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("rejects a visual 'x'/'y' coordinate property on a step", () => {
+  it("rejects workflow-owned visual properties with precise diagnostics", () => {
     const data = loadFixture();
     data.steps[0]!.x = 10;
     data.steps[0]!.y = 20;
@@ -158,19 +139,14 @@ describe("parseWorkflow — shape and semantic rules", () => {
         (issue) => issue.message === "Visual properties are owned by HQFlow and must not appear in workflow files.",
       ),
     ).toBe(true);
-  });
-
-  it("rejects a visual 'color' property on a step", () => {
-    const data = loadFixture();
-    data.steps[0]!.color = "#fff";
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    const colorData = loadFixture();
+    colorData.steps[0]!.color = "#fff";
+    const colorResult = parseWorkflow(colorData, FILE);
+    expect(colorResult.ok).toBe(false);
+    if (colorResult.ok) {
       throw new Error("expected failure");
     }
-    expect(result.issues).toContainEqual(expect.objectContaining({
+    expect(colorResult.issues).toContainEqual(expect.objectContaining({
       path: "steps[0].color",
       message: "Visual properties are owned by HQFlow and must not appear in workflow files.",
     }));
@@ -233,16 +209,11 @@ describe("parseWorkflow — corrected field shapes (status, entryPoint, notes)",
     expect(issue?.message).toContain("needs-review");
   });
 
-  it("rejects a string entryPoint (the old, incorrect shape)", () => {
-    const data = loadFixture();
-    data.entryPoint = "POST /api/x" as unknown as NonNullable<RawWorkflow["entryPoint"]>;
+  it("rejects legacy and unsafe entry-point shapes with useful paths", () => {
+    const legacy = loadFixture();
+    legacy.entryPoint = "POST /api/x" as unknown as NonNullable<RawWorkflow["entryPoint"]>;
+    expect(parseWorkflow(legacy, FILE).ok).toBe(false);
 
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("rejects entryPoint.file that is not repository-relative, with the repository-relative message", () => {
     const data = loadFixture();
     data.entryPoint = { file: "../outside.ts" };
 
@@ -255,32 +226,22 @@ describe("parseWorkflow — corrected field shapes (status, entryPoint, notes)",
     const issue = result.issues.find((i) => i.path === "entryPoint.file");
     expect(issue).toBeDefined();
     expect(issue?.message).toContain("'..' segment");
-  });
 
-  it("rejects entryPoint.line greater than entryPoint.endLine", () => {
-    const data = loadFixture();
-    data.entryPoint = { file: "a.ts", line: 9, endLine: 2 };
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    const reversed = loadFixture();
+    reversed.entryPoint = { file: "a.ts", line: 9, endLine: 2 };
+    const reversedResult = parseWorkflow(reversed, FILE);
+    expect(reversedResult.ok).toBe(false);
+    if (reversedResult.ok) {
       throw new Error("expected failure");
     }
-    const issue = result.issues.find((i) => i.path === "entryPoint.line");
-    expect(issue).toBeDefined();
+    expect(reversedResult.issues.find((i) => i.path === "entryPoint.line")).toBeDefined();
   });
 
-  it("rejects a string notes field (the old, incorrect shape)", () => {
-    const data = loadFixture();
-    data.notes = "hello";
+  it("rejects legacy string notes and accepts the array shape", () => {
+    const legacy = loadFixture();
+    legacy.notes = "hello";
+    expect(parseWorkflow(legacy, FILE).ok).toBe(false);
 
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("accepts notes as an array of strings", () => {
     const data = loadFixture();
     data.notes = ["hello"];
 
