@@ -62,8 +62,13 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     .filter(Boolean)
     .join(" ");
   const showInferredEdge = confidence.marker === "dashed";
+  const purposeLines = purposeLineCount(step.purpose);
   const purposeClassName =
-    purposeLineCount(step.purpose) === 2 ? `${styles.purpose} ${styles.purposeTwoLine}` : styles.purpose;
+    purposeLines === 3
+      ? `${styles.purpose} ${styles.purposeThreeLine}`
+      : purposeLines === 2
+        ? `${styles.purpose} ${styles.purposeTwoLine}`
+        : styles.purpose;
   const accessibleName = `${index + 1}. ${step.name}. ${category.label} category. ${confidence.label} confidence.${
     hasMissingSource ? " Missing sources." : ""
   }`;

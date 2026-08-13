@@ -9,32 +9,32 @@ import type { SourceStatus } from "../../api/types";
 import type { Depth } from "../../store/useCodeHQStore";
 
 /** Fixed node width across every depth — only height grows with content (contract §10/§11).
- * Wider than the original 300/340px: the spine layout (see layout.ts) reserves enough horizontal
- * room for long branch edges while keeping more canvas width for the card itself. That space is
- * spent on the purpose line and the in/out tags, which were truncating too aggressively to read
- * as the comprehension surface the product needs them to be. */
-export const NODE_WIDTH = 380;
+ * 320px is option A: 60px narrower than the 380px slab, so a typical board shows more of the
+ * pipeline and the purpose can wrap as a short block instead of a thin strip with empty paper
+ * on the right. Still wide enough that titles such as "Understand Product" do not clip. */
+export const NODE_WIDTH = 320;
 
 export const MAX_MODULE_ROWS = 5;
 export const MAX_SYMBOL_ROWS = 8;
 
-// Mirrors `--space-1` (4px) — see `.body`'s padding in `StepNode.module.css`. Tighter than the
-// original 8px: the two-line purpose reservation below (needed to stop hard-truncating purpose
-// text) has to be paid for somewhere, and slack padding is cheaper to spend than row content.
-const BODY_PADDING_Y = 12;
+// Mirrors the purpose top margin and footer top margin in `StepNode.module.css`. 15px, not the
+// original 12px: option A spends those 6 extra pixels so a three-line purpose card lands on
+// 148px instead of 142px, which is the box that was chosen against the 380 × 126 slab.
+const BODY_PADDING_Y = 15;
 // Matches the 24px `IconButton` "sm" square that now lives inline in the header (the per-step
 // expand toggle moved there from its own row, see StepNode.tsx) so the row never clips it.
 const HEADER_ROW_HEIGHT = 40;
-/** Height of one purpose line. `purposeLineCount` decides whether a card reserves one or two of
- * these — see its own doc comment for why that's a character count, not a DOM measurement. */
+/** Height of one purpose line. `purposeLineCount` decides whether a card reserves one, two, or
+ * three of these — see its own doc comment for why that's a character count, not a DOM measurement. */
 export const PURPOSE_LINE_HEIGHT = 16;
-/** Purposes at or under this length almost always fit on one line at `NODE_WIDTH`; anything
- * longer gets a second line reserved instead of hard-truncating mid-sentence (contract: "the
- * purpose is a primary comprehension surface — losing half of it defeats the product's point").
- * A character-count heuristic, not a DOM measurement: `computeNodeHeight` must stay pure and
- * DOM-free (contract §11), so it can only approximate what will wrap, not know it exactly — an
- * approximation is an acceptable trade for a layout that never needs the browser to compute. */
-export const PURPOSE_SINGLE_LINE_MAX_CHARS = 52;
+/** Purposes at or under this length almost always fit on one line at `NODE_WIDTH`. Scaled down
+ * from the old 52-char / 380px rule: at 320px the purpose column is about 294px, ~42 characters
+ * at `--fs-tiny`. A character-count heuristic, not a DOM measurement: `computeNodeHeight` must
+ * stay pure and DOM-free (contract §11). */
+export const PURPOSE_SINGLE_LINE_MAX_CHARS = 42;
+/** Purposes longer than one line but at or under this length get two lines; anything longer
+ * reserves three so a purpose such as Understand Product (108 chars) is not hard-truncated. */
+export const PURPOSE_TWO_LINE_MAX_CHARS = 84;
 const FOOTER_ROW_HEIGHT = 30;
 const DETAIL_SEPARATOR_PADDING = 5;
 const SECTION_LABEL_HEIGHT = 14;
@@ -95,10 +95,13 @@ export function showsIoOnCard(effectiveDepth: Depth): boolean {
   return effectiveDepth === "modules" || effectiveDepth === "symbols";
 }
 
-/** Whether a step's purpose should reserve one or two lines on its card (see
+/** Whether a step's purpose should reserve one, two, or three lines on its card (see
  * `PURPOSE_SINGLE_LINE_MAX_CHARS`'s doc comment for why this is a length heuristic). */
-export function purposeLineCount(purpose: string): 1 | 2 {
-  return purpose.length > PURPOSE_SINGLE_LINE_MAX_CHARS ? 2 : 1;
+export function purposeLineCount(purpose: string): 1 | 2 | 3 {
+  if (purpose.length <= PURPOSE_SINGLE_LINE_MAX_CHARS) {
+    return 1;
+  }
+  return purpose.length <= PURPOSE_TWO_LINE_MAX_CHARS ? 2 : 3;
 }
 
 /** Renders a short "first name, +N more" summary for a list of `DataReference`s — used for the
