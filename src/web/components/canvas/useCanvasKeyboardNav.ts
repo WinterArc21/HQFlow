@@ -20,6 +20,8 @@ export interface UseCanvasKeyboardNavParams {
   onSelect: (stepId: string) => void;
   onClear: () => void;
   reducedMotion: boolean;
+  /** Newly added cards stay in the graph for measurement but stay out of keyboard order. */
+  hiddenStepIds?: ReadonlySet<string>;
 }
 
 export interface UseCanvasKeyboardNavResult {
@@ -35,14 +37,14 @@ export interface UseCanvasKeyboardNavResult {
 const ACTIVATION_KEYS = new Set(["Enter", " "]);
 
 export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCanvasKeyboardNavResult {
-  const { workflow, layoutNodes, containerRef, reactFlowInstance, selectedStepId, onSelect, onClear, reducedMotion } = params;
+  const { workflow, layoutNodes, containerRef, reactFlowInstance, selectedStepId, onSelect, onClear, reducedMotion, hiddenStepIds } = params;
   const [rovingId, setRovingId] = useState<string | null>(null);
 
   const effectiveRovingId = rovingId ?? selectedStepId ?? workflow.steps[0]?.id ?? null;
 
   const getTabIndex = useCallback(
-    (stepId: string): 0 | -1 => (stepId === effectiveRovingId ? 0 : -1),
-    [effectiveRovingId],
+    (stepId: string): 0 | -1 => (hiddenStepIds?.has(stepId) === true || stepId !== effectiveRovingId ? -1 : 0),
+    [effectiveRovingId, hiddenStepIds],
   );
 
   const panToNode = useCallback(
@@ -87,7 +89,7 @@ export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCan
         event.preventDefault();
         const direction = event.key.slice("Arrow".length).toLowerCase() as "up" | "down" | "left" | "right";
         const next = computeArrowNavigation(workflow, stepId)[direction];
-        if (next !== undefined) {
+        if (next !== undefined && hiddenStepIds?.has(next) !== true) {
           focusAndCenter(next);
         }
         return;
@@ -118,7 +120,7 @@ export function useCanvasKeyboardNav(params: UseCanvasKeyboardNavParams): UseCan
         onClear();
       }
     },
-    [workflow, focusAndCenter, onSelect, onClear],
+    [workflow, focusAndCenter, hiddenStepIds, onSelect, onClear],
   );
 
   return { getTabIndex, handleNodeKeyDown, setRovingId, panToNode };

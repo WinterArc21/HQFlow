@@ -62,59 +62,12 @@
   cursor: default;
 }
 
-/* Live graph-diff motion (launch item 2): new nodes and edges fade in when a valid SSE snapshot
- * adds them to the map. Existing node positions deliberately do not transition: React Flow
- * recomputes edge geometry immediately, so animating only the node wrapper's transform visibly
- * detaches connectors until the node reaches its final position. A coherent graph is more
- * important than movement for movement's sake.
- *
- * The opacity animation is intentionally on the wrapper, NOT on the `.card` inside: the card
- * owns a `transition: opacity` for path-tracing dimming, and a completed CSS animation on the
- * same property would shadow that transition (the browser treats the animation as still "owning"
- * opacity even after it ends with fill-mode none, preventing the dim transition from firing).
- * `--dur-*` tokens zero under `prefers-reduced-motion` (tokens.css), and the explicit media
- * query below hard-disables the animations to avoid a zero-duration flash. */
-.flow :global(.react-flow__node) {
-  animation: nodeEnter var(--dur-base) var(--ease-standard);
-}
-
-/* New nodes fade in subtly on mount. React Flow reuses DOM elements by node id, so this only
- * plays for genuinely new nodes — surviving nodes keep their wrapper element and never
- * re-animate. */
-@keyframes nodeEnter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* New edges fade in deliberately rather than appearing at full opacity. React Flow reuses DOM
- * elements by edge id, so this animation only plays for genuinely new edges — existing edges
- * that persist across a snapshot never re-animate. Scoped to the wrapper `<g>` so it does not
- * touch the edge renderer's own path/label opacity (owned by another task, with its own
- * transition on those child elements). */
-@keyframes edgeEnter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.flow :global(.react-flow__edge) {
-  animation: edgeEnter var(--dur-base) var(--ease-standard);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .flow :global(.react-flow__node) {
-    animation: none;
-  }
-  .flow :global(.react-flow__edge) {
-    animation: none;
-  }
+/* Live additions use explicit presence state (hidden wrappers, then the agent cursor) instead of
+ * a mount animation on every React Flow node/edge. A remounted edge id must not flash as new. */
+.flow :global(.react-flow__node[data-presence-state="pending"]) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .flow :global(.react-flow__renderer),

@@ -20,8 +20,10 @@ import { useExportMode } from "../../export-viewer/ExportModeContext";
 import { fetchWorkflowExport } from "../../api/client";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
+import { LiveAgentCursor } from "./LiveAgentCursor";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
+import { useLivePresence } from "./useLivePresence";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -106,6 +108,11 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     reducedMotion,
   });
 
+  const { view, cursorRef, decorateNodes, decorateEdges, observeNodes } = useLivePresence({
+    workflow,
+    flush: reducedMotion || exportMode !== null,
+    containerRef,
+  });
   const { getTabIndex, handleNodeKeyDown, setRovingId, panToNode } = useCanvasKeyboardNav({
     workflow,
     layoutNodes: layout.nodes,
@@ -115,6 +122,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     onSelect: selectStep,
     onClear: handleClearSelection,
     reducedMotion,
+    hiddenStepIds: view.pendingNodeIds,
   });
 
   useLayoutEffect(() => {
@@ -126,7 +134,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   }, [panToNode, stepPanRequest, workflow.id]);
 
   const generatedNodes = useMemo(
-    () => [
+    () => decorateNodes([
       ...buildFlowNodes({
         workflow,
         layout,
@@ -144,7 +152,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         onFocusStep,
         onBlurStep,
       }),
-    ],
+    ]),
     [
       workflow,
       layout,
@@ -161,6 +169,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       onHoverEnd,
       onFocusStep,
       onBlurStep,
+      decorateNodes,
     ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(generatedNodes);
@@ -221,6 +230,10 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         : { ...edge, ...handles };
     });
   }, [baseEdges, layout, nodes]);
+  const decoratedEdges = useMemo(() => decorateEdges(edges), [decorateEdges, edges]);
+  useLayoutEffect(() => {
+    observeNodes(nodes);
+  }, [nodes, observeNodes]);
 
   const handleNodeClick: NodeMouseHandler<CanvasFlowNode> = (_event, node) => {
     selectStep(node.id);
@@ -279,7 +292,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           className={styles.flow}
           colorMode={theme}
           nodes={nodes}
-          edges={edges}
+          edges={decoratedEdges}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
           nodesDraggable
@@ -296,6 +309,12 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           aria-label={`${workflow.name} workflow canvas`}
         >
           {showMinimap ? <MiniMap pannable zoomable={false} ariaLabel={`${workflow.name} overview map`} /> : null}
+          <LiveAgentCursor
+            cursorRef={cursorRef}
+            visible={view.cursor !== null}
+            phase={view.cursor?.phase ?? null}
+            operation={view.cursor?.operation ?? null}
+          />
         </ReactFlow>
         <CanvasLegend workflow={workflow} dimmed={tracePath !== null} />
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}

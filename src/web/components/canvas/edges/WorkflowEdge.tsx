@@ -62,7 +62,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     return null;
   }
 
-  const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced } = data;
+  const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced, presence } = data;
   const isRetryLoop = retry;
   const visual = isRetryLoop
     ? RETRY_EDGE_VISUAL
@@ -142,13 +142,40 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   };
 
   const labelText = isRetryLoop ? (connectionLabelText(connection) ?? "retry") : connectionLabelText(connection);
-  const showLabel = labelText !== undefined;
+  const showLabel = labelText !== undefined && presence === undefined;
+  const pending = presence?.phase === "pending";
+  const drawing = presence?.phase === "drawing";
+  const markerEnd = presence === undefined ? `url(#${edgeMarkerId(markerVariant)})` : undefined;
+  const maskId = drawing ? `presence-draw-${id}` : undefined;
 
   return (
     <>
-      <g data-workflow-edge={id} data-edge-source={source} data-edge-target={target}>
-        <path d={path} fill="none" style={haloStyle} />
-        <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+      <g
+        data-workflow-edge={id}
+        data-edge-source={source}
+        data-edge-target={target}
+        data-presence-state={presence?.phase}
+        visibility={pending ? "hidden" : undefined}
+      >
+        {drawing ? (
+          <defs>
+            <mask id={maskId} maskUnits="userSpaceOnUse">
+              <path
+                d={path}
+                fill="none"
+                pathLength={1}
+                className={styles.drawMask}
+                style={{ "--presence-draw-ms": `${presence.durationMs}ms` } as CSSProperties}
+              />
+            </mask>
+          </defs>
+        ) : null}
+        <g mask={maskId === undefined ? undefined : `url(#${maskId})`}>
+          <path d={path} fill="none" style={haloStyle} />
+          {markerEnd === undefined
+            ? <BaseEdge path={path} style={edgeStyle} />
+            : <BaseEdge path={path} markerEnd={markerEnd} style={edgeStyle} />}
+        </g>
       </g>
       {showLabel ? (
         <EdgeLabelRenderer>

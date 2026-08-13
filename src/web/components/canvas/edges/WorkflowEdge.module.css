@@ -1,3 +1,22 @@
+.drawMask {
+  stroke: white;
+  stroke-width: 24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: presenceDraw var(--presence-draw-ms, 400ms) linear forwards;
+}
+
+@keyframes presenceDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .label {
   position: absolute;
   padding: 2px var(--space-2);

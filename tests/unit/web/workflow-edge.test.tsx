@@ -176,6 +176,19 @@ describe("WorkflowEdge visual grammar", () => {
   });
 
   describe("edge casing / halo", () => {
+    it("hides a pending presence edge and draws without a marker until complete", () => {
+      const pending = edgePaths(renderEdge(makeData({ presence: { phase: "pending", durationMs: 0, key: "pair:a->b#0" } })));
+      expect(pending.semantic.closest("[data-presence-state]")?.getAttribute("data-presence-state")).toBe("pending");
+      expect(pending.semantic.closest("[data-workflow-edge]")?.getAttribute("visibility")).toBe("hidden");
+      expect(pending.semantic.getAttribute("marker-end")).toBeNull();
+
+      const drawing = renderEdge(makeData({ presence: { phase: "drawing", durationMs: 400, key: "pair:a->b#0" } }));
+      const group = drawing.querySelector("[data-workflow-edge]");
+      expect(group?.getAttribute("data-presence-state")).toBe("drawing");
+      expect(group?.querySelector("mask")).not.toBeNull();
+      expect(drawing.querySelector("[data-edge-label]")).toBeNull();
+    });
+
     it("paints a non-interactive background underlay without stealing the arrowhead", () => {
       const { semantic, halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) })));
       expect(halo.getAttribute("fill")).toBe("none");

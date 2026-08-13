@@ -72,6 +72,13 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * anchor. Distinct from `!dimmed` (which is also true when no trace is active at all) so the
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
+  /** Live presence: a newly added connection stays hidden (`pending`) until both ends are visible,
+   * then draws source-to-target (`drawing`). Absent on an ordinary completed edge. */
+  presence?: {
+    phase: "pending" | "drawing";
+    durationMs: number;
+    key: string;
+  };
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;
