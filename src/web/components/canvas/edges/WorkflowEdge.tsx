@@ -4,6 +4,12 @@ import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../d
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
 import { edgeMarkerId } from "./EdgeMarkers";
+import {
+  chooseObstacleAwareRoute,
+  routeLabelPoint,
+  routeToSmoothSvgPath,
+  type RouteSide,
+} from "./obstacleRouting";
 import styles from "./WorkflowEdge.module.css";
 
 /** Branches turn with a broad radius so they feel routed rather than mechanically elbowed. */
@@ -104,6 +110,29 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         })
       : getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.35 });
     [path, labelX, labelY] = geometry;
+
+    // Retry and return edges deliberately stay on their existing custom paths above. For ordinary
+    // and branch edges, route only when the live node map contains another card. If every bounded
+    // orthogonal candidate is blocked, leaving `path` untouched is the exact pre-change React Flow
+    // fallback rather than a best-effort path that still crosses a card.
+    const obstacles = data.obstacles;
+    if (obstacles !== undefined && obstacles.some((obstacle) => obstacle.id !== source && obstacle.id !== target)) {
+      const route = chooseObstacleAwareRoute({
+        source: { x: sourceX, y: sourceY },
+        target: { x: targetX, y: targetY },
+        sourcePosition: sourcePosition as RouteSide,
+        targetPosition: targetPosition as RouteSide,
+        obstacles,
+        sourceId: source,
+        targetId: target,
+      });
+      if (route !== null) {
+        path = routeToSmoothSvgPath(route.points);
+        const label = routeLabelPoint(route.points);
+        labelX = label.x;
+        labelY = label.y;
+      }
+    }
   }
 
   const baseStrokeWidth = edgeStrokeWidth(markerVariant ?? "success");

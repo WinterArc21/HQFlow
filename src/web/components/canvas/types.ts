@@ -5,6 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
 import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
+import type { RouteObstacle } from "./edges/obstacleRouting";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
@@ -72,6 +73,9 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * anchor. Distinct from `!dimmed` (which is also true when no trace is active at all) so the
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
+  /** Live card bounds used by the pure obstacle router. Source and target are included so only
+   * their attachment legs can be exempted; a later detour may not pass behind either endpoint. */
+  obstacles?: readonly RouteObstacle[];
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;

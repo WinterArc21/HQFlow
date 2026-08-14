@@ -186,4 +186,28 @@ describe("WorkflowEdge visual grammar", () => {
       expect(halo.getAttribute("marker-end")).toBeNull();
     });
   });
+
+  describe("obstacle fallback", () => {
+    it("keeps the exact React Flow geometry when every bounded route is blocked", () => {
+      const data = makeData({
+        connection: makeConnection({ type: "failure" }),
+        obstacles: [{ id: "closed", x: -1_000, y: -1_000, width: 2_000, height: 2_000 }],
+      });
+      const fallback = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) }))).semantic.getAttribute("d");
+      const blocked = edgePaths(renderEdge(data)).semantic.getAttribute("d");
+
+      expect(blocked).toBe(fallback);
+    });
+
+    it("leaves retry and return geometry unchanged", () => {
+      const obstacles = [{ id: "card", x: -1_000, y: -1_000, width: 2_000, height: 2_000 }];
+      const retryWithoutObstacles = edgePaths(renderEdge(makeData({ retry: true }))).semantic.getAttribute("d");
+      const retryWithObstacles = edgePaths(renderEdge(makeData({ retry: true, obstacles }))).semantic.getAttribute("d");
+      const returnWithoutObstacles = edgePaths(renderEdge(makeData({ returnEdge: true }))).semantic.getAttribute("d");
+      const returnWithObstacles = edgePaths(renderEdge(makeData({ returnEdge: true, obstacles }))).semantic.getAttribute("d");
+
+      expect(retryWithObstacles).toBe(retryWithoutObstacles);
+      expect(returnWithObstacles).toBe(returnWithoutObstacles);
+    });
+  });
 });
