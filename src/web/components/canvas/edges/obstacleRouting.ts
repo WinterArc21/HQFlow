@@ -36,18 +36,34 @@ const CORNER_RADIUS = 12;
 // radius toward a corner, so this gap leaves a small deterministic margin after smoothing.
 const CORRIDOR_GAP = CORNER_RADIUS + 2;
 const MAX_ROUTING_OBSTACLES = 64;
-const MAX_CORRIDORS_PER_AXIS = 12;
-const MAX_ROUTE_CANDIDATES = 384;
+// Keep the per-edge family small: the direct, one-axis, and x/y combinations produce at most
+// 26 candidates while retaining the nearest corridors and both outer escape lanes.
+const MAX_CORRIDORS_PER_AXIS = 3;
+const MAX_ROUTE_CANDIDATES = 36;
 
 export interface RouteCandidate {
   points: RoutePoint[];
   collisionCount: number;
   length: number;
   turnCount: number;
-  /** Lower values preserve the current cardinal side preference. */
-  sidePreference: number;
+  /** Lower values preserve the already selected source/target cardinal ports. */
+  portPreference: number;
   /** Stable final tie-breaker based on deterministic candidate generation order. */
   order: number;
+}
+
+/**
+ * Immutable obstacle work shared by every edge in one canvas update. Node bounds move together
+ * with the React Flow update, so the canvas prepares inflation and obstacle corridors once and
+ * each edge reuses this object instead of rebuilding the same arrays.
+ */
+export interface ObstacleRoutingContext {
+  obstacles: readonly RouteObstacle[];
+  inflated: readonly RouteObstacle[];
+  obstacleCorridorXs: readonly number[];
+  obstacleCorridorYs: readonly number[];
+  clearance: number;
+  canRoute: boolean;
 }
 
 export interface ObstacleRouteOptions {
@@ -62,6 +78,8 @@ export interface ObstacleRouteOptions {
   sourceId?: string;
   targetId?: string;
   clearance?: number;
+  /** Prepared once by the canvas; omitted by pure callers, which prepare it locally. */
+  context?: ObstacleRoutingContext;
 }
 
 function normaliseRect(rect: RouteObstacle): RouteObstacle {
@@ -83,9 +101,56 @@ export function inflateObstacle(rect: RouteObstacle, clearance = EDGE_OBSTACLE_C
   };
 }
 
+/** Prepares the bounded, immutable geometry shared by all ordinary edges in one canvas update. */
+export function prepareObstacleRoutingContext(
+  obstacles: readonly RouteObstacle[],
+  clearance = EDGE_OBSTACLE_CLEARANCE,
+): ObstacleRoutingContext {
+  if (obstacles.length > MAX_ROUTING_OBSTACLES) {
+    return {
+      obstacles,
+      inflated: [],
+      obstacleCorridorXs: [],
+      obstacleCorridorYs: [],
+      clearance,
+      canRoute: false,
+    };
+  }
+
+  const inflated = obstacles.map((obstacle) => inflateObstacle(obstacle, clearance));
+  const obstacleCorridorXs: number[] = [];
+  const obstacleCorridorYs: number[] = [];
+  let outerLeft = Number.POSITIVE_INFINITY;
+  let outerRight = Number.NEGATIVE_INFINITY;
+  let outerTop = Number.POSITIVE_INFINITY;
+  let outerBottom = Number.NEGATIVE_INFINITY;
+  for (const obstacle of inflated) {
+    const right = obstacle.x + obstacle.width;
+    const bottom = obstacle.y + obstacle.height;
+    obstacleCorridorXs.push(obstacle.x - CORRIDOR_GAP, right + CORRIDOR_GAP);
+    obstacleCorridorYs.push(obstacle.y - CORRIDOR_GAP, bottom + CORRIDOR_GAP);
+    outerLeft = Math.min(outerLeft, obstacle.x);
+    outerRight = Math.max(outerRight, right);
+    outerTop = Math.min(outerTop, obstacle.y);
+    outerBottom = Math.max(outerBottom, bottom);
+  }
+  if (inflated.length > 0) {
+    obstacleCorridorXs.push(outerLeft - CORRIDOR_GAP, outerRight + CORRIDOR_GAP);
+    obstacleCorridorYs.push(outerTop - CORRIDOR_GAP, outerBottom + CORRIDOR_GAP);
+  }
+
+  return {
+    obstacles,
+    inflated,
+    obstacleCorridorXs,
+    obstacleCorridorYs,
+    clearance,
+    canRoute: true,
+  };
+}
+
 /** Closed segment-vs-rectangle test. Touching the inflated border counts as a collision. */
-export function segmentIntersectsRect(start: RoutePoint, end: RoutePoint, rect: RouteObstacle): boolean {
-  const obstacle = normaliseRect(rect);
+function segmentIntersectsNormalisedRect(start: RoutePoint, end: RoutePoint, obstacle: RouteObstacle): boolean {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   if (dx === 0 && dy === 0) {
@@ -119,6 +184,68 @@ export function segmentIntersectsRect(start: RoutePoint, end: RoutePoint, rect: 
     }
   }
   return leaving >= 0 && entering <= 1 && entering <= leaving;
+}
+
+/** Closed segment-vs-rectangle test. Touching the rectangle border counts as a collision. */
+export function segmentIntersectsRect(start: RoutePoint, end: RoutePoint, rect: RouteObstacle): boolean {
+  return segmentIntersectsNormalisedRect(start, end, normaliseRect(rect));
+}
+
+interface PathBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * React Flow's Bezier and smooth-step paths use only coordinate pairs in M/L/Q/C commands.
+ * Their control-point bounds are a conservative envelope for the rendered curve, so an obstacle
+ * outside this box cannot affect the default path. An unrecognised path is routed conservatively.
+ */
+function pathCoordinateBounds(path: string): PathBounds | null {
+  const values = path.match(/-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
+  if (values.length < 2 || values.length % 2 !== 0 || values.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (let index = 0; index < values.length; index += 2) {
+    const x = values[index]!;
+    const y = values[index + 1]!;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function boundsOverlap(left: PathBounds, right: RouteObstacle): boolean {
+  return left.minX <= right.x + right.width
+    && left.maxX >= right.x
+    && left.minY <= right.y + right.height
+    && left.maxY >= right.y;
+}
+
+/** Fast conservative gate: clear default paths skip candidate generation entirely. */
+export function pathMayNeedObstacleRoute(
+  path: string,
+  context: ObstacleRoutingContext,
+  sourceId?: string,
+  targetId?: string,
+): boolean {
+  if (!context.canRoute) {
+    return false;
+  }
+  const bounds = pathCoordinateBounds(path);
+  if (bounds === null) {
+    return true;
+  }
+  return context.inflated.some((obstacle) =>
+    obstacle.id !== sourceId && obstacle.id !== targetId && boundsOverlap(bounds, obstacle));
 }
 
 function pointInsideRect(point: RoutePoint, rect: RouteObstacle): boolean {
@@ -226,8 +353,12 @@ function offsetFromSide(point: RoutePoint, side: RouteSide, distance: number): R
   return { x: point.x + vector.x * distance, y: point.y + vector.y * distance };
 }
 
-/** Prefer routes that leave and arrive through the already selected cardinal sides. */
-function sidePreference(points: readonly RoutePoint[], sourceSide: RouteSide, targetSide: RouteSide): number {
+/**
+ * Prefer routes that leave and arrive through the already selected cardinal ports. Generated
+ * candidates all use those ports, so this is normally zero; it remains the final semantic
+ * tie-break before deterministic generation order for alternate-port callers.
+ */
+function portPreference(points: readonly RoutePoint[], sourceSide: RouteSide, targetSide: RouteSide): number {
   if (points.length < 2) {
     return 2;
   }
@@ -248,13 +379,39 @@ function collisionCountForInflatedPoints(
 
   let collisions = 0;
   const lastSegmentIndex = points.length - 2;
+  const segments = points.slice(0, -1).map((start, segmentIndex) => {
+    const end = points[segmentIndex + 1]!;
+    return {
+      start,
+      end,
+      minX: Math.min(start.x, end.x),
+      maxX: Math.max(start.x, end.x),
+      minY: Math.min(start.y, end.y),
+      maxY: Math.max(start.y, end.y),
+    };
+  });
   for (const obstacle of obstacles) {
-    const intersects = points.slice(0, -1).some((point, segmentIndex) => {
+    let intersects = false;
+    for (let segmentIndex = 0; segmentIndex <= lastSegmentIndex; segmentIndex += 1) {
       const isSourceAttachment = obstacle.id === sourceId && segmentIndex === 0;
       const isTargetAttachment = obstacle.id === targetId && segmentIndex === lastSegmentIndex;
-      return !isSourceAttachment && !isTargetAttachment
-        && segmentIntersectsRect(point, points[segmentIndex + 1]!, obstacle);
-    });
+      if (isSourceAttachment || isTargetAttachment) {
+        continue;
+      }
+      const segment = segments[segmentIndex]!;
+      if (
+        segment.maxX < obstacle.x
+        || segment.minX > obstacle.x + obstacle.width
+        || segment.maxY < obstacle.y
+        || segment.minY > obstacle.y + obstacle.height
+      ) {
+        continue;
+      }
+      if (segmentIntersectsNormalisedRect(segment.start, segment.end, obstacle)) {
+        intersects = true;
+        break;
+      }
+    }
     if (intersects) {
       collisions += 1;
     }
@@ -327,12 +484,12 @@ function routeKey(points: readonly RoutePoint[]): string {
  * around one card; x/y pairs cover a compact cluster without creating an unbounded search graph.
  */
 export function createRouteCandidates(options: ObstacleRouteOptions): RouteCandidate[] {
-  if (options.obstacles.length > MAX_ROUTING_OBSTACLES) {
+  const context = options.context ?? prepareObstacleRoutingContext(options.obstacles, options.clearance);
+  if (!context.canRoute) {
     return [];
   }
 
-  const clearance = options.clearance ?? EDGE_OBSTACLE_CLEARANCE;
-  const inflated = options.obstacles.map((obstacle) => inflateObstacle(obstacle, clearance));
+  const inflated = context.inflated;
   const sourceExit = offsetFromSide(options.source, options.sourcePosition, ENDPOINT_STUB);
   const targetEntry = offsetFromSide(options.target, options.targetPosition, ENDPOINT_STUB);
   const minimumX = Math.min(sourceExit.x, targetEntry.x);
@@ -340,20 +497,8 @@ export function createRouteCandidates(options: ObstacleRouteOptions): RouteCandi
   const minimumY = Math.min(sourceExit.y, targetEntry.y);
   const maximumY = Math.max(sourceExit.y, targetEntry.y);
 
-  const corridorXs = [sourceExit.x, targetEntry.x, options.source.x, options.target.x];
-  const corridorYs = [sourceExit.y, targetEntry.y, options.source.y, options.target.y];
-  for (const obstacle of inflated) {
-    corridorXs.push(obstacle.x - CORRIDOR_GAP, obstacle.x + obstacle.width + CORRIDOR_GAP);
-    corridorYs.push(obstacle.y - CORRIDOR_GAP, obstacle.y + obstacle.height + CORRIDOR_GAP);
-  }
-  if (inflated.length > 0) {
-    const outerLeft = Math.min(...inflated.map((obstacle) => obstacle.x)) - CORRIDOR_GAP;
-    const outerRight = Math.max(...inflated.map((obstacle) => obstacle.x + obstacle.width)) + CORRIDOR_GAP;
-    const outerTop = Math.min(...inflated.map((obstacle) => obstacle.y)) - CORRIDOR_GAP;
-    const outerBottom = Math.max(...inflated.map((obstacle) => obstacle.y + obstacle.height)) + CORRIDOR_GAP;
-    corridorXs.push(outerLeft, outerRight);
-    corridorYs.push(outerTop, outerBottom);
-  }
+  const corridorXs = [sourceExit.x, targetEntry.x, options.source.x, options.target.x, ...context.obstacleCorridorXs];
+  const corridorYs = [sourceExit.y, targetEntry.y, options.source.y, options.target.y, ...context.obstacleCorridorYs];
 
   const xs = selectCorridors(corridorXs, minimumX, maximumX);
   const ys = selectCorridors(corridorYs, minimumY, maximumY);
@@ -373,13 +518,13 @@ export function createRouteCandidates(options: ObstacleRouteOptions): RouteCandi
       return;
     }
     seen.add(key);
-    const preference = sidePreference(points, options.sourcePosition, options.targetPosition);
+    const preference = portPreference(points, options.sourcePosition, options.targetPosition);
     candidates.push({
       points,
       collisionCount: collisionCountForInflatedPoints(points, inflated, options.sourceId, options.targetId),
       length: pathLength(points),
       turnCount: turnCount(points),
-      sidePreference: preference,
+      portPreference: preference,
       order: candidates.length,
     });
   };
@@ -426,7 +571,7 @@ export function compareRouteCandidates(left: RouteCandidate, right: RouteCandida
   return left.collisionCount - right.collisionCount
     || left.length - right.length
     || left.turnCount - right.turnCount
-    || left.sidePreference - right.sidePreference
+    || left.portPreference - right.portPreference
     || left.order - right.order;
 }
 

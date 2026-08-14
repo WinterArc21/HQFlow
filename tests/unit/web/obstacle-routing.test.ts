@@ -4,6 +4,8 @@ import {
   chooseObstacleAwareRoute,
   compareRouteCandidates,
   inflateObstacle,
+  pathMayNeedObstacleRoute,
+  prepareObstacleRoutingContext,
   routeCollisionCount,
   type RouteCandidate,
   type RouteObstacle,
@@ -17,7 +19,7 @@ function candidate(overrides: Partial<RouteCandidate>): RouteCandidate {
     collisionCount: 0,
     length: 10,
     turnCount: 0,
-    sidePreference: 0,
+    portPreference: 0,
     order: 0,
     ...overrides,
   };
@@ -43,13 +45,13 @@ describe("obstacle-aware edge geometry", () => {
     const longFewTurns = candidate({ length: 101, turnCount: 1 });
     expect(compareRouteCandidates(shortManyTurns, longFewTurns)).toBeLessThan(0);
 
-    const manyTurns = candidate({ length: 100, turnCount: 3, sidePreference: 0 });
-    const fewTurns = candidate({ length: 100, turnCount: 2, sidePreference: 1 });
+    const manyTurns = candidate({ length: 100, turnCount: 3, portPreference: 0 });
+    const fewTurns = candidate({ length: 100, turnCount: 2, portPreference: 1 });
     expect(compareRouteCandidates(fewTurns, manyTurns)).toBeLessThan(0);
 
-    const preferredSide = candidate({ length: 100, turnCount: 2, sidePreference: 0, order: 9 });
-    const lessPreferredSide = candidate({ length: 100, turnCount: 2, sidePreference: 1, order: 0 });
-    expect(compareRouteCandidates(preferredSide, lessPreferredSide)).toBeLessThan(0);
+    const preferredPort = candidate({ length: 100, turnCount: 2, portPreference: 0, order: 9 });
+    const lessPreferredPort = candidate({ length: 100, turnCount: 2, portPreference: 1, order: 0 });
+    expect(compareRouteCandidates(preferredPort, lessPreferredPort)).toBeLessThan(0);
 
     const first = candidate({ order: 1 });
     const second = candidate({ order: 2 });
@@ -71,11 +73,25 @@ describe("obstacle-aware edge geometry", () => {
       targetId: "target",
     };
 
-    const first = chooseObstacleAwareRoute(options);
-    const second = chooseObstacleAwareRoute({ ...options, obstacles: options.obstacles.map((obstacle) => ({ ...obstacle })) });
+    const context = prepareObstacleRoutingContext(options.obstacles);
+    const uncached = chooseObstacleAwareRoute(options);
+    const first = chooseObstacleAwareRoute({ ...options, context });
+    const second = chooseObstacleAwareRoute({ ...options, context });
+    expect(first).toEqual(uncached);
     expect(first).not.toBeNull();
     expect(second).toEqual(first);
+    expect(first!.portPreference).toBe(0);
     expect(routeCollisionCount(first!.points, [blocker])).toBe(0);
+  });
+
+  it("uses the default path envelope as a conservative routing gate", () => {
+    const context = prepareObstacleRoutingContext([blocker]);
+
+    expect(pathMayNeedObstacleRoute("M0,0 C20,0 20,20 40,20", context, "source", "target")).toBe(false);
+    expect(pathMayNeedObstacleRoute("M0,140 C100,140 220,140 320,140", context, "source", "target")).toBe(true);
+    // The generated candidates keep the selected ports fixed. Port preference is therefore zero
+    // for every normal candidate; the comparator still retains it before its stable order tie-break.
+    expect(prepareObstacleRoutingContext([blocker]).canRoute).toBe(true);
   });
 
   it("returns null when every bounded candidate is blocked, preserving the caller's fallback", () => {

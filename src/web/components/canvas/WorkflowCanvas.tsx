@@ -11,7 +11,7 @@ import { CanvasHeader } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
-import type { RouteObstacle } from "./edges/obstacleRouting";
+import { prepareObstacleRoutingContext, type RouteObstacle } from "./edges/obstacleRouting";
 import { computeBackEdgeIds, computeTracePath } from "./graph";
 import { computeLayout } from "./layout";
 import { OutcomeNode } from "./nodes/OutcomeNode";
@@ -194,6 +194,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       }
     }
     const routeObstacles: RouteObstacle[] = Array.from(nodeBounds, ([id, bounds]) => ({ id, ...bounds }));
+    const routingContext = prepareObstacleRoutingContext(routeObstacles);
 
     return baseEdges.map((edge) => {
       if (edge.data?.retry === true || edge.data?.returnEdge === true) {
@@ -208,7 +209,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         if (candidate.data === undefined) {
           return candidate;
         }
-        return { ...candidate, data: { ...candidate.data, obstacles: routeObstacles } };
+        return { ...candidate, data: { ...candidate.data, routingContext } };
       };
       const sourceInitial = initialPositions.get(edge.source);
       const targetInitial = initialPositions.get(edge.target);
