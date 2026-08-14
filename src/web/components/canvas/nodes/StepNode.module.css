@@ -85,6 +85,40 @@
     opacity var(--dur-fast) var(--ease-standard);
 }
 
+:global(.react-flow__node[data-presence-state="constructing"][data-presence-effect="pixels"]) .card {
+  animation: presencePixelShove var(--presence-construct-ms, 1040ms) var(--ease-standard) both;
+}
+
+:global(.react-flow__node[data-presence-state="constructing"][data-presence-effect="bloom"]) .card {
+  animation: presenceBloomShove var(--presence-construct-ms, 1040ms) var(--ease-standard) both;
+}
+
+@keyframes presencePixelShove {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes presenceBloomShove {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+    clip-path: circle(0 at 0% 50%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: circle(140% at 0% 50%);
+  }
+}
+
 /* Path tracing (contract §11): everything off the hovered/focused/selected step's
  * upstream-downstream path fades instead of disappearing, so the rest of the graph stays legible
  * as context. `--dur-fast` collapses to 0ms under `prefers-reduced-motion` (tokens.css), so this
@@ -125,7 +159,7 @@
    to go check instead of on all of them.
 
    Absolutely positioned, so unlike the old flex-child spine it consumes no layout width: every
-   card is the same 380px box `layout.ts` computed either way, inferred or not. */
+   card is the same 320px box `layout.ts` computed either way, inferred or not. */
 .inferredEdge {
   position: absolute;
   left: 0;
@@ -224,7 +258,8 @@
 }
 
 /* Height mirrors `PURPOSE_LINE_HEIGHT * purposeLineCount(...)` in `../nodeContent.ts` exactly —
-   one line by default, two when `.purposeTwoLine` is also applied. */
+   one line by default, two when `.purposeTwoLine` is also applied, three for `.purposeThreeLine`.
+   Top margin is 15px so a three-line card is 148px (header 40 + pad 30 + purpose 48 + footer 30). */
 .purpose {
   height: 16px;
   flex-shrink: 0;
@@ -234,7 +269,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 12px 12px 0;
+  margin: 15px 12px 0;
 }
 
 .purposeTwoLine {
@@ -246,6 +281,15 @@
   overflow: hidden;
 }
 
+.purposeThreeLine {
+  height: 48px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .footer {
   height: 30px;
   flex-shrink: 0;
@@ -253,7 +297,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-top: 12px;
+  margin-top: 15px;
   padding: 0 12px;
   /* A translucent inset wash rather than the opaque footer token, so the tail of the gradient still
      shows through and the footer reads as part of the same card rather than a plate stuck on it. */

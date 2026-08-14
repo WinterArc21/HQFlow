@@ -1,0 +1,58 @@
+.layer {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 7;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+}
+
+.layer[data-presence-effect="bloom"] {
+  display: block;
+}
+
+.bloom {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--presence-construct-accent) 80%, white);
+  filter: blur(6px);
+  animation: constructBloom var(--presence-construct-ms, 1040ms) var(--ease-standard) both;
+}
+
+.pixel {
+  background: color-mix(in srgb, var(--presence-construct-accent) 55%, var(--bg-canvas));
+  opacity: 0;
+  animation: constructPixel calc(var(--presence-construct-ms, 1040ms) * 0.846) steps(1, end) both;
+  animation-delay: calc(var(--pixel-column) * 42ms + var(--pixel-row) * 6ms);
+}
+
+@keyframes constructBloom {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.4);
+  }
+  18% {
+    opacity: 0.9;
+    transform: translateY(-50%) scale(1.2);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-50%) scale(8);
+  }
+}
+
+@keyframes constructPixel {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

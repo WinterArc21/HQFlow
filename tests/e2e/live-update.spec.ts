@@ -8,10 +8,11 @@
  *
  * Live agent presence: a same-workflow addition keeps new node wrappers
  * `data-presence-state="pending"` and hidden until `[data-agent-cursor]` arrives
- * (`data-presence-operation="node:<id>"`, phase `moving` / `revealing`). A new edge then
- * enters `drawing` while the cursor identifies `edge:<key>` and travels source → target.
- * A rename/update alone must not mount a cursor. `prefers-reduced-motion` reveals additions
- * immediately and shows no cursor.
+ * (`data-presence-operation="node:<id>"`, phase `moving` / `constructing` / `revealing`).
+ * During `constructing`, the kite cursor shoves the card in from the left while terminal cards
+ * lock with pixels and middle cards bloom from the inbound port. A new edge then enters `drawing` while the cursor identifies `edge:<key>`
+ * and travels source → target. A rename/update alone must not mount a cursor.
+ * `prefers-reduced-motion` reveals additions immediately and shows no cursor.
  */
 import { promises as fsp } from "node:fs";
 import path from "node:path";
@@ -148,6 +149,10 @@ interface PresenceLog {
   pendingHiddenNodeIds: string[];
   nodePhases: string[];
   nodeOperations: string[];
+  nodeEffects: string[];
+  constructEffects: string[];
+  constructChildCounts: number[];
+  cardAnimationNames: string[];
   edgeStates: string[];
   edgeOperations: string[];
   edgePhases: string[];
@@ -157,6 +162,7 @@ interface PresenceLog {
   firstCardVisibleAt: number | null;
   firstEdgeDrawingAt: number | null;
   firstCursorEdgeOpAt: number | null;
+  kiteSeen: boolean;
 }
 
 function generateVideoPath(): string {
@@ -244,6 +250,10 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
         pendingHiddenNodeIds: [],
         nodePhases: [],
         nodeOperations: [],
+        nodeEffects: [],
+        constructEffects: [],
+        constructChildCounts: [],
+        cardAnimationNames: [],
         edgeStates: [],
         edgeOperations: [],
         edgePhases: [],
@@ -253,6 +263,7 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
         firstCardVisibleAt: null,
         firstEdgeDrawingAt: null,
         firstCursorEdgeOpAt: null,
+        kiteSeen: false,
       });
 
       const log = emptyLog();
@@ -284,6 +295,15 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
         const wrapper = document.querySelector(`.react-flow__node[data-id="${probedNodeId}"]`);
         const card = document.querySelector(`[data-step-node="${probedNodeId}"]`);
         const wrapperState = wrapper?.getAttribute("data-presence-state") ?? card?.getAttribute("data-presence-state");
+        remember(log.nodeEffects, wrapper?.getAttribute("data-presence-effect") ?? null);
+
+        const construct = document.querySelector(`[data-card-construct="${probedNodeId}"]`);
+        if (construct !== null) {
+          remember(log.constructEffects, construct.getAttribute("data-presence-effect"));
+          if (!log.constructChildCounts.includes(construct.childElementCount)) {
+            log.constructChildCounts.push(construct.childElementCount);
+          }
+        }
 
         if (wrapperState === "pending" && (isHidden(wrapper) || isHidden(card))) {
           remember(log.pendingHiddenNodeIds, probedNodeId);
@@ -292,6 +312,9 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
 
         if (wrapper !== null && card !== null && !isHidden(wrapper) && !isHidden(card)) {
           log.firstCardVisibleAt ??= now;
+          if (wrapperState === "constructing") {
+            remember(log.cardAnimationNames, getComputedStyle(card).animationName);
+          }
         }
 
         const edge =
@@ -308,6 +331,7 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
         if (cursor === null) {
           return;
         }
+        log.kiteSeen ||= cursor.querySelector('svg path[d^="M3.8 2.2"]') !== null;
 
         const operation = cursor.getAttribute("data-presence-operation");
         const phase = cursor.getAttribute("data-presence-phase");
@@ -328,7 +352,7 @@ async function installPresenceProbe(page: Page, nodeId: string, edgeId: string):
         if (operation === `node:${probedNodeId}`) {
           remember(log.nodeOperations, operation);
           remember(log.nodePhases, phase);
-          if (phase === "moving" || phase === "revealing") {
+          if (phase === "moving" || phase === "constructing" || phase === "revealing") {
             log.firstCursorNodeOpAt ??= now;
           }
         }
@@ -442,9 +466,17 @@ test("a live connected-chain addition plays pending, cursor arrival, then edge d
   const afterDrawing = await readPresenceLog(page);
   expect(afterDrawing.pendingHiddenNodeIds, "pending card exists but is initially hidden").toContain(NEW_NODE_ID);
   expect(afterDrawing.nodeOperations, "cursor operation targets the new node").toContain(NEW_NODE_OPERATION);
+  expect(afterDrawing.nodeEffects, "the new terminal card uses the pixels variant").toContain("pixels");
+  expect(afterDrawing.constructEffects, "the pixels overlay mounts during the shove").toContain("pixels");
+  expect(afterDrawing.constructChildCounts, "the pixels overlay contains its 16 × 8 grid").toContain(128);
   expect(
-    afterDrawing.nodePhases.some((phase) => phase === "moving" || phase === "revealing"),
-    "node cursor phase moves or reveals",
+    afterDrawing.cardAnimationNames.some((name) => name.includes("presencePixelShove")),
+    "the terminal card runs its shove animation",
+  ).toBe(true);
+  expect(afterDrawing.kiteSeen, "the live cursor uses the selected kite arrow SVG").toBe(true);
+  expect(
+    afterDrawing.nodePhases.some((phase) => phase === "moving" || phase === "constructing" || phase === "revealing"),
+    "node cursor phase moves, constructs, or reveals",
   ).toBe(true);
   expect(afterDrawing.edgeStates, "edge enters drawing").toContain("drawing");
   expect(afterDrawing.edgeOperations, "cursor operation identifies the new edge").toContain(NEW_EDGE_OPERATION);

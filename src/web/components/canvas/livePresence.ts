@@ -1,5 +1,10 @@
 /** Same-workflow live presence: project a graph, diff additions, and choose the next reveal. */
 import type { Workflow, WorkflowConnection } from "@schema/workflow";
+import {
+  inboundPoint,
+  outboundPoint,
+  type PresenceNodeBox,
+} from "./cardGeometry";
 import type { CanvasFlowNode, WorkflowFlowEdge } from "./types";
 
 export interface PresencePoint {
@@ -43,8 +48,10 @@ export type PresenceEdgeOperation = {
 
 export type PresenceOperation = PresenceNodeOperation | PresenceEdgeOperation;
 
-export type PresencePhase = "moving" | "revealing" | "drawing";
+export type PresencePhase = "moving" | "constructing" | "revealing" | "drawing";
 export type PresenceWrapperState = "pending" | "drawing";
+export type PresenceNodePhase = "pending" | "constructing" | "revealing";
+export type PresenceConstructEffect = "pixels" | "bloom";
 
 export interface PresenceState {
   workflowId: string | null;
@@ -60,23 +67,39 @@ export interface PresenceState {
 
 export interface PresenceView {
   pendingNodeIds: ReadonlySet<string>;
+  constructingNodeId: string | null;
   revealingNodeId: string | null;
+  constructDurationMs: number;
+  constructEffect: PresenceConstructEffect | null;
+  terminusNodeIds: ReadonlySet<string>;
   edgePresence: ReadonlyMap<string, { phase: PresenceWrapperState; durationMs: number; key: string }>;
   cursor: { phase: PresencePhase; operation: string } | null;
 }
 
 export interface PresenceDriver {
   sleep(ms: number, signal: AbortSignal): Promise<void>;
-  animateCursor(points: readonly PresencePoint[], ms: number, signal: AbortSignal): Promise<void>;
+  animateCursor(
+    points: readonly PresencePoint[],
+    ms: number,
+    signal: AbortSignal,
+    easing?: string,
+  ): Promise<void>;
 }
 
+export const PRESENCE_EASING = {
+  travel: "cubic-bezier(0.4, 0, 0.2, 1)",
+  draw: "linear",
+} as const;
+
 export const PRESENCE_TIMINGS = {
-  cursorMinMs: 180,
-  cursorMaxMs: 600,
-  edgeMinMs: 300,
-  edgeMaxMs: 750,
-  revealMs: 150,
-  dwellMs: 150,
+  cursorMinMs: 280,
+  cursorMaxMs: 820,
+  edgeMinMs: 380,
+  edgeMaxMs: 900,
+  constructMinMs: 880,
+  constructMaxMs: 1120,
+  revealMs: 180,
+  dwellMs: 40,
 } as const;
 
 export const PresenceTimings = PRESENCE_TIMINGS;
@@ -312,11 +335,38 @@ export function resolveCursorStart(
 export function operationTarget(
   operation: PresenceOperation,
   positions: ReadonlyMap<string, PresencePoint>,
+  boxes: ReadonlyMap<string, PresenceNodeBox> = new Map(),
 ): PresencePoint | null {
   if (operation.kind === "node") {
-    return positions.get(operation.id) ?? null;
+    const box = boxes.get(operation.id);
+    return box !== undefined ? inboundPoint(box) : positions.get(operation.id) ?? null;
   }
-  return positions.get(operation.source) ?? null;
+  const sourceBox = boxes.get(operation.source);
+  return sourceBox !== undefined ? outboundPoint(sourceBox) : positions.get(operation.source) ?? null;
+}
+
+export function constructDurationMs(length: number): number {
+  return clampDuration(length * 1.15, PRESENCE_TIMINGS.constructMinMs, PRESENCE_TIMINGS.constructMaxMs);
+}
+
+/** Start cards have no inbound edge. End cards have no outbound edge. Those use pixels; the rest bloom. */
+export function terminusNodeIds(graph: PresenceGraph | null): Set<string> {
+  if (graph === null) {
+    return new Set();
+  }
+  const incoming = new Set(graph.edges.map((edge) => edge.target));
+  const outgoing = new Set(graph.edges.map((edge) => edge.source));
+  const ids = new Set<string>();
+  for (const node of graph.nodes) {
+    if (!incoming.has(node.id) || !outgoing.has(node.id)) {
+      ids.add(node.id);
+    }
+  }
+  return ids;
+}
+
+export function constructEffectFor(nodeId: string, termini: ReadonlySet<string>): PresenceConstructEffect {
+  return termini.has(nodeId) ? "pixels" : "bloom";
 }
 
 export function nodeCenter(node: Pick<CanvasFlowNode, "position" | "width" | "height" | "measured">): PresencePoint {
@@ -342,7 +392,7 @@ export function distanceBetween(a: PresencePoint, b: PresencePoint): number {
 }
 
 export function cursorDurationMs(distance: number): number {
-  return clampDuration(distance * 0.7, PRESENCE_TIMINGS.cursorMinMs, PRESENCE_TIMINGS.cursorMaxMs);
+  return clampDuration(distance * 0.95, PRESENCE_TIMINGS.cursorMinMs, PRESENCE_TIMINGS.cursorMaxMs);
 }
 
 export function edgeDurationMs(length: number): number {
@@ -375,6 +425,9 @@ export function buildCurvedPath(from: PresencePoint, to: PresencePoint, samples 
 
 export function buildPresenceView(state: PresenceState): PresenceView {
   const pendingNodeIds = new Set(state.pendingNodeIds);
+  const termini = terminusNodeIds(state.graph);
+  const constructing =
+    state.active?.kind === "node" && state.activePhase === "constructing" ? state.active.id : null;
   const revealingNodeId = state.active?.kind === "node" && state.activePhase === "revealing" ? state.active.id : null;
   const edgePresence = new Map<string, { phase: PresenceWrapperState; durationMs: number; key: string }>();
   const pendingEdgeKeys = new Set(state.pendingEdgeKeys);
@@ -393,7 +446,11 @@ export function buildPresenceView(state: PresenceState): PresenceView {
 
   return {
     pendingNodeIds,
+    constructingNodeId: constructing,
     revealingNodeId,
+    constructDurationMs: constructing !== null ? state.drawingDurationMs : 0,
+    constructEffect: constructing !== null ? constructEffectFor(constructing, termini) : null,
+    terminusNodeIds: termini,
     edgePresence,
     cursor: state.active !== null && state.activePhase !== null
       ? { phase: state.activePhase, operation: presenceOperationId(state.active) }
@@ -406,32 +463,44 @@ export function applyPresenceToNodes(nodes: CanvasFlowNode[], view: PresenceView
     return nodes;
   }
   return nodes.map((node): CanvasFlowNode => {
-    if (!view.pendingNodeIds.has(node.id) || view.revealingNodeId === node.id) {
+    if (!view.pendingNodeIds.has(node.id)) {
       return node;
     }
-    const pendingStyle = {
-      ...node.style,
-      opacity: 0,
-      visibility: "hidden" as const,
-      pointerEvents: "none" as const,
-    };
-    const pendingAttributes = {
+    const phase: PresenceNodePhase =
+      view.constructingNodeId === node.id
+        ? "constructing"
+        : view.revealingNodeId === node.id
+          ? "revealing"
+          : "pending";
+    const presenceStyle = phase === "pending"
+      ? { ...node.style, opacity: 0, visibility: "hidden" as const, pointerEvents: "none" as const }
+      : {
+          ...node.style,
+          pointerEvents: "none" as const,
+          ...(phase === "constructing"
+            ? { ["--presence-construct-ms" as string]: `${view.constructDurationMs}ms` }
+            : {}),
+        };
+    const effect = constructEffectFor(node.id, view.terminusNodeIds);
+    const presenceAttributes = {
       ...node.domAttributes,
-      "data-presence-state": "pending",
+      "data-presence-state": phase,
+      "data-presence-effect": effect,
+      ...(phase === "constructing" ? { "data-presence-construct-ms": String(view.constructDurationMs) } : {}),
       "aria-hidden": true,
     };
     if (node.type === "outcome") {
       return {
         ...node,
-        style: pendingStyle,
-        domAttributes: pendingAttributes,
+        style: presenceStyle,
+        domAttributes: presenceAttributes,
         data: { ...node.data, tabIndex: -1 },
       };
     }
     return {
       ...node,
-      style: pendingStyle,
-      domAttributes: pendingAttributes,
+      style: presenceStyle,
+      domAttributes: presenceAttributes,
       data: { ...node.data, tabIndex: -1 },
     };
   });
@@ -573,12 +642,14 @@ export async function runPresenceSession(options: {
   getState: () => PresenceState;
   setState: (state: PresenceState) => void;
   getPositions: () => ReadonlyMap<string, PresencePoint>;
+  getBoxes?: () => ReadonlyMap<string, PresenceNodeBox>;
   getCursor: () => PresencePoint | null;
   sampleEdge: (renderId: string) => { points: PresencePoint[]; length: number } | null;
   driver: PresenceDriver;
   signal: AbortSignal;
 }): Promise<void> {
-  const { getState, setState, getPositions, getCursor, sampleEdge, driver, signal } = options;
+  const { getState, setState, getPositions, getBoxes, getCursor, sampleEdge, driver, signal } = options;
+  const boxesOf = (): ReadonlyMap<string, PresenceNodeBox> => getBoxes?.() ?? new Map();
 
   while (!signal.aborted) {
     let state = getState();
@@ -598,9 +669,9 @@ export async function runPresenceSession(options: {
 
     try {
       if (operation.kind === "node") {
-        await runNodeOperation({ operation, getState, setState, getPositions, getCursor, driver, signal });
+        await runNodeOperation({ operation, getState, setState, getPositions, getBoxes: boxesOf, getCursor, driver, signal });
       } else {
-        await runEdgeOperation({ operation, getState, setState, getPositions, getCursor, sampleEdge, driver, signal });
+        await runEdgeOperation({ operation, getState, setState, getPositions, getBoxes: boxesOf, getCursor, sampleEdge, driver, signal });
       }
     } catch (error) {
       if (isAbortError(error) || signal.aborted) {
@@ -616,18 +687,40 @@ async function runNodeOperation(options: {
   getState: () => PresenceState;
   setState: (state: PresenceState) => void;
   getPositions: () => ReadonlyMap<string, PresencePoint>;
+  getBoxes: () => ReadonlyMap<string, PresenceNodeBox>;
   getCursor: () => PresencePoint | null;
   driver: PresenceDriver;
   signal: AbortSignal;
 }): Promise<void> {
-  const { operation, getState, setState, getPositions, getCursor, driver, signal } = options;
-  const target = getPositions().get(operation.id);
+  const { operation, getState, setState, getPositions, getBoxes, getCursor, driver, signal } = options;
+  const box = getBoxes().get(operation.id);
+  const target = box !== undefined ? inboundPoint(box) : getPositions().get(operation.id);
   if (target === undefined) {
     return;
   }
 
-  const start = resolveCursorStart(getCursor(), target, visiblePositions(getState(), getPositions()));
-  await driver.animateCursor(buildCurvedPath(start, target), cursorDurationMs(distanceBetween(start, target)), signal);
+  const enterFrom = box !== undefined
+    ? { x: box.x - 28, y: box.y + box.height / 2 }
+    : { x: target.x - 28, y: target.y };
+  const exitTo = box !== undefined
+    ? { x: box.x + box.width + 12, y: box.y + box.height / 2 }
+    : { x: target.x + 28, y: target.y };
+  const start = resolveCursorStart(getCursor(), enterFrom, visiblePositions(getState(), getPositions()));
+  await driver.animateCursor(buildCurvedPath(start, enterFrom), cursorDurationMs(distanceBetween(start, enterFrom)), signal);
+  if (!isCurrentOperation(getState(), operation)) {
+    return;
+  }
+
+  const shovePath = box !== undefined
+    ? [{ x: box.x - 10, y: box.y + box.height / 2 }, exitTo]
+    : [enterFrom, exitTo];
+  const constructMs = constructDurationMs(box !== undefined ? box.width : 320);
+  setState(setPresencePhase(getState(), "constructing", constructMs));
+  await driver.sleep(16, signal);
+  if (!isCurrentOperation(getState(), operation)) {
+    return;
+  }
+  await driver.animateCursor(shovePath, constructMs, signal, PRESENCE_EASING.travel);
   if (!isCurrentOperation(getState(), operation)) {
     return;
   }
@@ -642,30 +735,40 @@ async function runEdgeOperation(options: {
   getState: () => PresenceState;
   setState: (state: PresenceState) => void;
   getPositions: () => ReadonlyMap<string, PresencePoint>;
+  getBoxes: () => ReadonlyMap<string, PresenceNodeBox>;
   getCursor: () => PresencePoint | null;
   sampleEdge: (renderId: string) => { points: PresencePoint[]; length: number } | null;
   driver: PresenceDriver;
   signal: AbortSignal;
 }): Promise<void> {
-  const { operation, getState, setState, getPositions, getCursor, sampleEdge, driver, signal } = options;
+  const { operation, getState, setState, getPositions, getBoxes, getCursor, sampleEdge, driver, signal } = options;
   const positions = getPositions();
-  const source = positions.get(operation.source);
-  const target = positions.get(operation.target);
+  const boxes = getBoxes();
+  const sourceBox = boxes.get(operation.source);
+  const source = sourceBox !== undefined ? outboundPoint(sourceBox) : positions.get(operation.source);
+  const targetBox = boxes.get(operation.target);
+  const target = targetBox !== undefined ? inboundPoint(targetBox) : positions.get(operation.target);
   if (source === undefined || target === undefined) {
     return;
   }
 
   const start = resolveCursorStart(getCursor(), source, visiblePositions(getState(), positions));
-  await driver.animateCursor(buildCurvedPath(start, source), cursorDurationMs(distanceBetween(start, source)), signal);
-  if (!isCurrentOperation(getState(), operation)) {
-    return;
+  if (distanceBetween(start, source) > 1) {
+    await driver.animateCursor(buildCurvedPath(start, source), cursorDurationMs(distanceBetween(start, source)), signal);
+    if (!isCurrentOperation(getState(), operation)) {
+      return;
+    }
   }
 
   const sampled = sampleEdge(operation.renderId);
   const points = sampled?.points ?? buildCurvedPath(source, target);
   const duration = edgeDurationMs(sampled?.length ?? distanceBetween(source, target));
   setState(setPresencePhase(getState(), "drawing", duration));
-  await driver.animateCursor(points, duration, signal);
+  await driver.sleep(16, signal);
+  if (!isCurrentOperation(getState(), operation)) {
+    return;
+  }
+  await driver.animateCursor(points, duration, signal, PRESENCE_EASING.draw);
   finishIfCurrent(getState, setState, operation);
 }
 

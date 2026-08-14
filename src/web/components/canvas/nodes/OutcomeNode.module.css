@@ -45,6 +45,40 @@
   opacity: 0.35;
 }
 
+:global(.react-flow__node[data-presence-state="constructing"][data-presence-effect="pixels"]) .card {
+  animation: presencePixelShove var(--presence-construct-ms, 1040ms) var(--ease-standard) both;
+}
+
+:global(.react-flow__node[data-presence-state="constructing"][data-presence-effect="bloom"]) .card {
+  animation: presenceBloomShove var(--presence-construct-ms, 1040ms) var(--ease-standard) both;
+}
+
+@keyframes presencePixelShove {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes presenceBloomShove {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+    clip-path: circle(0 at 0% 50%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: circle(140% at 0% 50%);
+  }
+}
+
 .success {
   border-color: color-mix(in srgb, var(--accent-output) 50%, var(--border-strong));
   background-color: color-mix(in srgb, var(--accent-output) 6%, var(--bg-surface));

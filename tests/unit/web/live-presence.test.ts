@@ -4,6 +4,7 @@ import {
   applyPresenceToEdges,
   applyPresenceToNodes,
   buildPresenceView,
+  constructEffectFor,
   createInitialPresenceState,
   finishPresenceOperation,
   flushPresence,
@@ -13,6 +14,7 @@ import {
   runPresenceSession,
   selectNextOperation,
   startPresenceOperation,
+  terminusNodeIds,
   type PresenceDriver,
   type PresencePoint,
   type PresenceState,
@@ -221,8 +223,24 @@ describe("selectNextOperation", () => {
   });
 });
 
+describe("construction effects", () => {
+  it("uses pixels for start, end, and disconnected cards, and bloom for middle cards", () => {
+    const graph = projectPresenceGraph(makeWorkflow(
+      [makeStep("start"), makeStep("middle"), makeStep("end"), makeStep("disconnected")],
+      [{ from: "start", to: "middle" }, { from: "middle", to: "end" }],
+    ));
+    const termini = terminusNodeIds(graph);
+
+    expect([...termini]).toEqual(["start", "end", "disconnected"]);
+    expect(constructEffectFor("start", termini)).toBe("pixels");
+    expect(constructEffectFor("middle", termini)).toBe("bloom");
+    expect(constructEffectFor("end", termini)).toBe("pixels");
+    expect(constructEffectFor("disconnected", termini)).toBe("pixels");
+  });
+});
+
 describe("presence view", () => {
-  it("hides pending cards and marks pending or drawing edges", () => {
+  it("hides pending cards, exposes constructing cards, and marks pending or drawing edges", () => {
     const workflow = makeWorkflow([makeStep("a"), makeStep("b")], [{ from: "a", to: "b" }]);
     let state = reconcilePresence(seeded(makeWorkflow([makeStep("a")])), projectPresenceGraph(workflow));
     const hidden = applyPresenceToNodes(
@@ -236,6 +254,27 @@ describe("presence view", () => {
     expect(hidden[1]?.style).toMatchObject({ opacity: 0, visibility: "hidden", pointerEvents: "none" });
     expect(hidden[1]?.domAttributes).toMatchObject({ "data-presence-state": "pending" });
     expect(hidden[1]?.data.tabIndex).toBe(-1);
+
+    state = startPresenceOperation(state, { kind: "node", id: "b", order: 1 });
+    state = { ...state, activePhase: "constructing", drawingDurationMs: 360 };
+    const constructing = applyPresenceToNodes(
+      [
+        { id: "a", type: "step", position: { x: 0, y: 0 }, data: { tabIndex: 0 } },
+        { id: "b", type: "step", position: { x: 80, y: 0 }, data: { tabIndex: 0 } },
+      ] as unknown as CanvasFlowNode[],
+      buildPresenceView(state),
+    );
+    expect(constructing[1]?.style).toMatchObject({
+      pointerEvents: "none",
+      "--presence-construct-ms": "360ms",
+    });
+    expect(constructing[1]?.style).not.toHaveProperty("opacity");
+    expect(constructing[1]?.style).not.toHaveProperty("visibility");
+    expect(constructing[1]?.domAttributes).toMatchObject({
+      "data-presence-state": "constructing",
+      "data-presence-effect": "pixels",
+      "data-presence-construct-ms": "360",
+    });
 
     const pendingEdges = applyPresenceToEdges(
       [{
@@ -257,7 +296,7 @@ describe("presence view", () => {
 });
 
 describe("runPresenceSession", () => {
-  it("reveals a node then draws its edge", async () => {
+  it("shoves a node from left to right, reveals it, then draws its edge", async () => {
     const workflow = makeWorkflow([makeStep("a"), makeStep("b")], [{ from: "a", to: "b" }]);
     let state = reconcilePresence(seeded(makeWorkflow([makeStep("a")])), projectPresenceGraph(workflow));
     const calls: string[] = [];
@@ -265,8 +304,8 @@ describe("runPresenceSession", () => {
       async sleep(ms) {
         calls.push(`sleep:${ms}`);
       },
-      async animateCursor(points, ms) {
-        calls.push(`move:${Math.round(points[points.length - 1]?.x ?? 0)}:${ms}`);
+      async animateCursor(points, ms, _signal, easing) {
+        calls.push(`move:${Math.round(points[0]?.x ?? 0)}:${Math.round(points[points.length - 1]?.x ?? 0)}:${ms}:${easing ?? "default"}`);
       },
     };
 
@@ -276,6 +315,10 @@ describe("runPresenceSession", () => {
         state = next;
       },
       getPositions: () => positions({ a: { x: 0, y: 0 }, b: { x: 80, y: 0 } }),
+      getBoxes: () => new Map([
+        ["a", { id: "a", x: -40, y: -30, width: 80, height: 60, radius: 10 }],
+        ["b", { id: "b", x: 80, y: -30, width: 320, height: 60, radius: 10 }],
+      ]),
       getCursor: () => null,
       sampleEdge: () => ({ points: [{ x: 0, y: 0 }, { x: 80, y: 0 }], length: 80 }),
       driver,
@@ -287,8 +330,11 @@ describe("runPresenceSession", () => {
     expect(state.visibleNodeIds).toEqual(["a", "b"]);
     expect(state.visibleEdgeKeys).toEqual(["pair:a->b#0"]);
     expect(state.active).toBeNull();
-    expect(calls.filter((call) => call.startsWith("move"))).toHaveLength(3);
-    expect(calls).toContain("sleep:150");
+    expect(calls.filter((call) => call.startsWith("move")).length).toBeGreaterThanOrEqual(3);
+    expect(calls).toContain("move:70:412:880:cubic-bezier(0.4, 0, 0.2, 1)");
+    expect(calls).toContain("sleep:180");
+    expect(calls).toContain("sleep:40");
+    expect(calls.filter((call) => call === "sleep:16").length).toBeGreaterThanOrEqual(1);
   });
 
   it("aborts leftover driver work when the session signal fires", async () => {

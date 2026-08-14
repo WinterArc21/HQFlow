@@ -18,6 +18,7 @@ import {
   type PresenceState,
   type PresenceView,
 } from "./livePresence";
+import { collectNodeBoxes } from "./cardGeometry";
 import type { CanvasFlowNode, WorkflowFlowEdge } from "./types";
 
 export interface UseLivePresenceParams {
@@ -98,6 +99,7 @@ export function useLivePresence({ workflow, flush, containerRef, driver }: UseLi
         getState: () => stateRef.current,
         setState: commit,
         getPositions: () => collectNodeCenters(nodesRef.current),
+        getBoxes: () => collectNodeBoxes(nodesRef.current),
         getCursor: () => lastPointRef.current,
         sampleEdge: (renderId) => sampleRenderedEdge(containerRef.current, renderId),
         driver: activeDriver,
@@ -136,7 +138,7 @@ export function createBrowserPresenceDriver(
     sleep(ms, signal) {
       return sleepWithSignal(ms, signal);
     },
-    async animateCursor(points, ms, signal) {
+    async animateCursor(points, ms, signal, easing = "cubic-bezier(0.4, 0, 0.2, 1)") {
       const last = points[points.length - 1];
       if (last !== undefined) {
         lastPointRef.current = last;
@@ -153,7 +155,7 @@ export function createBrowserPresenceDriver(
       cancelCursorAnimation(element);
       const animation = element.animate(keyframes, {
         duration: ms,
-        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+        easing,
         fill: "forwards",
       });
       try {

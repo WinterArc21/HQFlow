@@ -70,6 +70,11 @@
   pointer-events: none;
 }
 
+.flow :global(.react-flow__node[data-presence-state="constructing"]),
+.flow :global(.react-flow__node[data-presence-state="revealing"]) {
+  pointer-events: none;
+}
+
 .flow :global(.react-flow__renderer),
 .flow :global(.react-flow__viewport) {
   background: transparent;

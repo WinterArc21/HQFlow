@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
+import { categoryToken } from "../../design/semantics";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
@@ -21,6 +22,8 @@ import { fetchWorkflowExport } from "../../api/client";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
 import { LiveAgentCursor } from "./LiveAgentCursor";
+import { LiveCardConstruct } from "./LiveCardConstruct";
+import { nodeBoxFromFlowNode } from "./cardGeometry";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
 import { useLivePresence } from "./useLivePresence";
@@ -234,6 +237,19 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   useLayoutEffect(() => {
     observeNodes(nodes);
   }, [nodes, observeNodes]);
+  const constructingCard = useMemo(() => {
+    if (view.constructingNodeId === null) {
+      return null;
+    }
+    const node = nodes.find((candidate) => candidate.id === view.constructingNodeId);
+    if (node === undefined) {
+      return null;
+    }
+    return {
+      box: nodeBoxFromFlowNode(node),
+      accent: `var(${categoryToken(node.data.step.category).varName})`,
+    };
+  }, [nodes, view.constructingNodeId]);
 
   const handleNodeClick: NodeMouseHandler<CanvasFlowNode> = (_event, node) => {
     selectStep(node.id);
@@ -309,6 +325,12 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           aria-label={`${workflow.name} workflow canvas`}
         >
           {showMinimap ? <MiniMap pannable zoomable={false} ariaLabel={`${workflow.name} overview map`} /> : null}
+          <LiveCardConstruct
+            box={constructingCard?.box ?? null}
+            durationMs={view.constructDurationMs}
+            effect={view.constructEffect}
+            accent={constructingCard?.accent ?? "var(--accent-violet)"}
+          />
           <LiveAgentCursor
             cursorRef={cursorRef}
             visible={view.cursor !== null}
