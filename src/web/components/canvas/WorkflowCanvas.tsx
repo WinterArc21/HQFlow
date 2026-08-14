@@ -63,8 +63,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
-  const depth = useCodeHQStore((state) => state.depth);
-  const setDepth = useCodeHQStore((state) => state.setDepth);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
@@ -74,7 +72,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const stepPanRequest = useCodeHQStore((state) => state.stepPanRequest);
   const selectStep = useCodeHQStore((state) => state.selectStep);
 
-  const layout = useMemo(() => computeLayout(workflow, { depth, expandedStepIds }), [workflow, depth, expandedStepIds]);
+  const layout = useMemo(() => computeLayout(workflow, { expandedStepIds }), [workflow, expandedStepIds]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
 
   // Path tracing (contract §11): hover wins over keyboard focus, which wins over the persisted
@@ -101,7 +99,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     layoutBounds: layout.bounds,
     workflowId: workflow.id,
     workflowRevision,
-    depth,
     reactFlowInstance,
     reducedMotion,
   });
@@ -131,7 +128,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         workflow,
         layout,
         backEdgeIds,
-        depth,
         expandedStepIds,
         sourceChecks,
         selectedStepId,
@@ -149,7 +145,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       workflow,
       layout,
       backEdgeIds,
-      depth,
       expandedStepIds,
       sourceChecks,
       selectedStepId,
@@ -261,8 +256,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         workflow={workflow}
         {...(modifiedAt !== undefined ? { modifiedAt } : {})}
         {...(state !== undefined ? { state } : {})}
-        depth={depth}
-        onDepthChange={setDepth}
         onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
         onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
         onResetLayout={resetLayout}

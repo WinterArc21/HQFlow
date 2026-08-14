@@ -35,7 +35,7 @@ Release did not, a rerun skips the completed work and finishes the missing steps
 
 - **No LLM inside the product.** HQFlow renders agent-authored `.codehq` files; it never uploads repository code.
 - **Workflow JSON never carries visuals.** No coordinates, colors, fonts, or layout hints in schema files — the renderer owns that.
-- **Prefer altitude over encyclopedias.** Maps should stay at Story height by default; proof (files, types, symbols) belongs in the code map, expanded cards, and drawer.
+- **Prefer the story over encyclopedias.** Maps should stay at product height by default; proof (files, types, symbols) belongs in expanded cards and the drawer.
 - Match existing TypeScript, CSS Modules, and test patterns. Avoid drive-by refactors.
 
 ## Reporting security issues

@@ -6,7 +6,9 @@
  */
 import type { DataReference, SourceReference, WorkflowStep } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
-import type { Depth } from "../../store/useCodeHQStore";
+
+/** Collapsed cards stay on the story. Expanded cards show files, symbols, and I/O. */
+export type Depth = "workflow" | "symbols";
 
 /** Fixed node width across every depth — only height grows with content (contract §10/§11).
  * 320px is option A: 60px narrower than the 380px slab, so a typical board shows more of the
@@ -14,7 +16,6 @@ import type { Depth } from "../../store/useCodeHQStore";
  * on the right. Still wide enough that titles such as "Understand Product" do not clip. */
 export const NODE_WIDTH = 320;
 
-export const MAX_MODULE_ROWS = 5;
 export const MAX_SYMBOL_ROWS = 8;
 
 // Mirrors the purpose top margin and footer top margin in `StepNode.module.css`. 15px, not the
@@ -38,16 +39,12 @@ export const PURPOSE_TWO_LINE_MAX_CHARS = 84;
 const FOOTER_ROW_HEIGHT = 30;
 const DETAIL_SEPARATOR_PADDING = 5;
 const SECTION_LABEL_HEIGHT = 14;
-const FILE_ROW_HEIGHT = 14;
-// Slightly taller than a file row: a symbol row carries more content (file + arrow + symbol()),
-// and keeping it taller guarantees `symbols` depth is strictly taller than `modules` depth even
-// when both show the same number of rows (contract requirement: node height grows with depth).
 const SYMBOL_ROW_HEIGHT = 16;
 const MORE_ROW_HEIGHT = 14;
 
 /** Fixed height for every outcome pill — always collapsed to a name + one purpose line, never
- * growing with depth (contract: outcome nodes are "clearly not units of work", so they don't
- * participate in the Story / Code map / expand altitude ladder at all). */
+ * growing with expand (contract: outcome nodes are "clearly not units of work", so they don't
+ * participate in the story / expand ladder at all). */
 export const OUTCOME_NODE_HEIGHT = 64;
 const OUTCOME_NODE_MIN_WIDTH = 200;
 const OUTCOME_NODE_MAX_WIDTH = 300;
@@ -87,12 +84,12 @@ export function stepIoSummary(step: WorkflowStep): StepIoSummary {
 }
 
 /**
- * Story altitude (`workflow`) keeps type-level I/O off the card so the board reads as a product
- * narrative. Code map (`modules`) and per-step expand (`symbols`) surface IN/OUT — that's where
- * type names earn their keep. Layout and render must agree on this gate (contract §11).
+ * Collapsed cards keep type-level I/O off so the board reads as a product story.
+ * Expanding a step surfaces IN/OUT — that's where type names earn their keep.
+ * Layout and render must agree on this gate (contract §11).
  */
 export function showsIoOnCard(effectiveDepth: Depth): boolean {
-  return effectiveDepth === "modules" || effectiveDepth === "symbols";
+  return effectiveDepth === "symbols";
 }
 
 /** Whether a step's purpose should reserve one, two, or three lines on its card (see
@@ -124,19 +121,6 @@ export function splitPath(file: string): { dir: string; base: string } {
   return { dir: file.slice(0, separatorIndex + 1), base: file.slice(separatorIndex + 1) };
 }
 
-/** Distinct source files referenced by a step's `sources`, in first-seen order (depth `modules`). */
-export function stepModuleFiles(step: WorkflowStep): string[] {
-  const seen = new Set<string>();
-  const files: string[] = [];
-  for (const source of step.sources ?? []) {
-    if (!seen.has(source.file)) {
-      seen.add(source.file);
-      files.push(source.file);
-    }
-  }
-  return files;
-}
-
 export interface StepSymbolRow {
   file: string;
   symbol?: string;
@@ -145,7 +129,7 @@ export interface StepSymbolRow {
 /**
  * One row per distinct (file, symbol) pair referenced by a step's `sources`, in first-seen
  * order (depth `symbols`). A source with no `symbol` still produces a file-only row, so nothing
- * a step references is silently dropped when going one level deeper than `modules`.
+ * a step references is silently dropped when the card expands.
  */
 export function stepSymbolRows(step: WorkflowStep): StepSymbolRow[] {
   const seen = new Set<string>();
@@ -171,16 +155,14 @@ function isStepIdExpanded(expandedStepIds: ReadonlySet<string> | Record<string, 
 }
 
 /**
- * A step's per-node expand toggle overrides the global altitude for that one step only:
- * expanding always shows the deepest (`symbols`) view regardless of Story vs Code map;
- * collapsing falls back to the global altitude.
+ * Expanding a card shows files, symbols, and I/O for that one step.
+ * Collapsing returns it to the story card.
  */
 export function effectiveDepthForStep(
   step: WorkflowStep,
-  depth: Depth,
   expandedStepIds: ReadonlySet<string> | Record<string, true>,
 ): Depth {
-  return isStepIdExpanded(expandedStepIds, step.id) ? "symbols" : depth;
+  return isStepIdExpanded(expandedStepIds, step.id) ? "symbols" : "workflow";
 }
 
 function sourceCheckKey(ref: Pick<SourceReference, "file" | "symbol">): string {
@@ -219,16 +201,6 @@ export function stepHasMissingSource(step: WorkflowStep, sourceChecks: Record<st
  */
 export function computeNodeHeight(step: WorkflowStep, effectiveDepth: Depth): number {
   let height = HEADER_ROW_HEIGHT + BODY_PADDING_Y * 2 + PURPOSE_LINE_HEIGHT * purposeLineCount(step.purpose) + FOOTER_ROW_HEIGHT;
-
-  if (effectiveDepth === "modules") {
-    const files = stepModuleFiles(step);
-    if (files.length > 0) {
-      height += DETAIL_SEPARATOR_PADDING + SECTION_LABEL_HEIGHT + Math.min(files.length, MAX_MODULE_ROWS) * FILE_ROW_HEIGHT;
-      if (files.length > MAX_MODULE_ROWS) {
-        height += MORE_ROW_HEIGHT;
-      }
-    }
-  }
 
   if (effectiveDepth === "symbols") {
     const rows = stepSymbolRows(step);

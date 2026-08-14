@@ -9,9 +9,9 @@ import { StepNodeDetail } from "./StepNodeDetail";
 import styles from "./StepNode.module.css";
 
 /**
- * The single, most important visual component in the product (contract §10). Story altitude
- * shows index/name/purpose/category; Code map adds IN/OUT and files; per-step expand adds
- * symbols. The card itself is the roving-tabindex target (`data-step-node`, `tabIndex`,
+ * The single, most important visual component in the product (contract §10). The
+ * collapsed card shows index/name/purpose/category; per-step expand adds I/O,
+ * files, and symbols. The card itself is the roving-tabindex target (`data-step-node`, `tabIndex`,
  * `onKeyDown` all come from `useCanvasKeyboardNav` via node data) — never measured, its box is
  * exactly the size `layout.ts` computed for it.
  *

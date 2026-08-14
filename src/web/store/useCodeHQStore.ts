@@ -6,7 +6,6 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
  * snapshot (see `api/events.ts`) and never lives here.
  */
 
-export type Depth = "workflow" | "modules" | "symbols";
 export type Theme = "dark" | "light";
 
 export interface StepPanRequest {
@@ -15,15 +14,14 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 1;
+const PERSIST_VERSION = 2;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
   selectedStepId: string | null;
   /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
   stepPanRequest: StepPanRequest | null;
-  depth: Depth;
-  /** Per-step expansion overriding the global `depth` for that one step; `true` = expanded. */
+  /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
   expandedStepIds: Record<string, true>;
   /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
   layoutResetRevision: number;
@@ -37,7 +35,6 @@ interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
-  setDepth: (depth: Depth) => void;
   toggleStepExpanded: (stepId: string) => void;
   collapseAllSteps: () => void;
   resetLayout: () => void;
@@ -98,7 +95,6 @@ const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
   selectedStepId: null,
   stepPanRequest: null,
-  depth: "workflow",
   expandedStepIds: {},
   layoutResetRevision: 0,
   searchQuery: "",
@@ -132,8 +128,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
           stepPanRequest: { workflowId, stepId },
           diagnosticsOpen: false,
         }),
-
-      setDepth: (depth) => set({ depth }),
 
       toggleStepExpanded: (stepId) =>
         set((state) => {
@@ -170,20 +164,17 @@ export const useCodeHQStore = create<CodeHQStore>()(
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme, depth: state.depth }),
+      partialize: (state) => ({ theme: state.theme }),
       /**
-       * v0 stored a three-way chrome depth including `symbols`. Symbols is now expand-only;
-       * map any lingering preference onto Code map so rehydrate never leaves a dead control state.
+       * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {
           return persisted as CodeHQUiState;
         }
-        const state = persisted as Partial<CodeHQUiState>;
-        if (state.depth === "symbols") {
-          return { ...state, depth: "modules" };
-        }
-        return state as CodeHQUiState;
+        const state = { ...(persisted as Record<string, unknown>) };
+        delete state.depth;
+        return state as unknown as CodeHQUiState;
       },
     },
   ),
