@@ -86,8 +86,9 @@ export interface SourceCheckRef {
 
 /**
  * Checks a single `{ file, symbol? }` reference against the repository on disk.
- * Best-effort and cached per `(absolutePath, mtimeMs, symbol)` so repeated checks across a
- * reload do not re-read every file.
+ * Best-effort and cached per `(absolutePath, mtimeMs, size, symbol)` so repeated checks across a
+ * reload do not re-read every file. The size is part of the key because some filesystems can
+ * expose the same millisecond mtime for two immediate writes.
  */
 export function checkSourceReference(root: string, ref: SourceCheckRef): SourceStatus {
   const resolved = resolveInsideRepository(root, ref.file);
@@ -114,7 +115,7 @@ export function checkSourceReference(root: string, ref: SourceCheckRef): SourceS
     return "file-only";
   }
 
-  const cacheKey = `${resolved.absolutePath}::${stats.mtimeMs}::${ref.symbol}`;
+  const cacheKey = `${resolved.absolutePath}::${stats.mtimeMs}::${stats.size}::${ref.symbol}`;
   const cached = cacheGet(cacheKey);
   if (cached !== undefined) {
     return cached;
