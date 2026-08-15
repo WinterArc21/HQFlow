@@ -4,6 +4,13 @@ import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../d
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
 import { edgeMarkerId } from "./EdgeMarkers";
+import {
+  chooseObstacleAwareRoute,
+  pathMayNeedObstacleRoute,
+  routeLabelPoint,
+  routeToSmoothSvgPath,
+  type RouteSide,
+} from "./obstacleRouting";
 import styles from "./WorkflowEdge.module.css";
 
 /** Branches turn with a broad radius so they feel routed rather than mechanically elbowed. */
@@ -104,6 +111,33 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         })
       : getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.35 });
     [path, labelX, labelY] = geometry;
+
+    // Retry and return edges deliberately stay on their existing custom paths above. For ordinary
+    // and branch edges, a conservative default-path envelope skips candidate generation when no
+    // unrelated card can affect the existing path. If every bounded orthogonal candidate is
+    // blocked, leaving `path` untouched is the exact pre-change React Flow fallback.
+    const routingContext = data.routingContext;
+    if (
+      routingContext !== undefined
+      && pathMayNeedObstacleRoute(path, routingContext, source, target)
+    ) {
+      const route = chooseObstacleAwareRoute({
+        source: { x: sourceX, y: sourceY },
+        target: { x: targetX, y: targetY },
+        sourcePosition: sourcePosition as RouteSide,
+        targetPosition: targetPosition as RouteSide,
+        obstacles: routingContext.obstacles,
+        sourceId: source,
+        targetId: target,
+        context: routingContext,
+      });
+      if (route !== null) {
+        path = routeToSmoothSvgPath(route.points);
+        const label = routeLabelPoint(route.points);
+        labelX = label.x;
+        labelY = label.y;
+      }
+    }
   }
 
   const baseStrokeWidth = edgeStrokeWidth(markerVariant ?? "success");

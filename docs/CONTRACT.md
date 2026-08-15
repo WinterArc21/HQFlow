@@ -389,13 +389,12 @@ Client state holds **only** UI state. Workflow data always comes from the server
 
 ### Progressive depth
 
-Two global altitudes in the chrome — **Story** (`workflow`) and **Code map** (`modules`) —
-plus per-step expansion that shows symbol-level detail (`symbols`) for that one step only.
-Same canvas, same nodes — nodes grow. Never a separate screen per depth.
+The board is one story. Same canvas, same nodes — a node grows only when that step is
+expanded. Never a separate screen, and never a second global mode.
 
 - **Story** (default): human step names and purposes; no file paths, no type-level IN/OUT on the card.
-- **Code map**: Story content plus source files and compact IN/OUT tags.
-- **Per-step expand**: deepest view (files + symbols) for one step without changing the global altitude.
+- **Per-step expand**: files, symbols, and compact IN/OUT for that one step.
+- **Drawer**: full detail for the selected step (sources, data, edge cases, tests, notes).
 
 ### Accessibility (mandatory)
 

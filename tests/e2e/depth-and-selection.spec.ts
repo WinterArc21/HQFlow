@@ -8,22 +8,9 @@ test.beforeEach(async ({ page }) => {
   await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
 });
 
-test("switches between the Story and Code map canvas views", async ({ page }) => {
-  const altitude = page.getByRole("group", { name: "Canvas altitude" });
-  const story = altitude.getByRole("button", { name: "Story" });
-  const codeMap = altitude.getByRole("button", { name: "Code map" });
-
-  await expect(story).toHaveAttribute("aria-pressed", "true");
-  await expect(codeMap).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByText("Files", { exact: true })).toHaveCount(0);
-
-  await codeMap.click();
-  await expect(codeMap).toHaveAttribute("aria-pressed", "true");
-  await expect(story).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByText("Files", { exact: true }).first()).toBeVisible();
-
-  await story.click();
-  await expect(story).toHaveAttribute("aria-pressed", "true");
+test("keeps the board on the story and has no Code map control", async ({ page }) => {
+  await expect(page.getByRole("group", { name: "Canvas altitude" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Code map" })).toHaveCount(0);
   await expect(page.getByText("Files", { exact: true })).toHaveCount(0);
 });
 

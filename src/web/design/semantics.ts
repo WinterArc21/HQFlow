@@ -52,7 +52,7 @@ export interface ToneVisual {
  * 2. Card hues avoid the connection hues where they can. The one place this could not be fully
  *    satisfied is `data`: orange (h24) sits in the 30deg corridor between failure red (h6) and the
  *    amber of conditional/retry edges (h36), 12deg off the latter. Accepted rather than solved —
- *    an edge is a 1.5px stroke and a card is a 380px fill, so the form difference carries the
+ *    an edge is a 1.5px stroke and a card is a 320px fill, so the form difference carries the
  *    distinction that hue alone cannot here. If it ever reads as ambiguous on a real graph, the
  *    fix is to move the conditional edge toward yellow, not to move this card.
  *

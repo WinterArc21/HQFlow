@@ -340,25 +340,6 @@ function initDemo() {
     e.preventDefault();
   });
 
-  /* ---- altitude control (Story / Code map) ---- */
-  const subOf = (s, depth) => {
-    if (depth === "modules") {
-      const files = s.sources.map((r) => String(r.file).split("/").pop()).filter(Boolean);
-      return files.length > 0 ? files.join(" · ") : s.io;
-    }
-    return s.purpose ?? s.io;
-  };
-  document.querySelectorAll(".seg-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
-      const depth = btn.dataset.depth ?? "workflow";
-      for (const s of STEPS) {
-        const sub = nodeEls.get(s.id)?.querySelector(".node-sub");
-        if (sub) sub.textContent = subOf(s, depth);
-      }
-      buildEdges();
-    });
-  });
 }
 
 /* ==========================================================================

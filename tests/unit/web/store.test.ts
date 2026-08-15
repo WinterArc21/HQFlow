@@ -43,7 +43,7 @@ describe("useCodeHQStore", () => {
     setSystemTheme("dark");
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ state: { theme: "light", depth: "workflow" }, version: 1 }),
+      JSON.stringify({ state: { theme: "light" }, version: 2 }),
     );
 
     const { useCodeHQStore: freshStore } = await loadFreshStore();
@@ -100,9 +100,8 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
   });
 
-  it("persists only theme and depth, under one namespaced localStorage key", () => {
+  it("persists only theme, under one namespaced localStorage key", () => {
     useCodeHQStore.getState().setTheme("light");
-    useCodeHQStore.getState().setDepth("modules");
     useCodeHQStore.getState().selectWorkflow("some-workflow");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -110,8 +109,7 @@ describe("useCodeHQStore", () => {
     const parsed: { state: Record<string, unknown> } = JSON.parse(raw as string);
 
     expect(parsed.state.theme).toBe("light");
-    expect(parsed.state.depth).toBe("modules");
-    expect(Object.keys(parsed.state).sort()).toEqual(["depth", "theme"]);
+    expect(Object.keys(parsed.state)).toEqual(["theme"]);
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {
@@ -132,7 +130,7 @@ describe("useCodeHQStore", () => {
       throw new Error("SecurityError");
     };
     try {
-      expect(() => useCodeHQStore.getState().setDepth("modules")).not.toThrow();
+      expect(() => useCodeHQStore.getState().setTheme("light")).not.toThrow();
     } finally {
       window.localStorage.getItem = originalGetItem;
     }

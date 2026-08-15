@@ -15,8 +15,6 @@ const WORKFLOW: Workflow = {
 };
 
 const TOOLBAR_PROPS: Omit<CanvasHeaderProps, "workflow"> = {
-  depth: "modules",
-  onDepthChange: () => {},
   onZoomIn: () => {},
   onZoomOut: () => {},
   onResetLayout: () => {},

@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 /**
- * The canvas frame now has a real, focusable header (depth switch, zoom, fit, collapse-all —
+ * The canvas frame now has a real, focusable header (zoom, fit, collapse-all —
  * contract §10.4) sitting before the graph in DOM/tab order, so reaching the first step node no
  * longer takes exactly one Tab press. Presses Tab until a `[data-step-node]` element is focused,
  * capped well above the toolbar's control count so a real regression still fails loudly instead

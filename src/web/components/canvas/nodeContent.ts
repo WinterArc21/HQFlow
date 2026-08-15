@@ -6,48 +6,45 @@
  */
 import type { DataReference, SourceReference, WorkflowStep } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
-import type { Depth } from "../../store/useCodeHQStore";
+
+/** Collapsed cards stay on the story. Expanded cards show files, symbols, and I/O. */
+export type Depth = "workflow" | "symbols";
 
 /** Fixed node width across every depth — only height grows with content (contract §10/§11).
- * Wider than the original 300/340px: the spine layout (see layout.ts) reserves enough horizontal
- * room for long branch edges while keeping more canvas width for the card itself. That space is
- * spent on the purpose line and the in/out tags, which were truncating too aggressively to read
- * as the comprehension surface the product needs them to be. */
-export const NODE_WIDTH = 380;
+ * 320px is option A: 60px narrower than the 380px slab, so a typical board shows more of the
+ * pipeline and the purpose can wrap as a short block instead of a thin strip with empty paper
+ * on the right. Still wide enough that titles such as "Understand Product" do not clip. */
+export const NODE_WIDTH = 320;
 
-export const MAX_MODULE_ROWS = 5;
 export const MAX_SYMBOL_ROWS = 8;
 
-// Mirrors `--space-1` (4px) — see `.body`'s padding in `StepNode.module.css`. Tighter than the
-// original 8px: the two-line purpose reservation below (needed to stop hard-truncating purpose
-// text) has to be paid for somewhere, and slack padding is cheaper to spend than row content.
-const BODY_PADDING_Y = 12;
+// Mirrors the purpose top margin and footer top margin in `StepNode.module.css`. 15px, not the
+// original 12px: option A spends those 6 extra pixels so a three-line purpose card lands on
+// 148px instead of 142px, which is the box that was chosen against the 380 × 126 slab.
+const BODY_PADDING_Y = 15;
 // Matches the 24px `IconButton` "sm" square that now lives inline in the header (the per-step
 // expand toggle moved there from its own row, see StepNode.tsx) so the row never clips it.
 const HEADER_ROW_HEIGHT = 40;
-/** Height of one purpose line. `purposeLineCount` decides whether a card reserves one or two of
- * these — see its own doc comment for why that's a character count, not a DOM measurement. */
+/** Height of one purpose line. `purposeLineCount` decides whether a card reserves one, two, or
+ * three of these — see its own doc comment for why that's a character count, not a DOM measurement. */
 export const PURPOSE_LINE_HEIGHT = 16;
-/** Purposes at or under this length almost always fit on one line at `NODE_WIDTH`; anything
- * longer gets a second line reserved instead of hard-truncating mid-sentence (contract: "the
- * purpose is a primary comprehension surface — losing half of it defeats the product's point").
- * A character-count heuristic, not a DOM measurement: `computeNodeHeight` must stay pure and
- * DOM-free (contract §11), so it can only approximate what will wrap, not know it exactly — an
- * approximation is an acceptable trade for a layout that never needs the browser to compute. */
-export const PURPOSE_SINGLE_LINE_MAX_CHARS = 52;
+/** Purposes at or under this length almost always fit on one line at `NODE_WIDTH`. Scaled down
+ * from the old 52-char / 380px rule: at 320px the purpose column is about 294px, ~42 characters
+ * at `--fs-tiny`. A character-count heuristic, not a DOM measurement: `computeNodeHeight` must
+ * stay pure and DOM-free (contract §11). */
+export const PURPOSE_SINGLE_LINE_MAX_CHARS = 42;
+/** Purposes longer than one line but at or under this length get two lines; anything longer
+ * reserves three so a purpose such as Understand Product (108 chars) is not hard-truncated. */
+export const PURPOSE_TWO_LINE_MAX_CHARS = 84;
 const FOOTER_ROW_HEIGHT = 30;
 const DETAIL_SEPARATOR_PADDING = 5;
 const SECTION_LABEL_HEIGHT = 14;
-const FILE_ROW_HEIGHT = 14;
-// Slightly taller than a file row: a symbol row carries more content (file + arrow + symbol()),
-// and keeping it taller guarantees `symbols` depth is strictly taller than `modules` depth even
-// when both show the same number of rows (contract requirement: node height grows with depth).
 const SYMBOL_ROW_HEIGHT = 16;
 const MORE_ROW_HEIGHT = 14;
 
 /** Fixed height for every outcome pill — always collapsed to a name + one purpose line, never
- * growing with depth (contract: outcome nodes are "clearly not units of work", so they don't
- * participate in the Story / Code map / expand altitude ladder at all). */
+ * growing with expand (contract: outcome nodes are "clearly not units of work", so they don't
+ * participate in the story / expand ladder at all). */
 export const OUTCOME_NODE_HEIGHT = 64;
 const OUTCOME_NODE_MIN_WIDTH = 200;
 const OUTCOME_NODE_MAX_WIDTH = 300;
@@ -87,18 +84,21 @@ export function stepIoSummary(step: WorkflowStep): StepIoSummary {
 }
 
 /**
- * Story altitude (`workflow`) keeps type-level I/O off the card so the board reads as a product
- * narrative. Code map (`modules`) and per-step expand (`symbols`) surface IN/OUT — that's where
- * type names earn their keep. Layout and render must agree on this gate (contract §11).
+ * Collapsed cards keep type-level I/O off so the board reads as a product story.
+ * Expanding a step surfaces IN/OUT — that's where type names earn their keep.
+ * Layout and render must agree on this gate (contract §11).
  */
 export function showsIoOnCard(effectiveDepth: Depth): boolean {
-  return effectiveDepth === "modules" || effectiveDepth === "symbols";
+  return effectiveDepth === "symbols";
 }
 
-/** Whether a step's purpose should reserve one or two lines on its card (see
+/** Whether a step's purpose should reserve one, two, or three lines on its card (see
  * `PURPOSE_SINGLE_LINE_MAX_CHARS`'s doc comment for why this is a length heuristic). */
-export function purposeLineCount(purpose: string): 1 | 2 {
-  return purpose.length > PURPOSE_SINGLE_LINE_MAX_CHARS ? 2 : 1;
+export function purposeLineCount(purpose: string): 1 | 2 | 3 {
+  if (purpose.length <= PURPOSE_SINGLE_LINE_MAX_CHARS) {
+    return 1;
+  }
+  return purpose.length <= PURPOSE_TWO_LINE_MAX_CHARS ? 2 : 3;
 }
 
 /** Renders a short "first name, +N more" summary for a list of `DataReference`s — used for the
@@ -121,19 +121,6 @@ export function splitPath(file: string): { dir: string; base: string } {
   return { dir: file.slice(0, separatorIndex + 1), base: file.slice(separatorIndex + 1) };
 }
 
-/** Distinct source files referenced by a step's `sources`, in first-seen order (depth `modules`). */
-export function stepModuleFiles(step: WorkflowStep): string[] {
-  const seen = new Set<string>();
-  const files: string[] = [];
-  for (const source of step.sources ?? []) {
-    if (!seen.has(source.file)) {
-      seen.add(source.file);
-      files.push(source.file);
-    }
-  }
-  return files;
-}
-
 export interface StepSymbolRow {
   file: string;
   symbol?: string;
@@ -142,7 +129,7 @@ export interface StepSymbolRow {
 /**
  * One row per distinct (file, symbol) pair referenced by a step's `sources`, in first-seen
  * order (depth `symbols`). A source with no `symbol` still produces a file-only row, so nothing
- * a step references is silently dropped when going one level deeper than `modules`.
+ * a step references is silently dropped when the card expands.
  */
 export function stepSymbolRows(step: WorkflowStep): StepSymbolRow[] {
   const seen = new Set<string>();
@@ -168,16 +155,14 @@ function isStepIdExpanded(expandedStepIds: ReadonlySet<string> | Record<string, 
 }
 
 /**
- * A step's per-node expand toggle overrides the global altitude for that one step only:
- * expanding always shows the deepest (`symbols`) view regardless of Story vs Code map;
- * collapsing falls back to the global altitude.
+ * Expanding a card shows files, symbols, and I/O for that one step.
+ * Collapsing returns it to the story card.
  */
 export function effectiveDepthForStep(
   step: WorkflowStep,
-  depth: Depth,
   expandedStepIds: ReadonlySet<string> | Record<string, true>,
 ): Depth {
-  return isStepIdExpanded(expandedStepIds, step.id) ? "symbols" : depth;
+  return isStepIdExpanded(expandedStepIds, step.id) ? "symbols" : "workflow";
 }
 
 function sourceCheckKey(ref: Pick<SourceReference, "file" | "symbol">): string {
@@ -216,16 +201,6 @@ export function stepHasMissingSource(step: WorkflowStep, sourceChecks: Record<st
  */
 export function computeNodeHeight(step: WorkflowStep, effectiveDepth: Depth): number {
   let height = HEADER_ROW_HEIGHT + BODY_PADDING_Y * 2 + PURPOSE_LINE_HEIGHT * purposeLineCount(step.purpose) + FOOTER_ROW_HEIGHT;
-
-  if (effectiveDepth === "modules") {
-    const files = stepModuleFiles(step);
-    if (files.length > 0) {
-      height += DETAIL_SEPARATOR_PADDING + SECTION_LABEL_HEIGHT + Math.min(files.length, MAX_MODULE_ROWS) * FILE_ROW_HEIGHT;
-      if (files.length > MAX_MODULE_ROWS) {
-        height += MORE_ROW_HEIGHT;
-      }
-    }
-  }
 
   if (effectiveDepth === "symbols") {
     const rows = stepSymbolRows(step);

@@ -142,25 +142,13 @@ describe("StepNode", () => {
     expect(screen.queryByText("out")).not.toBeInTheDocument();
   });
 
-  it("surfaces inputs and outputs on the Code map card", () => {
+  it("surfaces inputs, outputs, and symbols on an expanded card", () => {
     const data = makeData({
-      effectiveDepth: "modules",
+      effectiveDepth: "symbols",
+      expanded: true,
       step: makeStep({
         inputs: [{ name: "ScrapedWebsite" }],
         outputs: [{ name: "ProductContext" }],
-      }),
-    });
-    renderStepNode(makeProps(data));
-    expect(screen.getByText("ScrapedWebsite")).toBeInTheDocument();
-    expect(screen.getByText("ProductContext")).toBeInTheDocument();
-    expect(screen.getByText("in")).toBeInTheDocument();
-    expect(screen.getByText("out")).toBeInTheDocument();
-  });
-
-  it("lists distinct source files at Code map altitude", () => {
-    const data = makeData({
-      effectiveDepth: "modules",
-      step: makeStep({
         sources: [
           { file: "lib/scraper.ts", symbol: "scrapeWebsite" },
           { file: "lib/validation.ts" },
@@ -168,16 +156,21 @@ describe("StepNode", () => {
       }),
     });
     renderStepNode(makeProps(data));
-    expect(screen.getByText("Files")).toBeInTheDocument();
+    expect(screen.getByText("ScrapedWebsite")).toBeInTheDocument();
+    expect(screen.getByText("ProductContext")).toBeInTheDocument();
+    expect(screen.getByText("in")).toBeInTheDocument();
+    expect(screen.getByText("out")).toBeInTheDocument();
+    expect(screen.getByText("Symbols")).toBeInTheDocument();
     expect(screen.getByText("scraper.ts")).toBeInTheDocument();
     expect(screen.getByText("validation.ts")).toBeInTheDocument();
   });
 
-  it("caps the file list and shows a '+N more' line beyond the maximum", () => {
+  it("caps the symbol list and shows a '+N more' line beyond the maximum", () => {
     const data = makeData({
-      effectiveDepth: "modules",
+      effectiveDepth: "symbols",
+      expanded: true,
       step: makeStep({
-        sources: Array.from({ length: 7 }, (_, i) => ({ file: `lib/file-${i}.ts` })),
+        sources: Array.from({ length: 10 }, (_, i) => ({ file: `lib/file-${i}.ts` })),
       }),
     });
     renderStepNode(makeProps(data));
@@ -249,13 +242,12 @@ describe("canvas outcome and legend semantics", () => {
         { id: "failure", from: "source", to: "failure-outcome", type: "failure" },
       ],
     };
-    const layout = computeLayout(workflow, { depth: "workflow", expandedStepIds: {} });
+    const layout = computeLayout(workflow, { expandedStepIds: {} });
     const backEdgeIds = computeBackEdgeIds(workflow);
     const nodes = buildFlowNodes({
       workflow,
       layout,
       backEdgeIds,
-      depth: "workflow",
       expandedStepIds: {},
       sourceChecks: {},
       selectedStepId: null,
@@ -310,7 +302,7 @@ describe("canvas outcome and legend semantics", () => {
       steps: [makeStep({ id: "source" }), makeStep({ id: "done", category: "output" })],
       connections: [{ from: "source", to: "done", type: "success" as const }],
     };
-    const layout = computeLayout(workflow, { depth: "workflow", expandedStepIds: {} });
+    const layout = computeLayout(workflow, { expandedStepIds: {} });
     const [edge] = buildFlowEdges(layout, new Set<string>(), null);
 
     expect(edge).toMatchObject({

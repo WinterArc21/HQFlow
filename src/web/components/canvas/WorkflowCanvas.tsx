@@ -11,6 +11,7 @@ import { CanvasHeader } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
+import { prepareObstacleRoutingContext, type RouteObstacle } from "./edges/obstacleRouting";
 import { computeBackEdgeIds, computeTracePath } from "./graph";
 import { computeLayout } from "./layout";
 import { OutcomeNode } from "./nodes/OutcomeNode";
@@ -63,8 +64,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
-  const depth = useCodeHQStore((state) => state.depth);
-  const setDepth = useCodeHQStore((state) => state.setDepth);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
@@ -74,7 +73,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const stepPanRequest = useCodeHQStore((state) => state.stepPanRequest);
   const selectStep = useCodeHQStore((state) => state.selectStep);
 
-  const layout = useMemo(() => computeLayout(workflow, { depth, expandedStepIds }), [workflow, depth, expandedStepIds]);
+  const layout = useMemo(() => computeLayout(workflow, { expandedStepIds }), [workflow, expandedStepIds]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
 
   // Path tracing (contract §11): hover wins over keyboard focus, which wins over the persisted
@@ -101,7 +100,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     layoutBounds: layout.bounds,
     workflowId: workflow.id,
     workflowRevision,
-    depth,
     reactFlowInstance,
     reducedMotion,
   });
@@ -131,7 +129,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         workflow,
         layout,
         backEdgeIds,
-        depth,
         expandedStepIds,
         sourceChecks,
         selectedStepId,
@@ -149,7 +146,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       workflow,
       layout,
       backEdgeIds,
-      depth,
       expandedStepIds,
       sourceChecks,
       selectedStepId,
@@ -197,6 +193,8 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         nodeBounds.set(node.id, { x: node.position.x, y: node.position.y, width, height });
       }
     }
+    const routeObstacles: RouteObstacle[] = Array.from(nodeBounds, ([id, bounds]) => ({ id, ...bounds }));
+    const routingContext = prepareObstacleRoutingContext(routeObstacles);
 
     return baseEdges.map((edge) => {
       if (edge.data?.retry === true || edge.data?.returnEdge === true) {
@@ -207,18 +205,25 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       if (source === undefined || target === undefined) {
         return edge;
       }
+      const withObstacles = (candidate: WorkflowFlowEdge): WorkflowFlowEdge => {
+        if (candidate.data === undefined) {
+          return candidate;
+        }
+        return { ...candidate, data: { ...candidate.data, routingContext } };
+      };
       const sourceInitial = initialPositions.get(edge.source);
       const targetInitial = initialPositions.get(edge.target);
       const outcomeAtRest = edge.data?.branch === true && sourceInitial !== undefined && targetInitial !== undefined
         && source.x === sourceInitial.x && source.y === sourceInitial.y
         && target.x === targetInitial.x && target.y === targetInitial.y;
       if (outcomeAtRest) {
-        return edge;
+        return withObstacles(edge);
       }
       const handles = chooseCardinalHandles(source, target);
-      return edge.sourceHandle === handles.sourceHandle && edge.targetHandle === handles.targetHandle
+      const nextEdge = edge.sourceHandle === handles.sourceHandle && edge.targetHandle === handles.targetHandle
         ? edge
         : { ...edge, ...handles };
+      return withObstacles(nextEdge);
     });
   }, [baseEdges, layout, nodes]);
 
@@ -261,8 +266,6 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         workflow={workflow}
         {...(modifiedAt !== undefined ? { modifiedAt } : {})}
         {...(state !== undefined ? { state } : {})}
-        depth={depth}
-        onDepthChange={setDepth}
         onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
         onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
         onResetLayout={resetLayout}

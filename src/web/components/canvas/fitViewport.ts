@@ -4,7 +4,7 @@
  * clamped minimum readable zoom (contract §1: "clamp the minimum default zoom to something
  * legible") can't fit it, centering silently crops an equal sliver off both the top *and* the
  * bottom. That hides the workflow's entry step behind the header with no visual cue that more
- * content exists — the worst possible first impression after switching depth.
+ * content exists — the worst possible first impression of a tall workflow.
  *
  * This computes the same "fit" zoom `fitView` would, clamps it the same way, but when the fitted
  * content is taller than the viewport it anchors to the *top* instead of the centre: the entry
