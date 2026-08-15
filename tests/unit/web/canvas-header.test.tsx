@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workflow } from "@schema/workflow";
 import { CanvasHeader, type CanvasHeaderProps } from "@web/components/canvas/CanvasHeader";
+import { resetCodeHQStore, useCodeHQStore } from "@web/store/useCodeHQStore";
 
 const WORKFLOW: Workflow = {
   schemaVersion: "0.1",
@@ -24,6 +25,10 @@ const TOOLBAR_PROPS: Omit<CanvasHeaderProps, "workflow"> = {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+beforeEach(() => {
+  resetCodeHQStore();
 });
 
 describe("CanvasHeader workflow trust context", () => {
@@ -62,5 +67,17 @@ describe("CanvasHeader workflow trust context", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset layout" }));
 
     expect(onResetLayout).toHaveBeenCalledOnce();
+  });
+
+  it("offers background presets and applies the selected canvas mood", () => {
+    render(<CanvasHeader workflow={WORKFLOW} {...TOOLBAR_PROPS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Canvas background: Graph paper" }));
+    expect(screen.getByRole("menu", { name: "Canvas background options" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitemradio", { name: /Mist forest/ }));
+
+    expect(useCodeHQStore.getState().canvasBackground).toBe("mist");
+    expect(screen.getByRole("button", { name: "Canvas background: Mist forest" })).toBeInTheDocument();
   });
 });

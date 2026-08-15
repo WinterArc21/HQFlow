@@ -24,6 +24,9 @@ export default defineConfig({
   build: {
     outDir: "../../dist/export-viewer",
     emptyOutDir: true,
+    // Keep the optional canvas photo inside the single-file export. The current prototype image
+    // is intentionally below this ceiling, so exported snapshots remain portable from file://.
+    assetsInlineLimit: 200_000,
     cssCodeSplit: false,
     rollupOptions: {
       input: entryPath,

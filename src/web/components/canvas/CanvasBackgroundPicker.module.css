@@ -1,0 +1,128 @@
+.picker {
+  position: relative;
+  z-index: 8;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  width: 238px;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-raised);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--bg-inset) 48%, transparent);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+}
+
+.headingHint {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.option:hover,
+.option:focus-visible {
+  border-color: var(--border-subtle);
+  background-color: var(--bg-surface);
+}
+
+.selected {
+  border-color: color-mix(in srgb, var(--accent-blue) 48%, var(--border-subtle));
+  background-color: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-surface));
+}
+
+.swatch {
+  width: 42px;
+  height: 30px;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-canvas);
+}
+
+.swatchGrid {
+  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  background-size: 9px 9px;
+}
+
+.swatchMist {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--bg-canvas) 38%, transparent), color-mix(in srgb, var(--bg-canvas) 52%, transparent)),
+    url("../../assets/mist-forest.png");
+  background-position: center;
+  background-size: cover;
+}
+
+.swatchBlueprint {
+  background-color: color-mix(in srgb, var(--accent-blue) 12%, var(--bg-canvas));
+  background-image:
+    linear-gradient(to right, var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-strong) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.swatchPlain {
+  background-color: var(--bg-canvas);
+}
+
+.optionCopy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.optionLabel {
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+}
+
+.optionDescription {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  flex: none;
+  margin-left: auto;
+  color: var(--accent-blue);
+}
+
+@media (max-width: 560px) {
+  .menu {
+    right: calc(-1 * var(--space-2));
+  }
+}

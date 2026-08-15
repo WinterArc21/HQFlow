@@ -7,6 +7,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
  */
 
 export type Theme = "dark" | "light";
+export type CanvasBackground = "grid" | "mist" | "blueprint" | "plain";
 
 export interface StepPanRequest {
   workflowId: string;
@@ -14,7 +15,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 2;
+const PERSIST_VERSION = 3;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -29,6 +30,7 @@ interface CodeHQUiState {
   searchOpen: boolean;
   diagnosticsOpen: boolean;
   theme: Theme;
+  canvasBackground: CanvasBackground;
 }
 
 interface CodeHQUiActions {
@@ -44,6 +46,7 @@ interface CodeHQUiActions {
   toggleDiagnostics: () => void;
   closeDiagnostics: () => void;
   setTheme: (theme: Theme) => void;
+  setCanvasBackground: (background: CanvasBackground) => void;
 }
 
 export type CodeHQStore = CodeHQUiState & CodeHQUiActions;
@@ -101,6 +104,7 @@ const INITIAL_STATE: CodeHQUiState = {
   searchOpen: false,
   diagnosticsOpen: false,
   theme: getInitialTheme(),
+  canvasBackground: "grid",
 };
 
 export const useCodeHQStore = create<CodeHQStore>()(
@@ -159,12 +163,13 @@ export const useCodeHQStore = create<CodeHQStore>()(
       closeDiagnostics: () => set({ diagnosticsOpen: false }),
 
       setTheme: (theme) => set({ theme }),
+      setCanvasBackground: (canvasBackground) => set({ canvasBackground }),
     }),
     {
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme }),
+      partialize: (state) => ({ theme: state.theme, canvasBackground: state.canvasBackground }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        */
@@ -174,6 +179,13 @@ export const useCodeHQStore = create<CodeHQStore>()(
         }
         const state = { ...(persisted as Record<string, unknown>) };
         delete state.depth;
+        if (state.canvasBackground !== undefined
+          && state.canvasBackground !== "grid"
+          && state.canvasBackground !== "mist"
+          && state.canvasBackground !== "blueprint"
+          && state.canvasBackground !== "plain") {
+          delete state.canvasBackground;
+        }
         return state as unknown as CodeHQUiState;
       },
     },

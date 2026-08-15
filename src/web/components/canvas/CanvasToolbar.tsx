@@ -7,6 +7,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { IconButton } from "../primitives";
+import { CanvasBackgroundPicker } from "./CanvasBackgroundPicker";
 import styles from "./CanvasToolbar.module.css";
 
 export interface CanvasToolbarProps {
@@ -51,6 +52,8 @@ export function CanvasToolbar({
         onClick={onCollapseAll}
         disabled={collapseDisabled}
       />
+      <div className={styles.divider} aria-hidden="true" />
+      <CanvasBackgroundPicker />
       {onExport !== undefined ? (
         <>
           <div className={styles.divider} aria-hidden="true" />

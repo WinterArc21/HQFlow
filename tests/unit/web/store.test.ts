@@ -51,6 +51,18 @@ describe("useCodeHQStore", () => {
     expect(freshStore.getState().theme).toBe("light");
   });
 
+  it("restores a persisted canvas background", async () => {
+    setSystemTheme("dark");
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ state: { theme: "dark", canvasBackground: "mist" }, version: 3 }),
+    );
+
+    const { useCodeHQStore: freshStore } = await loadFreshStore();
+
+    expect(freshStore.getState().canvasBackground).toBe("mist");
+  });
+
   it("requests a pan only for indirect step selection", () => {
     useCodeHQStore.getState().selectStepAndPan("workflow-a", "step-2");
 
@@ -100,8 +112,9 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
   });
 
-  it("persists only theme, under one namespaced localStorage key", () => {
+  it("persists theme and canvas background under one namespaced localStorage key", () => {
     useCodeHQStore.getState().setTheme("light");
+    useCodeHQStore.getState().setCanvasBackground("blueprint");
     useCodeHQStore.getState().selectWorkflow("some-workflow");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -109,7 +122,8 @@ describe("useCodeHQStore", () => {
     const parsed: { state: Record<string, unknown> } = JSON.parse(raw as string);
 
     expect(parsed.state.theme).toBe("light");
-    expect(Object.keys(parsed.state)).toEqual(["theme"]);
+    expect(parsed.state.canvasBackground).toBe("blueprint");
+    expect(Object.keys(parsed.state)).toEqual(["theme", "canvasBackground"]);
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {

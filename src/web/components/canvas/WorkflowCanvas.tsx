@@ -4,7 +4,7 @@ import { MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, typ
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
-import { useCodeHQStore } from "../../store/useCodeHQStore";
+import { useCodeHQStore, type CanvasBackground } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
 import { CanvasLegend } from "./CanvasLegend";
 import { CanvasHeader } from "./CanvasHeader";
@@ -36,6 +36,12 @@ const MINIMAP_NODE_THRESHOLD = 10;
 
 const NODE_TYPES = { step: StepNode, outcome: OutcomeNode };
 const EDGE_TYPES = { workflow: WorkflowEdge };
+const BACKGROUND_CLASSES: Record<CanvasBackground, string> = {
+  grid: styles.backgroundGrid!,
+  mist: styles.backgroundMist!,
+  blueprint: styles.backgroundBlueprint!,
+  plain: styles.backgroundPlain!,
+};
 
 export interface WorkflowCanvasProps {
   workflow: Workflow;
@@ -64,6 +70,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
+  const canvasBackground = useCodeHQStore((state) => state.canvasBackground);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
@@ -276,7 +283,11 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           ? { onDelete: () => setDeleteDialogOpen(true) }
           : {})}
       />
-      <div className={styles.stage} ref={containerRef}>
+      <div
+        className={`${styles.stage} ${BACKGROUND_CLASSES[canvasBackground]}`}
+        data-canvas-background={canvasBackground}
+        ref={containerRef}
+      >
         <EdgeMarkers />
         <ReactFlow
           className={styles.flow}

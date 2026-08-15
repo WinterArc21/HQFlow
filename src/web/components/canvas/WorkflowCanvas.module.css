@@ -6,19 +6,14 @@
   min-height: 0;
 }
 
-/* The graph gets a quiet point field instead of inheriting the app shell's ruled 32px grid.
- * Cards, labels, and semantic edge dashes already create plenty of linear detail; dots provide
- * enough spatial reference for panning without competing with those elements or making the
- * canvas read as drafting paper. The opaque canvas colour masks `base.css`'s body grid only
- * inside this stage, leaving the surrounding shell unchanged. */
+/* The stage owns the selected canvas texture instead of inheriting the app shell's ruled 32px
+ * grid. Cards, labels, and semantic edge dashes already create plenty of linear detail, so each
+ * background preset stays quiet enough to leave the graph as the main figure. */
 .stage {
   position: relative;
   flex: 1;
   min-height: 0;
   background-color: var(--bg-canvas);
-  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
-  background-position: 0 0;
-  background-size: 28px 28px;
   /* `--canvas-node-header`, `--canvas-node-footer`, `--canvas-node-body-hover`, and
      `--canvas-node-border-hover` used to live here too. The step card's header and footer are
      translucent now so its accent gradient shows through them, and both its resting border and its
@@ -35,6 +30,38 @@
   --canvas-outcome-shadow: 0 5px 14px color-mix(in srgb, var(--bg-canvas) 16%, transparent);
 }
 
+.backgroundGrid {
+  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  background-position: 0 0;
+  background-size: 28px 28px;
+}
+
+.backgroundMist {
+  background-image:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--bg-canvas) 56%, transparent),
+      color-mix(in srgb, var(--bg-canvas) 74%, transparent)
+    ),
+    url("../../assets/mist-forest.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.backgroundBlueprint {
+  background-color: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-canvas));
+  background-image:
+    linear-gradient(to right, var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-strong) 1px, transparent 1px);
+  background-position: center;
+  background-size: 64px 64px;
+}
+
+.backgroundPlain {
+  background-color: var(--bg-canvas);
+}
+
 :global(:root[data-theme="light"]) .stage {
   --canvas-node-shadow: 0 2px 5px color-mix(in srgb, var(--text-primary) 9%, transparent), 0 14px 32px color-mix(in srgb, var(--text-primary) 8%, transparent);
   --canvas-node-shadow-lifted: 0 4px 10px color-mix(in srgb, var(--text-primary) 12%, transparent), 0 20px 42px color-mix(in srgb, var(--text-primary) 11%, transparent);
@@ -43,8 +70,8 @@
 
 /* React Flow ships light, generic defaults (white pane, grey attribution, plain black
    selection outline). Everything below re-points it at the design system's own tokens instead
-   (contract §11: "override its default look ... with tokens") — the technical background grid
-   itself comes from the app shell (`styles/base.css`), so the pane stays fully transparent. */
+   (contract §11: "override its default look ... with tokens") — the selected stage background
+   stays visible because the pane is fully transparent. */
 .flow {
   width: 100%;
   height: 100%;
