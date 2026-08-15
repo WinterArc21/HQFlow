@@ -6,14 +6,10 @@ import {
   MagnifyingGlassPlus,
   Trash,
 } from "@phosphor-icons/react";
-import type { Depth } from "../../store/useCodeHQStore";
 import { IconButton } from "../primitives";
-import { DepthControl } from "./DepthControl";
 import styles from "./CanvasToolbar.module.css";
 
 export interface CanvasToolbarProps {
-  depth: Depth;
-  onDepthChange: (depth: Depth) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetLayout: () => void;
@@ -25,10 +21,8 @@ export interface CanvasToolbarProps {
   onDelete?: () => void;
 }
 
-/** The canvas's own chrome: depth control, zoom, collapse-all, and (when available) export/delete. */
+/** The canvas's own chrome: zoom, collapse-all, and (when available) export/delete. */
 export function CanvasToolbar({
-  depth,
-  onDepthChange,
   onZoomIn,
   onZoomOut,
   onResetLayout,
@@ -39,8 +33,6 @@ export function CanvasToolbar({
 }: CanvasToolbarProps) {
   return (
     <div className={styles.toolbar}>
-      <DepthControl depth={depth} onChange={onDepthChange} />
-      <div className={styles.divider} aria-hidden="true" />
       <div className={styles.zoomGroup}>
         <IconButton label="Zoom in" icon={<MagnifyingGlassPlus size={16} />} size="sm" onClick={onZoomIn} />
         <IconButton label="Zoom out" icon={<MagnifyingGlassMinus size={16} />} size="sm" onClick={onZoomOut} />

@@ -1,7 +1,6 @@
 /** Deterministic horizontal workflow layout. Work reads left-to-right; terminal output steps
  * occupy semantic bands above (failure) or below (success) the vertically-centred mainline. */
 import type { Workflow, WorkflowConnection } from "@schema/workflow";
-import type { Depth } from "../../store/useCodeHQStore";
 import { outcomeTone } from "../../design/semantics";
 import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } from "./graph";
 import { computeNodeHeight, computeOutcomeNodeWidth, effectiveDepthForStep, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
@@ -43,7 +42,6 @@ export interface LayoutBounds {
   height: number;
 }
 export interface ComputeLayoutOptions {
-  depth: Depth;
   expandedStepIds: ReadonlySet<string> | Record<string, true>;
 }
 export interface LayoutResult {
@@ -84,7 +82,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
   const heights = new Map(
     workIds.map((id) => {
       const step = byId.get(id)!.step;
-      return [id, computeNodeHeight(step, effectiveDepthForStep(step, opts.depth, opts.expandedStepIds))] as const;
+      return [id, computeNodeHeight(step, effectiveDepthForStep(step, opts.expandedStepIds))] as const;
     }),
   );
   const backEdgeIds = computeBackEdgeIds(workflow);
@@ -237,7 +235,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     const isOutcome = outcomes.has(step.id);
     const height = isOutcome
       ? OUTCOME_NODE_HEIGHT
-      : (heights.get(step.id) ?? computeNodeHeight(step, effectiveDepthForStep(step, opts.depth, opts.expandedStepIds)));
+      : (heights.get(step.id) ?? computeNodeHeight(step, effectiveDepthForStep(step, opts.expandedStepIds)));
     const point = positioned.get(step.id) ?? {
       x: LAYOUT_MARGIN_X + index * (NODE_WIDTH + LAYOUT_RANK_SEP),
       y: mainCenterY - height / 2,

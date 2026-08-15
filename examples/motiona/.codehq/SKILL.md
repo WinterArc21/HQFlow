@@ -30,7 +30,7 @@ file after every change and fix anything you broke.
 15. Never add layout coordinates, colors, styling, or visual instructions.
 16. Run `hqflow validate` after making changes.
 17. Read `.codehq/diagnostics.json` and repair any errors you introduced.
-18. Write step `name` and `purpose` in product language a non-author can understand (e.g. "Collect website data", not `pollFirecrawlBatch`). Keep type and symbol names in `inputs`/`outputs`/`sources` — the canvas shows Story by default and Code map on demand.
+18. Write step `name` and `purpose` in product language a non-author can understand (e.g. "Collect website data", not `pollFirecrawlBatch`). Keep type and symbol names in `inputs`/`outputs`/`sources` — the canvas shows the product story; expand a card or open the drawer for files, types, and symbols.
 
 The goal is not to document every function in the codebase. It is to give the next person (or
 agent) who opens this project a fast, trustworthy map of how a handful of real, important
@@ -120,11 +120,11 @@ Use forward slashes or backslashes, e.g. `"src/server/routes/checkout.ts"`.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `id` | string | yes | Unique within the workflow. |
-| `name` | string | yes | Short product-language step name (Story altitude), e.g. `"Collect website data"` — not a function identifier. |
+| `name` | string | yes | Short product-language step name, e.g. `"Collect website data"` — not a function identifier. |
 | `purpose` | string | yes | One plain sentence: what this step does and why. No file paths or type names. |
 | `category` | one of: `"entry"`, `"logic"`, `"decision"`, `"data"`, `"external"`, `"output"` | no | Drives the step's marker color. Use `"entry"` for the step(s) that begin the workflow — this is also how reachability is computed. |
 | `confidence` | one of: `"verified"`, `"inferred"`, `"human-confirmed"` | no | `"verified"`: directly supported by the code you read. `"inferred"`: a reasonable interpretation you could not fully confirm. `"human-confirmed"`: a human explicitly confirmed this — never downgrade it. |
-| `sources` | `SourceReference[]` | no | Real files/symbols that implement this step (shown on Code map / expand). |
+| `sources` | `SourceReference[]` | no | Real files/symbols that implement this step (shown on expand and in the drawer). |
 | `inputs` | `DataReference[]` | no | What this step consumes (type names belong here, not in `name`). |
 | `outputs` | `DataReference[]` | no | What this step produces (type names belong here, not in `name`). |
 | `edgeCases` | `EdgeCase[]` | no | Meaningful failure branches or special cases. |

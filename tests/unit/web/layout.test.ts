@@ -17,7 +17,7 @@ function makeWorkflow(steps: WorkflowStep[], connections: Workflow["connections"
   };
 }
 
-const BASE_OPTS = { depth: "workflow" as const, expandedStepIds: {} };
+const BASE_OPTS = { expandedStepIds: {} };
 
 function overlaps(a: { x: number; y: number; width: number; height: number }, b: typeof a): boolean {
   const separatedX = a.x + a.width <= b.x || b.x + b.width <= a.x;
@@ -157,8 +157,8 @@ describe("computeLayout", () => {
       ],
       [{ from: "a", to: "b" }],
     );
-    const collapsed = computeLayout(workflow, { depth: "workflow", expandedStepIds: {} });
-    const expanded = computeLayout(workflow, { depth: "workflow", expandedStepIds: { a: true } });
+    const collapsed = computeLayout(workflow, { expandedStepIds: {} });
+    const expanded = computeLayout(workflow, { expandedStepIds: { a: true } });
     const a = expanded.nodes.find((node) => node.id === "a")!;
     const b = expanded.nodes.find((node) => node.id === "b")!;
 

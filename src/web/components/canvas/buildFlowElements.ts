@@ -4,7 +4,6 @@ import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent
 import { Position, type NodeHandle } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
-import type { Depth } from "../../store/useCodeHQStore";
 import { outcomeTone } from "../../design/semantics";
 import { computeIncomingTypes } from "./graph";
 import type { LayoutResult } from "./layout";
@@ -118,7 +117,6 @@ export interface BuildFlowNodesParams extends TraceHandlers {
   workflow: Workflow;
   layout: LayoutResult;
   backEdgeIds: ReadonlySet<string>;
-  depth: Depth;
   expandedStepIds: Record<string, true>;
   sourceChecks: Record<string, SourceStatus>;
   selectedStepId: string | null;
@@ -250,7 +248,7 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
       data: {
         step,
         index: layoutNode.index,
-        effectiveDepth: effectiveDepthForStep(step, params.depth, params.expandedStepIds),
+        effectiveDepth: effectiveDepthForStep(step, params.expandedStepIds),
         expanded: isStepExpanded(params.expandedStepIds, step.id),
         selected: step.id === params.selectedStepId,
         hasMissingSource: stepHasMissingSource(step, params.sourceChecks),

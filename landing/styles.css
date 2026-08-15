@@ -96,7 +96,7 @@ h1, h2, h3 { font-family: var(--display); }
 .dim { color: var(--ink-3); }
 
 /* small mono labels. deliberately few: no section eyebrows anywhere. */
-.head-note, .demo-repo, .demo-stats, .demo-depth-label, .install-cue,
+.head-note, .demo-repo, .demo-stats, .install-cue,
 .install-compat, .foot-tag, .foot-c, .demo-caption,
 .live, .d-section > span, .d-foot {
   color: var(--ink-3);
@@ -325,10 +325,6 @@ main { position: relative; }
 .d-foot { font-size: 10px; }
 
 .demo-foot { border-top: 1px solid var(--line); background: var(--paper-2); }
-.seg { display: inline-flex; overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--r-1); background: white; }
-.seg-btn { padding: 4px 10px; color: var(--ink-3); font: 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.seg-btn + .seg-btn { border-left: 1px solid var(--line-strong); }
-.seg-btn.is-on { color: white; background: var(--ink); }
 .demo-caption { margin-top: 14px; text-align: right; text-transform: none; letter-spacing: .02em; }
 .demo-caption code { font-size: 10.5px; }
 
@@ -448,9 +444,6 @@ main { position: relative; }
   .demo-bar .live, .demo-spacer { display: none; }
   .demo-pan { width: max(100%, 720px); }
   .demo-foot { display: grid; grid-template-columns: auto 1fr; }
-  .demo-stats, .demo-depth-label { display: none; }
-  .seg { justify-self: end; }
-  .seg-btn { padding-inline: 7px; font-size: 9px; }
   .demo-caption { text-align: left; }
   .foot-c { text-align: left; }
 }

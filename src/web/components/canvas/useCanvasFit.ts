@@ -3,12 +3,11 @@
  * "no React component file over ~200 lines") along the seam that was already documented there as
  * a distinct concern from node/edge wiring: computing the graph's bounding box, deciding the
  * fitted zoom/position via `fitViewport.ts`, and the two effects that apply it (a synchronous
- * re-fit on workflow/depth change, and a one-shot fallback for the container's very first real
+ * re-fit on workflow change, and a one-shot fallback for the container's very first real
  * layout).
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
-import type { Depth } from "../../store/useCodeHQStore";
 import { computeFitViewport, computeViewportOverflow, type Viewport } from "./fitViewport";
 import type { LayoutBounds } from "./layout";
 
@@ -27,7 +26,6 @@ export interface UseCanvasFitParams {
   /** Stable serialization of the valid workflow content. Changes when a live semantic edit can
    * alter graph bounds, but not for source-check-only snapshots or local expansion state. */
   workflowRevision: string;
-  depth: Depth;
   reactFlowInstance: Pick<ReactFlowInstance, "setViewport">;
   reducedMotion: boolean;
 }
@@ -41,12 +39,11 @@ export interface UseCanvasFitResult {
 }
 
 export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
-  const { layoutBounds, workflowId, workflowRevision, depth, reactFlowInstance, reducedMotion } = params;
+  const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion } = params;
   const containerRef = useRef<HTMLDivElement>(null);
-  // Whether the fitted graph still has more content below the visible stage — a deeper depth
-  // (`modules`/`symbols` grow every node) or a large workflow can be taller than even the
-  // minimum legible zoom allows. Drives the "more below" affordance so a reader never mistakes a
-  // cut-off last card for the end of the workflow.
+  // Whether the fitted graph still has more content below the visible stage — a large
+  // workflow can be taller than even the minimum legible zoom allows. Drives the "more below"
+  // affordance so a reader never mistakes a cut-off last card for the end of the workflow.
   const [overflowsBottom, setOverflowsBottom] = useState(false);
   const [overflowsRight, setOverflowsRight] = useState(false);
 
@@ -98,11 +95,11 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
   // before snapping to the fitted one.
   useLayoutEffect(() => {
     fitToViewport(reducedMotion ? 0 : 400);
-    // Re-fit on a new workflow, a valid live workflow-content update, or a global depth change
-    // (contract §11). Expanding a single step, selecting a step, or a source-check-only update
-    // must never re-frame the viewport.
+    // Re-fit on a new workflow or a valid live workflow-content update (contract §11).
+    // Expanding a single step, selecting a step, or a source-check-only update must never
+    // re-frame the viewport.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowId, workflowRevision, depth]);
+  }, [workflowId, workflowRevision]);
 
   // One-shot fallback for the very first mount: the app auto-selects the default workflow from
   // a *regular* `useEffect` in `App.tsx` (necessarily async — it reacts to the server snapshot
@@ -126,8 +123,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
     observer.observe(container);
     return () => observer.disconnect();
     // Deliberately mount-scoped: only ever needs to catch the first real layout, not every
-    // resize (contract §11: the viewport must not re-frame on anything but a workflow/depth
-    // change).
+    // resize (contract §11: the viewport must not re-frame on anything but a workflow change).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

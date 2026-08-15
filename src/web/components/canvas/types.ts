@@ -3,8 +3,9 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
-import type { Depth } from "../../store/useCodeHQStore";
+import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
+import type { ObstacleRoutingContext } from "./edges/obstacleRouting";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
@@ -79,6 +80,8 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
     durationMs: number;
     key: string;
   };
+  /** Live card geometry prepared once per canvas update for the pure obstacle router. */
+  routingContext?: ObstacleRoutingContext;
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;
