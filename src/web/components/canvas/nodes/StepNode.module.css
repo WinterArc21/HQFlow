@@ -47,18 +47,8 @@
   border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
 }
 
-/* The category marker is the card itself (contract §10 still holds — colour encodes category and
-   nothing else). Instead of a 6px spine, the accent enters at 15% on the leading edge and
-   dissolves into the neutral body by 78% across: at canvas zoom the category reads from the card's
-   whole silhouette rather than from a sliver, while the purpose line and the file rows still sit on
-   effectively neutral background, which is what keeps long text legible.
-
-   15% is a ceiling, not a taste call — at 22% the purpose line (`--text-secondary`) falls to
-   ~4.3:1 against the leading edge on the paper theme. Verified against all six category accents in
-   both themes; the weakest pairing that survives is 5.05:1.
-
-   `background-color` stays as a solid fallback while the gradient uses the same controlled alpha as
-   the card surface, so dropping the gradient still leaves a safe neutral plate. */
+/* The card is a low-tint frosted overlay. Its small accent wash keeps category meaning without
+   masking the background image that must remain visible through the full card. */
 .card {
   box-sizing: border-box;
   position: relative;
@@ -72,15 +62,15 @@
   background-color: var(--canvas-node-body-translucent);
   background-image: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--node-accent) 15%, var(--canvas-node-body-translucent)) 0%,
-    color-mix(in srgb, var(--node-accent) 7%, var(--canvas-node-body-translucent)) 42%,
+    color-mix(in srgb, var(--node-accent) 5%, var(--canvas-node-body-translucent)) 0%,
+    color-mix(in srgb, var(--node-accent) 2%, var(--canvas-node-body-translucent)) 42%,
     var(--canvas-node-body-translucent) 78%
   );
   border: 1px solid color-mix(in srgb, var(--node-accent) 26%, var(--canvas-node-border));
   border-radius: 10px;
   box-shadow: var(--canvas-node-shadow);
-  backdrop-filter: blur(var(--canvas-node-blur));
-  -webkit-backdrop-filter: blur(var(--canvas-node-blur));
+  backdrop-filter: var(--canvas-node-filter);
+  -webkit-backdrop-filter: var(--canvas-node-filter);
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -197,7 +187,8 @@
   font-size: var(--fs-lg);
   font-weight: 600;
   letter-spacing: -0.005em;
-  color: var(--text-primary);
+  color: var(--canvas-card-text-primary);
+  text-shadow: var(--canvas-card-text-shadow);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,7 +227,8 @@
   flex-shrink: 0;
   font-size: var(--fs-tiny);
   line-height: 16px;
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -270,9 +262,7 @@
   gap: var(--space-2);
   margin-top: 15px;
   padding: 0 12px;
-  /* A translucent inset wash rather than the opaque footer token, so the tail of the gradient still
-     shows through and the footer reads as part of the same card rather than a plate stuck on it. */
-  background: color-mix(in srgb, var(--bg-inset) 30%, transparent);
+  background: color-mix(in srgb, var(--canvas-card-text-primary) 7%, transparent);
   border-top: 1px solid color-mix(in srgb, var(--node-accent) 18%, var(--canvas-node-divider));
 }
 
@@ -285,7 +275,8 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--node-accent) 85%, var(--text-primary));
+  color: color-mix(in srgb, var(--node-accent) 62%, var(--canvas-card-text-primary));
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 /* Now the row's only occupant (the source/edge-case/test counts that used to sit opposite it
@@ -322,7 +313,8 @@
   vertical-align: bottom;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 /* `--text-secondary`, not `--text-tertiary`: at 9px this was already the weakest text on the card
@@ -336,14 +328,15 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 .detail {
   flex-shrink: 0;
   margin: 0 12px;
   padding-top: 5px;
-  background-image: linear-gradient(var(--border-subtle), var(--border-subtle));
+  background-image: linear-gradient(var(--canvas-node-divider), var(--canvas-node-divider));
   background-position: top;
   background-repeat: no-repeat;
   background-size: 100% 1px;
@@ -357,7 +350,8 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 .fileRow {
@@ -382,18 +376,21 @@
 
 .dir {
   flex-shrink: 0;
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .base {
   flex-shrink: 0;
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 .symbol {
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -402,7 +399,8 @@
   height: 14px;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 @media (forced-colors: active) {

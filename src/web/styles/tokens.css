@@ -47,6 +47,13 @@
   --text-primary: #edeae4;
   --text-secondary: #9ba1a9;
   --text-tertiary: #6b7178;
+  /* Image-backed cards select one pair from local background luminance. */
+  --text-on-image-light: #ffffff;
+  --text-on-image-light-muted: rgba(255, 255, 255, 0.84);
+  --text-on-image-light-shadow: 0 1px 2px rgba(0, 0, 0, 0.86), 0 0 7px rgba(0, 0, 0, 0.62);
+  --text-on-image-dark: #101214;
+  --text-on-image-dark-muted: rgba(16, 18, 20, 0.82);
+  --text-on-image-dark-shadow: 0 1px 2px rgba(255, 255, 255, 0.78), 0 0 7px rgba(255, 255, 255, 0.58);
 
   /* ---- accents (dark) ---- */
   --accent-blue: #5b8def; /* focus + selection rings, async connections — not a category */

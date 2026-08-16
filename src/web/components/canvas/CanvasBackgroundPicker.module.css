@@ -96,6 +96,20 @@
   background-color: var(--bg-canvas);
 }
 
+.swatchUpload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 28%, transparent), transparent 48%),
+    linear-gradient(45deg, color-mix(in srgb, var(--accent-blue) 30%, var(--bg-canvas)), var(--bg-canvas));
+}
+
+.fileInput {
+  display: none;
+}
+
 .optionCopy {
   display: grid;
   min-width: 0;

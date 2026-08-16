@@ -22,7 +22,9 @@ import { fetchWorkflowExport } from "../../api/client";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
 import { useCanvasFit } from "./useCanvasFit";
+import { useAdaptiveCanvasContrast } from "./useAdaptiveCanvasContrast";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
+import mistForestUrl from "../../assets/mist-forest.png";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -41,6 +43,7 @@ const BACKGROUND_CLASSES: Record<CanvasBackground, string> = {
   mist: styles.backgroundMist!,
   blueprint: styles.backgroundBlueprint!,
   plain: styles.backgroundPlain!,
+  custom: styles.backgroundCustom!,
 };
 
 export interface WorkflowCanvasProps {
@@ -71,6 +74,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
 
   const theme = useCodeHQStore((state) => state.theme);
   const canvasBackground = useCodeHQStore((state) => state.canvasBackground);
+  const canvasBackgroundImage = useCodeHQStore((state) => state.canvasBackgroundImage);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
@@ -167,6 +171,10 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(generatedNodes);
+  const adaptiveImageUrl = canvasBackground === "custom"
+    ? canvasBackgroundImage
+    : canvasBackground === "mist" ? mistForestUrl : null;
+  const updateAdaptiveContrast = useAdaptiveCanvasContrast(containerRef, adaptiveImageUrl);
   const previousWorkflowId = useRef(workflow.id);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
@@ -184,6 +192,9 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     handledLayoutResetRevision.current = layoutResetRevision;
     setNodes((current) => restoreGeneratedNodePositions(current, generatedNodes));
   }, [generatedNodes, layoutResetRevision, setNodes]);
+  useLayoutEffect(() => {
+    updateAdaptiveContrast();
+  }, [nodes, updateAdaptiveContrast]);
   const baseEdges = useMemo(
     () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null),
     [layout, backEdgeIds, tracePath],
@@ -287,6 +298,9 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         className={`${styles.stage} ${BACKGROUND_CLASSES[canvasBackground]}`}
         data-canvas-background={canvasBackground}
         ref={containerRef}
+        style={canvasBackground === "custom" && canvasBackgroundImage !== null
+          ? { backgroundImage: `url(${JSON.stringify(canvasBackgroundImage)})` }
+          : undefined}
       >
         <EdgeMarkers />
         <ReactFlow
@@ -303,7 +317,11 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           disableKeyboardA11y
           minZoom={0.2}
           maxZoom={2}
-          onMove={(_event, viewport) => updateOverflow(viewport)}
+          onMove={(_event, viewport) => {
+            updateOverflow(viewport);
+            updateAdaptiveContrast();
+          }}
+          onNodeDrag={updateAdaptiveContrast}
           onNodeClick={handleNodeClick}
           onNodesChange={onNodesChange}
           onPaneClick={handleClearSelection}

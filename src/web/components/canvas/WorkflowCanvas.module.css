@@ -14,15 +14,16 @@
   flex: 1;
   min-height: 0;
   background-color: var(--bg-canvas);
-  /* Keep the card and label surfaces separate. Cards are translucent enough to inherit the
-     selected background, while labels stay almost opaque so small semantic text never depends on
-     the pixels behind it. The first value in each pair is the solid fallback for browsers without
-     `color-mix`; the second is the controlled enhancement. */
+  /* Cards are true local overlays: 90% of the image remains visible and the backdrop filter
+     diffuses, rather than replaces, the pixels behind each moving node. */
   --canvas-node-body: var(--bg-surface);
-  --canvas-node-body-translucent: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  --canvas-node-body-translucent: color-mix(in srgb, var(--bg-surface) 10%, transparent);
   --canvas-node-border: color-mix(in srgb, var(--text-primary) 24%, var(--border-strong));
   --canvas-node-divider: color-mix(in srgb, var(--text-primary) 10%, transparent);
-  --canvas-node-blur: 6px;
+  --canvas-node-filter: blur(12px) saturate(1.35);
+  --canvas-card-text-primary: var(--text-primary);
+  --canvas-card-text-secondary: var(--text-secondary);
+  --canvas-card-text-shadow: none;
   --canvas-label-surface: var(--bg-surface);
   --canvas-label-surface-translucent: color-mix(in srgb, var(--bg-surface) 96%, transparent);
   --canvas-label-border: color-mix(in srgb, var(--text-primary) 24%, var(--border-strong));
@@ -44,8 +45,8 @@
   background-image:
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--bg-canvas) 56%, transparent),
-      color-mix(in srgb, var(--bg-canvas) 74%, transparent)
+      color-mix(in srgb, var(--bg-canvas) 8%, transparent),
+      color-mix(in srgb, var(--bg-canvas) 14%, transparent)
     ),
     url("../../assets/mist-forest.png");
   background-position: center;
@@ -64,6 +65,24 @@
 
 .backgroundPlain {
   background-color: var(--bg-canvas);
+}
+
+.backgroundCustom {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.stage :global([data-card-text="light"]) {
+  --canvas-card-text-primary: var(--text-on-image-light);
+  --canvas-card-text-secondary: var(--text-on-image-light-muted);
+  --canvas-card-text-shadow: var(--text-on-image-light-shadow);
+}
+
+.stage :global([data-card-text="dark"]) {
+  --canvas-card-text-primary: var(--text-on-image-dark);
+  --canvas-card-text-secondary: var(--text-on-image-dark-muted);
+  --canvas-card-text-shadow: var(--text-on-image-dark-shadow);
 }
 
 :global(:root[data-theme="light"]) .stage {
@@ -233,7 +252,7 @@
   .stage {
     --canvas-node-body-translucent: var(--bg-surface);
     --canvas-label-surface-translucent: var(--bg-surface);
-    --canvas-node-blur: 0px;
+    --canvas-node-filter: none;
   }
 }
 
@@ -248,12 +267,13 @@
     --canvas-label-surface-translucent: Canvas;
     --canvas-label-border: CanvasText;
     --canvas-edge-halo: Canvas;
-    --canvas-node-blur: 0px;
+    --canvas-node-filter: none;
   }
 
   .backgroundGrid,
   .backgroundMist,
-  .backgroundBlueprint {
+  .backgroundBlueprint,
+  .backgroundCustom {
     background-image: none;
     background-color: Canvas;
   }

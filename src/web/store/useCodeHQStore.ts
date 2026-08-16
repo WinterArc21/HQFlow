@@ -7,7 +7,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
  */
 
 export type Theme = "dark" | "light";
-export type CanvasBackground = "grid" | "mist" | "blueprint" | "plain";
+export type CanvasBackground = "grid" | "mist" | "blueprint" | "plain" | "custom";
 
 export interface StepPanRequest {
   workflowId: string;
@@ -15,7 +15,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 3;
+const PERSIST_VERSION = 4;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -31,6 +31,8 @@ interface CodeHQUiState {
   diagnosticsOpen: boolean;
   theme: Theme;
   canvasBackground: CanvasBackground;
+  /** A user-selected image. It stays in the browser and is never sent to the server. */
+  canvasBackgroundImage: string | null;
 }
 
 interface CodeHQUiActions {
@@ -47,6 +49,7 @@ interface CodeHQUiActions {
   closeDiagnostics: () => void;
   setTheme: (theme: Theme) => void;
   setCanvasBackground: (background: CanvasBackground) => void;
+  setCanvasBackgroundImage: (image: string) => void;
 }
 
 export type CodeHQStore = CodeHQUiState & CodeHQUiActions;
@@ -105,6 +108,7 @@ const INITIAL_STATE: CodeHQUiState = {
   diagnosticsOpen: false,
   theme: getInitialTheme(),
   canvasBackground: "grid",
+  canvasBackgroundImage: null,
 };
 
 export const useCodeHQStore = create<CodeHQStore>()(
@@ -164,12 +168,17 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setTheme: (theme) => set({ theme }),
       setCanvasBackground: (canvasBackground) => set({ canvasBackground }),
+      setCanvasBackgroundImage: (canvasBackgroundImage) => set({ canvasBackground: "custom", canvasBackgroundImage }),
     }),
     {
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme, canvasBackground: state.canvasBackground }),
+      partialize: (state) => ({
+        theme: state.theme,
+        canvasBackground: state.canvasBackground,
+        canvasBackgroundImage: state.canvasBackgroundImage,
+      }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        */
@@ -183,8 +192,15 @@ export const useCodeHQStore = create<CodeHQStore>()(
           && state.canvasBackground !== "grid"
           && state.canvasBackground !== "mist"
           && state.canvasBackground !== "blueprint"
-          && state.canvasBackground !== "plain") {
+          && state.canvasBackground !== "plain"
+          && state.canvasBackground !== "custom") {
           delete state.canvasBackground;
+        }
+        if (typeof state.canvasBackgroundImage !== "string" || !state.canvasBackgroundImage.startsWith("data:image/")) {
+          delete state.canvasBackgroundImage;
+          if (state.canvasBackground === "custom") {
+            state.canvasBackground = "grid";
+          }
         }
         return state as unknown as CodeHQUiState;
       },

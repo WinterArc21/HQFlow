@@ -624,9 +624,9 @@ test("protects cards, connections, and labels across selected backgrounds and th
 
       expect(report.cardCount, `${theme}/${background.id} card count`).toBe(9);
       expect(report.cardsReadable, `${theme}/${background.id} card text and names`).toBe(true);
-      expect(report.cardSurfaceAlpha.every((alpha) => alpha > 0.7 && alpha < 1), `${theme}/${background.id} controlled card alpha`).toBe(true);
+      expect(report.cardSurfaceAlpha.every((alpha) => alpha >= 0.08 && alpha <= 0.16), `${theme}/${background.id} low card tint`).toBe(true);
       expect(report.cardBoundariesVisible, `${theme}/${background.id} card boundaries`).toBe(true);
-      expect(report.cardBlur.every((blur) => blur === "blur(6px)"), `${theme}/${background.id} local blur`).toBe(true);
+      expect(report.cardBlur.every((filter) => filter.includes("blur(12px)") && filter.includes("saturate(1.35)")), `${theme}/${background.id} local blur and saturation`).toBe(true);
       expect(report.edgeCount, `${theme}/${background.id} edge count`).toBe(11);
       expect(report.edgesProtected, `${theme}/${background.id} edge casing and markers`).toBe(true);
       expect(report.labelCount, `${theme}/${background.id} edge label count`).toBe(5);
@@ -646,6 +646,66 @@ test("protects cards, connections, and labels across selected backgrounds and th
     `${JSON.stringify({ viewport: "1920x1080", reducedMotion: true, states: reports }, null, 2)}\n`,
     "utf8",
   );
+});
+
+test("uses uploaded image pixels through cards and changes text contrast when a card moves", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(server.url);
+  await waitForBoot(page);
+  await selectWorkflowByName(page, "Canvas Grammar Demo");
+
+  const image = Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900">
+      <rect width="800" height="900" fill="#07110b"/>
+      <rect x="800" width="800" height="900" fill="#fff8dc"/>
+      <circle cx="360" cy="280" r="220" fill="#176b35"/>
+      <circle cx="1240" cy="280" r="220" fill="#ffc34d"/>
+    </svg>
+  `);
+  await page.locator('button[aria-label^="Canvas background:"]').click();
+  await page.getByLabel("Upload canvas background image").setInputFiles({
+    name: "contrast-zones.svg",
+    mimeType: "image/svg+xml",
+    buffer: image,
+  });
+
+  const stage = page.locator("[data-canvas-background]");
+  const card = page.locator("[data-step-node]").first();
+  await expect(stage).toHaveAttribute("data-canvas-background", "custom");
+  await expect(page.locator('button[aria-label^="Canvas background:"]')).toHaveAttribute(
+    "aria-label",
+    "Canvas background: Custom image",
+  );
+  await expect(card).toHaveCSS("background-color", /(?:\/ 0\.1|, 0\.1)\)/);
+  await expect(card).toHaveCSS("backdrop-filter", /blur\(12px\).*saturate\(1\.35\)/);
+
+  const stageBox = await stage.boundingBox();
+  const cardBox = await card.boundingBox();
+  expect(stageBox).not.toBeNull();
+  expect(cardBox).not.toBeNull();
+  const dragCardTo = async (x: number): Promise<void> => {
+    const current = await card.boundingBox();
+    expect(current).not.toBeNull();
+    await page.mouse.move(current!.x + current!.width / 2, current!.y + current!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(x, stageBox!.y + stageBox!.height / 2, { steps: 12 });
+    await page.mouse.up();
+  };
+
+  await dragCardTo(stageBox!.x + cardBox!.width / 2 + 24);
+  await expect(card).toHaveAttribute("data-card-text", "light");
+  const lightTextColor = await card.locator("p").first().evaluate((element) => getComputedStyle(element).color);
+
+  await dragCardTo(stageBox!.x + stageBox!.width - cardBox!.width / 2 - 24);
+  await expect(card).toHaveAttribute("data-card-text", "dark");
+  const darkTextColor = await card.locator("p").first().evaluate((element) => getComputedStyle(element).color);
+  expect(darkTextColor).not.toBe(lightTextColor);
+
+  await page.screenshot({
+    path: path.join(ARTIFACT_DIR, "canvas-background", "uploaded-background-adaptive-card.png"),
+    animations: "disabled",
+  });
 });
 
 test("keeps the canvas readable in forced-colors mode", async ({ page }) => {

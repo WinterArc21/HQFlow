@@ -1,4 +1,4 @@
-import { Check, Image as ImageIcon } from "@phosphor-icons/react";
+import { Check, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useCodeHQStore, type CanvasBackground } from "../../store/useCodeHQStore";
 import { IconButton } from "../primitives";
@@ -20,9 +20,27 @@ const OPTIONS: ReadonlyArray<{
 export function CanvasBackgroundPicker() {
   const canvasBackground = useCodeHQStore((state) => state.canvasBackground);
   const setCanvasBackground = useCodeHQStore((state) => state.setCanvasBackground);
+  const setCanvasBackgroundImage = useCodeHQStore((state) => state.setCanvasBackgroundImage);
   const [open, setOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const currentOption = OPTIONS.find((option) => option.id === canvasBackground) ?? OPTIONS[0]!;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentLabel = canvasBackground === "custom"
+    ? "Custom image"
+    : (OPTIONS.find((option) => option.id === canvasBackground) ?? OPTIONS[0]!).label;
+
+  const uploadImage = (file: File | undefined): void => {
+    if (file === undefined || !file.type.startsWith("image/")) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        setCanvasBackgroundImage(reader.result);
+        setOpen(false);
+      }
+    });
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -51,7 +69,7 @@ export function CanvasBackgroundPicker() {
   return (
     <div className={styles.picker} ref={pickerRef}>
       <IconButton
-        label={`Canvas background: ${currentOption.label}`}
+        label={`Canvas background: ${currentLabel}`}
         icon={<ImageIcon size={16} />}
         size="sm"
         aria-expanded={open}
@@ -84,6 +102,32 @@ export function CanvasBackgroundPicker() {
               {canvasBackground === option.id ? <Check className={styles.check} size={15} aria-hidden="true" /> : null}
             </button>
           ))}
+          <button
+            type="button"
+            role="menuitem"
+            className={`${styles.option} ${canvasBackground === "custom" ? styles.selected : ""}`}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <span className={`${styles.swatch} ${styles.swatchUpload}`} aria-hidden="true">
+              <UploadSimple size={16} />
+            </span>
+            <span className={styles.optionCopy}>
+              <span className={styles.optionLabel}>Upload image</span>
+              <span className={styles.optionDescription}>Choose a photo from this device</span>
+            </span>
+            {canvasBackground === "custom" ? <Check className={styles.check} size={15} aria-hidden="true" /> : null}
+          </button>
+          <input
+            ref={fileInputRef}
+            className={styles.fileInput}
+            type="file"
+            accept="image/*"
+            aria-label="Upload canvas background image"
+            onChange={(event) => {
+              uploadImage(event.currentTarget.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
         </div>
       ) : null}
     </div>

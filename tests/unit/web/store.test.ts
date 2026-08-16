@@ -123,7 +123,22 @@ describe("useCodeHQStore", () => {
 
     expect(parsed.state.theme).toBe("light");
     expect(parsed.state.canvasBackground).toBe("blueprint");
-    expect(Object.keys(parsed.state)).toEqual(["theme", "canvasBackground"]);
+    expect(parsed.state.canvasBackgroundImage).toBeNull();
+    expect(Object.keys(parsed.state)).toEqual(["theme", "canvasBackground", "canvasBackgroundImage"]);
+  });
+
+  it("keeps an uploaded canvas image local and selects it", () => {
+    const image = "data:image/png;base64,dGVzdA==";
+
+    useCodeHQStore.getState().setCanvasBackgroundImage(image);
+
+    expect(useCodeHQStore.getState().canvasBackground).toBe("custom");
+    expect(useCodeHQStore.getState().canvasBackgroundImage).toBe(image);
+    const persisted = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as {
+      state?: { canvasBackground?: unknown; canvasBackgroundImage?: unknown };
+    };
+    expect(persisted.state?.canvasBackground).toBe("custom");
+    expect(persisted.state?.canvasBackgroundImage).toBe(image);
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {

@@ -25,8 +25,8 @@
   border-width: 1.5px;
   border-style: solid;
   box-shadow: var(--canvas-outcome-shadow);
-  backdrop-filter: blur(var(--canvas-node-blur));
-  -webkit-backdrop-filter: blur(var(--canvas-node-blur));
+  backdrop-filter: var(--canvas-node-filter);
+  -webkit-backdrop-filter: var(--canvas-node-filter);
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -50,13 +50,13 @@
 .success {
   border-color: color-mix(in srgb, var(--accent-output) 50%, var(--border-strong));
   background-color: var(--canvas-node-body);
-  background-color: color-mix(in srgb, var(--accent-output) 6%, var(--canvas-node-body-translucent));
+  background-color: color-mix(in srgb, var(--accent-output) 5%, var(--canvas-node-body-translucent));
 }
 
 .failure {
   border-color: color-mix(in srgb, var(--accent-red) 50%, var(--border-strong));
   background-color: var(--canvas-node-body);
-  background-color: color-mix(in srgb, var(--accent-red) 6%, var(--canvas-node-body-translucent));
+  background-color: color-mix(in srgb, var(--accent-red) 5%, var(--canvas-node-body-translucent));
 }
 
 .neutral {
@@ -73,7 +73,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: color-mix(in srgb, currentColor 14%, var(--bg-surface));
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
 .success .glyph {
@@ -93,7 +93,7 @@
 }
 
 .neutral .glyph {
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
 }
 
 .text {
@@ -115,12 +115,14 @@
 .success .name,
 .failure .name,
 .neutral .name {
-  color: var(--text-primary);
+  color: var(--canvas-card-text-primary);
+  text-shadow: var(--canvas-card-text-shadow);
 }
 
 .purpose {
   font-size: var(--fs-micro);
-  color: var(--text-secondary);
+  color: var(--canvas-card-text-secondary);
+  text-shadow: var(--canvas-card-text-shadow);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

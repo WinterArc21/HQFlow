@@ -267,9 +267,10 @@ information-dense without clutter. Not an analytics dashboard, not an editor, no
 
 **Banned:** purple AI gradients, glassmorphism, full-screen blur backdrops, chat bubbles, pill
 spam, big rounded cards, drop shadows for decoration, emoji in UI, meaningless charts, skeleton
-shimmer that never resolves, `border-radius > 6px`. Canvas cards may use a controlled translucent
-surface with a small local backdrop blur as a progressive enhancement when a user-selected canvas
-background is visible; this is not a full-screen backdrop and must keep a solid fallback.
+shimmer that never resolves, `border-radius > 6px`. Image-backed canvas cards use a 10% neutral
+tint with local blur and saturation, so the image colours remain visible through them. Card text
+switches between light and dark tokens from the local image luminance. This is not a full-screen
+backdrop and must keep solid, high-contrast, and forced-colour fallbacks.
 
 ### Themes
 
