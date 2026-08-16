@@ -180,7 +180,7 @@ describe("WorkflowEdge visual grammar", () => {
     it("paints a non-interactive background underlay without stealing the arrowhead", () => {
       const { semantic, halo } = edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "failure" }) })));
       expect(halo.getAttribute("fill")).toBe("none");
-      expect(halo.style.stroke).toBe("var(--bg-canvas)");
+      expect(halo.style.stroke).toBe("var(--canvas-edge-halo, var(--bg-surface))");
       expect(Number(halo.style.strokeWidth)).toBe(Number(semantic.style.strokeWidth) + 4);
       expect(halo.style.pointerEvents).toBe("none");
       expect(semantic.getAttribute("marker-end")).toBe("url(#codehq-arrow-failure)");

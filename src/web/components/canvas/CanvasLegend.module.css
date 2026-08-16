@@ -6,10 +6,12 @@
   display: grid;
   gap: var(--space-1);
   padding: var(--space-2);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--canvas-label-border, var(--border-subtle));
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
-  color: var(--text-tertiary);
+  background-color: var(--canvas-label-surface, var(--bg-surface));
+  background-color: var(--canvas-label-surface-translucent, var(--bg-surface));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 52%, transparent);
+  color: var(--text-secondary);
   font-family: var(--font-ui);
   font-size: var(--fs-micro);
   pointer-events: none;
@@ -22,7 +24,7 @@
 
 .heading {
   margin: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -40,4 +42,12 @@
   width: 22px;
   height: 0;
   flex: none;
+}
+
+@media (forced-colors: active) {
+  .legend {
+    border-color: CanvasText;
+    background-color: Canvas;
+    box-shadow: none;
+  }
 }

@@ -30,6 +30,14 @@
   stroke: var(--accent-amber);
 }
 
+.markerHalo {
+  fill: none;
+  stroke: var(--canvas-edge-halo, var(--bg-surface));
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .markerSuccess,
 .markerSuccessOutcome,
 .markerAsync,

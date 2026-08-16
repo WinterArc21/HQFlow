@@ -25,6 +25,8 @@
   border-width: 1.5px;
   border-style: solid;
   box-shadow: var(--canvas-outcome-shadow);
+  backdrop-filter: blur(var(--canvas-node-blur));
+  -webkit-backdrop-filter: blur(var(--canvas-node-blur));
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -47,17 +49,20 @@
 
 .success {
   border-color: color-mix(in srgb, var(--accent-output) 50%, var(--border-strong));
-  background-color: color-mix(in srgb, var(--accent-output) 6%, var(--bg-surface));
+  background-color: var(--canvas-node-body);
+  background-color: color-mix(in srgb, var(--accent-output) 6%, var(--canvas-node-body-translucent));
 }
 
 .failure {
   border-color: color-mix(in srgb, var(--accent-red) 50%, var(--border-strong));
-  background-color: color-mix(in srgb, var(--accent-red) 6%, var(--bg-surface));
+  background-color: var(--canvas-node-body);
+  background-color: color-mix(in srgb, var(--accent-red) 6%, var(--canvas-node-body-translucent));
 }
 
 .neutral {
   border-color: var(--border-strong);
-  background-color: var(--bg-surface);
+  background-color: var(--canvas-node-body);
+  background-color: var(--canvas-node-body-translucent);
 }
 
 .glyph {
@@ -119,4 +124,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (forced-colors: active) {
+  .card {
+    background-color: Canvas;
+    border-color: CanvasText;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .glyph {
+    background-color: Canvas;
+  }
 }

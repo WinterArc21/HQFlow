@@ -14,15 +14,19 @@
   flex: 1;
   min-height: 0;
   background-color: var(--bg-canvas);
-  /* `--canvas-node-header`, `--canvas-node-footer`, `--canvas-node-body-hover`, and
-     `--canvas-node-border-hover` used to live here too. The step card's header and footer are
-     translucent now so its accent gradient shows through them, and both its resting border and its
-     hover state are mixed from the card's own `--node-accent` instead of from a neutral — nothing
-     reads those four any more, so they are gone rather than left as tokens that look load-bearing
-     and are not. */
-  --canvas-node-body: color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface));
-  --canvas-node-border: color-mix(in srgb, var(--text-primary) 18%, var(--border-subtle));
+  /* Keep the card and label surfaces separate. Cards are translucent enough to inherit the
+     selected background, while labels stay almost opaque so small semantic text never depends on
+     the pixels behind it. The first value in each pair is the solid fallback for browsers without
+     `color-mix`; the second is the controlled enhancement. */
+  --canvas-node-body: var(--bg-surface);
+  --canvas-node-body-translucent: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  --canvas-node-border: color-mix(in srgb, var(--text-primary) 24%, var(--border-strong));
   --canvas-node-divider: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --canvas-node-blur: 6px;
+  --canvas-label-surface: var(--bg-surface);
+  --canvas-label-surface-translucent: color-mix(in srgb, var(--bg-surface) 96%, transparent);
+  --canvas-label-border: color-mix(in srgb, var(--text-primary) 24%, var(--border-strong));
+  --canvas-edge-halo: var(--bg-surface);
   --canvas-port-center: var(--bg-inset);
   --canvas-port-ring: color-mix(in srgb, var(--text-primary) 55%, var(--border-strong));
   --canvas-node-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4.5%, transparent), 0 2px 5px color-mix(in srgb, var(--bg-canvas) 38%, transparent), 0 15px 34px color-mix(in srgb, var(--bg-canvas) 26%, transparent);
@@ -221,4 +225,36 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+/* A stronger-contrast preference keeps the same graph grammar but removes the translucent layer
+ * from important surfaces. This is an accessibility fallback, not a second visual theme. */
+@media (prefers-contrast: more) {
+  .stage {
+    --canvas-node-body-translucent: var(--bg-surface);
+    --canvas-label-surface-translucent: var(--bg-surface);
+    --canvas-node-blur: 0px;
+  }
+}
+
+/* Forced-colour mode must not leave a photograph or texture between the user and the graph. */
+@media (forced-colors: active) {
+  .stage {
+    background-color: Canvas;
+    --canvas-node-body: Canvas;
+    --canvas-node-body-translucent: Canvas;
+    --canvas-node-border: CanvasText;
+    --canvas-label-surface: Canvas;
+    --canvas-label-surface-translucent: Canvas;
+    --canvas-label-border: CanvasText;
+    --canvas-edge-halo: Canvas;
+    --canvas-node-blur: 0px;
+  }
+
+  .backgroundGrid,
+  .backgroundMist,
+  .backgroundBlueprint {
+    background-image: none;
+    background-color: Canvas;
+  }
 }

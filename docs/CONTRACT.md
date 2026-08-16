@@ -265,9 +265,11 @@ Output text is specified in the product brief — match it closely.
 The interface must feel like a **professional code instrument**: calm, technical, premium,
 information-dense without clutter. Not an analytics dashboard, not an editor, not a chatbot.
 
-**Banned:** purple AI gradients, glassmorphism, blur backdrops, chat bubbles, pill spam,
-big rounded cards, drop shadows for decoration, emoji in UI, meaningless charts, skeleton
-shimmer that never resolves, `border-radius > 6px`.
+**Banned:** purple AI gradients, glassmorphism, full-screen blur backdrops, chat bubbles, pill
+spam, big rounded cards, drop shadows for decoration, emoji in UI, meaningless charts, skeleton
+shimmer that never resolves, `border-radius > 6px`. Canvas cards may use a controlled translucent
+surface with a small local backdrop blur as a progressive enhancement when a user-selected canvas
+background is visible; this is not a full-screen backdrop and must keep a solid fallback.
 
 ### Themes
 

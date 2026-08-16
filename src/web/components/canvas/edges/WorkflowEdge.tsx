@@ -162,13 +162,13 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     edgeStyle.strokeDasharray = DASH_PATTERNS.dashed;
   }
 
-  // The casing/halo: a solid background-coloured underlay 4px wider than the semantic stroke,
+  // The casing/halo: a solid, protected surface underlay 4px wider than the semantic stroke,
   // painted beneath the dashed line so dashes and shape are preserved on top. It separates the
-  // edge from the canvas grid and card borders without a neon outline. It carries the same
+  // edge from a detailed or mixed canvas background without a neon outline. It carries the same
   // opacity/transition as the semantic stroke so a dimmed edge's halo fades with it, and it never
   // captures pointer events (edges are not interactive; nodes drive path tracing).
   const haloStyle: CSSProperties = {
-    stroke: "var(--bg-canvas)",
+    stroke: "var(--canvas-edge-halo, var(--bg-surface))",
     strokeWidth: strokeWidth + HALO_WIDTH_PADDING,
     opacity,
     transition: edgeTransition,

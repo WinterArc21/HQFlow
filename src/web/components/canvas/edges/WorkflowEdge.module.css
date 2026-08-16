@@ -2,12 +2,22 @@
   position: absolute;
   padding: 2px var(--space-2);
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, currentColor 38%, var(--border-subtle));
-  background-color: var(--canvas-node-body, var(--bg-surface));
+  border: 1px solid var(--canvas-label-border, var(--border-strong));
+  background-color: var(--canvas-label-surface, var(--bg-surface));
+  background-color: var(--canvas-label-surface-translucent, var(--bg-surface));
   box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   line-height: 1.35;
   white-space: nowrap;
   pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .label {
+    border-color: CanvasText;
+    background-color: Canvas;
+    box-shadow: none;
+    color: CanvasText;
+  }
 }

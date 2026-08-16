@@ -14,6 +14,12 @@ import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
 const ARTIFACT_DIR = path.join(REPO_ROOT, ".amp", "in", "artifacts");
 const DEMO_SOURCE = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "canvas-grammar-demo.json");
+const BACKGROUND_PRESETS = [
+  { id: "grid", label: "Graph paper" },
+  { id: "mist", label: "Mist forest" },
+  { id: "blueprint", label: "Blueprint" },
+  { id: "plain", label: "Plain" },
+] as const;
 let root: string;
 let server: ManagedServer;
 
@@ -23,6 +29,109 @@ async function setTheme(page: Page, theme: "dark" | "light"): Promise<void> {
     await page.getByRole("button", { name: `Switch to ${theme} theme` }).click();
   }
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+}
+
+async function setCanvasBackground(page: Page, background: (typeof BACKGROUND_PRESETS)[number]): Promise<void> {
+  const trigger = page.locator('button[aria-label^="Canvas background:"]');
+  await trigger.click();
+  const menu = page.getByRole("menu", { name: "Canvas background options" });
+  await menu.getByRole("menuitemradio", { name: new RegExp(`^${background.label}`) }).click();
+  await expect(page.locator("[data-canvas-background]")).toHaveAttribute("data-canvas-background", background.id);
+  await expect(trigger).toHaveAttribute("aria-label", `Canvas background: ${background.label}`);
+}
+
+interface AdaptiveCanvasReport {
+  cardCount: number;
+  cardsReadable: boolean;
+  cardSurfaceAlpha: number[];
+  cardBoundariesVisible: boolean;
+  cardBlur: string[];
+  edgeCount: number;
+  edgesProtected: boolean;
+  labelCount: number;
+  labelsProtected: boolean;
+  oneRovingTabStop: boolean;
+}
+
+/** Returns the browser's final style/a11y state for the adaptive-surface contract. */
+async function inspectAdaptiveCanvas(page: Page): Promise<AdaptiveCanvasReport> {
+  return page.evaluate(() => {
+    const alphaOf = (color: string): number => {
+      const slash = color.lastIndexOf("/");
+      if (slash !== -1) {
+        const alpha = Number.parseFloat(color.slice(slash + 1).replace(")", "").trim());
+        return Number.isNaN(alpha) ? 1 : alpha;
+      }
+      const rgba = color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/);
+      return rgba === null ? 1 : Number.parseFloat(rgba[1]!);
+    };
+    const isVisible = (element: HTMLElement): boolean => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-step-node]"));
+    const cardStyles = cards.map((card) => {
+      const style = getComputedStyle(card);
+      const textElements = [card, ...Array.from(card.querySelectorAll<HTMLElement>("*"))]
+        .filter((element) => (element.textContent ?? "").trim().length > 0);
+      return {
+        accessible: card.getAttribute("role") === "button"
+          && (card.getAttribute("aria-label") ?? "").trim().length > 0,
+        visibleText: (card.textContent ?? "").trim().length > 0,
+        textColors: textElements.every((element) => {
+          const color = getComputedStyle(element).color;
+          return color !== "transparent" && !color.endsWith("/ 0)");
+        }),
+        alpha: alphaOf(style.backgroundColor),
+        boundary: Number.parseFloat(style.borderTopWidth) > 0
+          && style.borderTopColor !== "transparent"
+          && style.boxShadow !== "none",
+        blur: style.backdropFilter,
+      };
+    });
+    const edgeGroups = Array.from(document.querySelectorAll<SVGGElement>("[data-workflow-edge]"));
+    const edgesProtected = edgeGroups.every((group) => {
+      const paths = Array.from(group.querySelectorAll<SVGPathElement>("path"));
+      const semantic = paths.find((path) => path.classList.contains("react-flow__edge-path"));
+      const halo = paths.find(
+        (path) => !path.classList.contains("react-flow__edge-path")
+          && !path.classList.contains("react-flow__edge-interaction"),
+      );
+      if (semantic === undefined || halo === undefined || semantic.getAttribute("d") === null) {
+        return false;
+      }
+      const semanticStyle = getComputedStyle(semantic);
+      const haloStyle = getComputedStyle(halo);
+      return semantic.getAttribute("d")!.length > 0
+        && haloStyle.stroke !== "none"
+        && Number.parseFloat(haloStyle.strokeWidth) > Number.parseFloat(semanticStyle.strokeWidth)
+        && semantic.getAttribute("marker-end") !== null;
+    });
+    const labels = Array.from(document.querySelectorAll<HTMLElement>("[data-edge-label]"));
+    const labelsProtected = labels.length > 0 && labels.every((label) => {
+      const style = getComputedStyle(label);
+      return isVisible(label)
+        && (label.textContent ?? "").trim().length > 0
+        && label.getAttribute("aria-hidden") === null
+        && style.pointerEvents === "none"
+        && Number.parseFloat(style.borderTopWidth) > 0
+        && style.borderTopColor !== "transparent"
+        && style.backgroundColor !== "rgba(0, 0, 0, 0)"
+        && alphaOf(style.backgroundColor) > 0.9;
+    });
+    return {
+      cardCount: cards.length,
+      cardsReadable: cardStyles.every((card) => card.accessible && card.visibleText && card.textColors),
+      cardSurfaceAlpha: cardStyles.map((card) => card.alpha),
+      cardBoundariesVisible: cardStyles.every((card) => card.boundary),
+      cardBlur: cardStyles.map((card) => card.blur),
+      edgeCount: edgeGroups.length,
+      edgesProtected,
+      labelCount: labels.length,
+      labelsProtected,
+      oneRovingTabStop: cards.filter((card) => card.getAttribute("tabindex") === "0").length === 1,
+    };
+  });
 }
 
 async function capture(page: Page, workflow: string, slug: string, theme: "dark" | "light"): Promise<void> {
@@ -496,6 +605,84 @@ test("keeps repeated drag updates error-free and deterministic", async ({ page }
   const replayPath = await moveTarget();
   expect(replayPath).toBe(firstPath);
   expect(runtimeErrors).toEqual([]);
+});
+
+test("protects cards, connections, and labels across selected backgrounds and themes", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(server.url);
+  await waitForBoot(page);
+  await selectWorkflowByName(page, "Canvas Grammar Demo");
+  const reports: Array<AdaptiveCanvasReport & { theme: "dark" | "light"; background: string }> = [];
+
+  for (const theme of ["dark", "light"] as const) {
+    await setTheme(page, theme);
+    for (const background of BACKGROUND_PRESETS) {
+      await setCanvasBackground(page, background);
+      const report = await inspectAdaptiveCanvas(page);
+      reports.push({ theme, background: background.id, ...report });
+
+      expect(report.cardCount, `${theme}/${background.id} card count`).toBe(9);
+      expect(report.cardsReadable, `${theme}/${background.id} card text and names`).toBe(true);
+      expect(report.cardSurfaceAlpha.every((alpha) => alpha > 0.7 && alpha < 1), `${theme}/${background.id} controlled card alpha`).toBe(true);
+      expect(report.cardBoundariesVisible, `${theme}/${background.id} card boundaries`).toBe(true);
+      expect(report.cardBlur.every((blur) => blur === "blur(6px)"), `${theme}/${background.id} local blur`).toBe(true);
+      expect(report.edgeCount, `${theme}/${background.id} edge count`).toBe(11);
+      expect(report.edgesProtected, `${theme}/${background.id} edge casing and markers`).toBe(true);
+      expect(report.labelCount, `${theme}/${background.id} edge label count`).toBe(5);
+      expect(report.labelsProtected, `${theme}/${background.id} edge label protection`).toBe(true);
+      expect(report.oneRovingTabStop, `${theme}/${background.id} keyboard roving tab stop`).toBe(true);
+      expect(await renderedEdgeNodeOcclusions(page), `${theme}/${background.id} edge occlusions`).toEqual([]);
+
+      await page.screenshot({
+        path: path.join(ARTIFACT_DIR, "canvas-background", `grammar-${background.id}-${theme}.png`),
+        animations: "disabled",
+      });
+    }
+  }
+
+  await fsp.writeFile(
+    path.join(ARTIFACT_DIR, "canvas-background", "adaptive-canvas-dom-report.json"),
+    `${JSON.stringify({ viewport: "1920x1080", reducedMotion: true, states: reports }, null, 2)}\n`,
+    "utf8",
+  );
+});
+
+test("keeps the canvas readable in forced-colors mode", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" });
+  await page.goto(server.url);
+  await waitForBoot(page);
+  await selectWorkflowByName(page, "Canvas Grammar Demo");
+  await setCanvasBackground(page, BACKGROUND_PRESETS[1]!);
+
+  const forcedColorsState = await page.evaluate(() => {
+    const stage = document.querySelector<HTMLElement>("[data-canvas-background]");
+    const card = document.querySelector<HTMLElement>("[data-step-node]");
+    const label = document.querySelector<HTMLElement>("[data-edge-label]");
+    if (stage === null || card === null || label === null) {
+      return null;
+    }
+    const cardStyle = getComputedStyle(card);
+    const labelStyle = getComputedStyle(label);
+    return {
+      stageBackgroundImage: getComputedStyle(stage).backgroundImage,
+      cardBackgroundImage: cardStyle.backgroundImage,
+      cardBackdropFilter: cardStyle.backdropFilter,
+      cardBorderWidth: cardStyle.borderTopWidth,
+      labelBackgroundColor: labelStyle.backgroundColor,
+      labelBorderWidth: labelStyle.borderTopWidth,
+    };
+  });
+
+  expect(forcedColorsState).not.toBeNull();
+  expect(forcedColorsState?.stageBackgroundImage).toBe("none");
+  expect(forcedColorsState?.cardBackgroundImage).toBe("none");
+  expect(forcedColorsState?.cardBackdropFilter).toBe("none");
+  expect(Number.parseFloat(forcedColorsState?.cardBorderWidth ?? "0")).toBeGreaterThan(0);
+  expect(forcedColorsState?.labelBackgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(Number.parseFloat(forcedColorsState?.labelBorderWidth ?? "0")).toBeGreaterThan(0);
+  expect(await page.locator("[data-step-node][role=\"button\"]").count()).toBe(9);
 });
 
 test("captures deterministic dark and light review screenshots", async ({ page }) => {

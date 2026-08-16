@@ -44,6 +44,7 @@ export function EdgeMarkers() {
             markerUnits="userSpaceOnUse"
             orient="auto-start-reverse"
           >
+            <path d="M1,1 L9,5 L1,9" className={styles.markerHalo} />
             <path d="M1,1 L9,5 L1,9" className={MARKER_CLASS_NAMES[variant]} />
           </marker>
         ))}

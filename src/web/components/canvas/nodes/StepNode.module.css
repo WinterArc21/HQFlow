@@ -57,8 +57,8 @@
    ~4.3:1 against the leading edge on the paper theme. Verified against all six category accents in
    both themes; the weakest pairing that survives is 5.05:1.
 
-   `background-color` stays as the base the gradient's final stop matches, so the card degrades to
-   today's flat neutral if `background-image` is ever dropped. */
+   `background-color` stays as a solid fallback while the gradient uses the same controlled alpha as
+   the card surface, so dropping the gradient still leaves a safe neutral plate. */
 .card {
   box-sizing: border-box;
   position: relative;
@@ -66,16 +66,21 @@
   height: 100%;
   display: flex;
   align-items: stretch;
+  /* Solid first for older engines; the second declaration lets the selected canvas texture show
+     through without making text depend on exact image pixels. */
   background-color: var(--canvas-node-body);
+  background-color: var(--canvas-node-body-translucent);
   background-image: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--node-accent) 15%, var(--canvas-node-body)) 0%,
-    color-mix(in srgb, var(--node-accent) 7%, var(--canvas-node-body)) 42%,
-    var(--canvas-node-body) 78%
+    color-mix(in srgb, var(--node-accent) 15%, var(--canvas-node-body-translucent)) 0%,
+    color-mix(in srgb, var(--node-accent) 7%, var(--canvas-node-body-translucent)) 42%,
+    var(--canvas-node-body-translucent) 78%
   );
   border: 1px solid color-mix(in srgb, var(--node-accent) 26%, var(--canvas-node-border));
   border-radius: 10px;
   box-shadow: var(--canvas-node-shadow);
+  backdrop-filter: blur(var(--canvas-node-blur));
+  -webkit-backdrop-filter: blur(var(--canvas-node-blur));
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -352,7 +357,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .fileRow {
@@ -377,7 +382,7 @@
 
 .dir {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -397,5 +402,27 @@
   height: 14px;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
+}
+
+@media (forced-colors: active) {
+  .card {
+    background-color: Canvas;
+    background-image: none;
+    border-color: CanvasText;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .header,
+  .footer {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .index {
+    background-color: CanvasText;
+    color: Canvas;
+  }
 }
