@@ -1,6 +1,0 @@
-{
-  "name": "motiona",
-  "version": "0.1.0",
-  "private": true,
-  "description": "MotionA turns a website into a cinematic video-generation prompt. This is a fixture repository used by HQFlow's example .codehq/ project."
-}

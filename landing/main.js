@@ -2,7 +2,7 @@
    HQFlow landing page runtime
 
    Three pieces:
-     1. the workflow canvas demo (real data from examples/motiona)
+     1. the workflow canvas preview
      2. the hero preview, same components and data at a smaller scale
      3. the spine, one continuous line connecting the whole page
    ========================================================================== */

@@ -16,7 +16,6 @@ import { resolveTemplatesDir } from "../templates";
 export interface InitOptions {
   root?: string;
   force?: boolean;
-  example?: boolean;
 }
 
 type FileAction = "created" | "overwritten" | "unchanged";
@@ -35,7 +34,6 @@ export interface InitResult {
   unchanged: string[];
 }
 
-const EXAMPLE_WORKFLOW_TEMPLATE = "example-generate-video.json";
 const GITIGNORE_ENTRY = ".codehq/.runtime/";
 
 function looksLikeProjectRoot(root: string): boolean {
@@ -116,14 +114,6 @@ async function ensureGitignoreEntry(root: string): Promise<void> {
 export async function runInit(options: InitOptions): Promise<InitResult> {
   const root = resolveCliRoot(options.root);
   const force = options.force ?? false;
-  // Opt-in, not opt-out. The bundled example necessarily cites files that exist only in the
-  // story it tells (`app/api/generate/route.ts` and friends), so scaffolding it into someone
-  // else's repository made their very first `validate` print a wall of "does not exist"
-  // warnings and every card on their board wear a "Missing sources" badge — a correct report
-  // about a fake workflow, read as a broken tool. The board's own guided empty state is the
-  // real next step: it hands the user a ready-to-copy prompt for their coding agent to map a
-  // real workflow, rather than standing a fake one up for them.
-  const includeExample = options.example ?? false;
 
   const warnings: string[] = [];
   if (!looksLikeProjectRoot(root)) {
@@ -153,20 +143,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   const fixedOutcomes = [projectOutcome, workflowsDirOutcome, skillOutcome];
   const created = fixedOutcomes.filter((o) => o.action !== "unchanged").map((o) => o.displayPath);
   const unchanged = fixedOutcomes.filter((o) => o.action === "unchanged").map((o) => o.displayPath);
-
-  if (includeExample) {
-    const exampleTemplateText = await fs.readFile(path.join(templatesDir, "workflows", EXAMPLE_WORKFLOW_TEMPLATE), "utf-8");
-    const exampleWorkflow = JSON.parse(exampleTemplateText) as { id?: unknown };
-    const workflowId = typeof exampleWorkflow.id === "string" && exampleWorkflow.id.length > 0 ? exampleWorkflow.id : "example";
-    const exampleTargetPath = path.join(paths.workflowsDir, `${workflowId}.json`);
-
-    const exampleOutcome = await writeManagedFile(root, exampleTargetPath, exampleTemplateText, force);
-    // Deliberately excluded from `created` (the example is folded into the "workflows/"
-    // line), but surfaced under "Unchanged:" so a rerun still reports it honestly.
-    if (exampleOutcome.action === "unchanged") {
-      unchanged.push(exampleOutcome.displayPath);
-    }
-  }
 
   const initialDiagnostics = buildDiagnostics([]);
   await writeFileAtomic(paths.diagnosticsFile, `${JSON.stringify(initialDiagnostics, null, 2)}\n`);

@@ -3,7 +3,7 @@
  * SSE, with no `page.reload()` anywhere in this file.
  *
  * Isolation: owns port 4501 (helpers/paths.ts PORTS.liveUpdate) and uses a private temp copy of
- * examples/motiona for every test. This file runs serially because its tests intentionally share
+ * the test project for every test. This file runs serially because its tests intentionally share
  * that one port; other spec files still run in parallel on their own dedicated ports.
  */
 import { promises as fsp } from "node:fs";

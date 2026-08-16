@@ -37,10 +37,9 @@ interface RawWorkflow {
   connections: RawConnection[];
 }
 
-// The example workflow lives once, under templates/codehq/workflows, and is loaded
-// directly here rather than duplicated into a test fixture so the two cannot drift.
+// Use the end-to-end workflow fixture for broad schema coverage.
 const FIXTURE_PATH = fileURLToPath(
-  new URL("../../../templates/codehq/workflows/example-generate-video.json", import.meta.url),
+  new URL("../../e2e/fixtures/project/.codehq/workflows/generate-video.json", import.meta.url),
 );
 const FILE = ".codehq/workflows/generate-video.json";
 
@@ -49,8 +48,8 @@ function loadFixture(): RawWorkflow {
   return JSON.parse(raw) as RawWorkflow;
 }
 
-describe("parseWorkflow — generate-video example", () => {
-  it("parses the full example with no errors and no warnings", () => {
+describe("parseWorkflow — generate-video fixture", () => {
+  it("parses the full fixture with no errors and no warnings", () => {
     const result = parseWorkflow(loadFixture(), FILE);
 
     expect(result.ok).toBe(true);
@@ -58,8 +57,8 @@ describe("parseWorkflow — generate-video example", () => {
       throw new Error(`expected ok, got issues: ${JSON.stringify(result.issues)}`);
     }
     expect(result.value.id).toBe("generate-video");
-    // A loose range, not an exact count: this guards "the example is still a substantial,
-    // parseable workflow" without pinning the example's editorial shape. The upper bound covers
+    // A loose range, not an exact count: this guards a substantial, parseable workflow without
+    // pinning the fixture's editorial shape. The upper bound covers
     // the 7 work steps plus the 4 terminal outcome steps the current canvas design expects.
     expect(result.value.steps.length).toBeGreaterThanOrEqual(5);
     expect(result.value.steps.length).toBeLessThanOrEqual(14);

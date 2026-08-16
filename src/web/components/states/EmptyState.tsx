@@ -1,4 +1,4 @@
-import { AGENT_PROMPT, AGENT_PROMPT_EXAMPLES } from "../../lib/agentPrompt";
+import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { Button, CopyButton } from "../primitives";
 import { StateLayout } from "./StateLayout";
@@ -25,15 +25,6 @@ export function EmptyState({ onRecheck }: EmptyStateProps) {
         <Button variant="secondary" size="sm" onClick={recheck.run}>
           Recheck files
         </Button>
-      </div>
-      <div className={styles.examples}>
-        <p className={styles.examplesTitle}>Try prompts like</p>
-        {AGENT_PROMPT_EXAMPLES.map((prompt) => (
-          <div className={styles.example} key={prompt}>
-            <code>{prompt}</code>
-            <CopyButton value={prompt} label="Copy example" size="sm" />
-          </div>
-        ))}
       </div>
       {recheck.status === "error" && recheck.message !== null ? (
         <p className={styles.actionError} role="alert">

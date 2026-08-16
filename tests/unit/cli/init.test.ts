@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { parseProject, parseWorkflow } from "@schema/validate";
+import { parseProject } from "@schema/validate";
 import { runInit } from "../../../src/cli/commands/init";
 
 let root: string;
@@ -18,7 +18,6 @@ afterEach(() => {
 const PROJECT_FILE = ".codehq/project.json";
 const SKILL_FILE = ".codehq/SKILL.md";
 const WORKFLOWS_DIR = ".codehq/workflows";
-const EXAMPLE_WORKFLOW_FILE = ".codehq/workflows/generate-video.json";
 const DIAGNOSTICS_FILE = ".codehq/diagnostics.json";
 
 function abs(relative: string): string {
@@ -34,11 +33,6 @@ describe("runInit — fresh repository", () => {
     expect(existsSync(abs(SKILL_FILE))).toBe(true);
     expect(existsSync(abs(WORKFLOWS_DIR))).toBe(true);
     expect(existsSync(abs(DIAGNOSTICS_FILE))).toBe(true);
-    // The example is opt-in (see the `--example` block below): scaffolding a workflow that cites
-    // files this repository does not contain would make the user's first `validate` a wall of
-    // "does not exist" warnings about a workflow they did not write.
-    expect(existsSync(abs(EXAMPLE_WORKFLOW_FILE))).toBe(false);
-
     expect(result.created).toEqual([".codehq/project.json", ".codehq/workflows/", ".codehq/SKILL.md"]);
     expect(result.unchanged).toEqual([]);
 
@@ -89,12 +83,6 @@ describe("runInit — idempotency", () => {
     expect(secondResult.unchanged).toContain(SKILL_FILE);
     expect(secondResult.created).not.toContain(SKILL_FILE);
   });
-
-  it("also reports an existing example workflow as unchanged on rerun", async () => {
-    await runInit({ root, example: true });
-    const secondResult = await runInit({ root, example: true });
-    expect(secondResult.unchanged).toContain(EXAMPLE_WORKFLOW_FILE);
-  });
 });
 
 describe("runInit — --force", () => {
@@ -107,27 +95,6 @@ describe("runInit — --force", () => {
     expect(readFileSync(abs(SKILL_FILE), "utf-8")).not.toBe("custom content that should be replaced\n");
     expect(result.created).toContain(SKILL_FILE);
     expect(result.unchanged).not.toContain(SKILL_FILE);
-  });
-});
-
-describe("runInit — --example", () => {
-  it("copies a parseable example workflow when explicitly asked for it", async () => {
-    const result = await runInit({ root, example: true });
-
-    expect(existsSync(abs(EXAMPLE_WORKFLOW_FILE))).toBe(true);
-    // Folded into the "workflows/" line rather than listed separately — see runInit.
-    expect(result.created).toContain(".codehq/workflows/");
-
-    const workflowJson = JSON.parse(readFileSync(abs(EXAMPLE_WORKFLOW_FILE), "utf-8")) as unknown;
-    const workflowResult = parseWorkflow(workflowJson, EXAMPLE_WORKFLOW_FILE);
-    expect(workflowResult.ok).toBe(true);
-  });
-
-  it("omits the example workflow file when no example is requested", async () => {
-    const result = await runInit({ root, example: false });
-    expect(existsSync(abs(EXAMPLE_WORKFLOW_FILE))).toBe(false);
-    expect(existsSync(abs(WORKFLOWS_DIR))).toBe(true);
-    expect(result.unchanged).not.toContain(EXAMPLE_WORKFLOW_FILE);
   });
 });
 

@@ -38,7 +38,7 @@ workflows actually work — where they start, what they touch, what can go wrong
 prove it with tests. A workflow file that is short, accurate, and verifiable is worth far more
 than one that is exhaustive and speculative.
 
-## Example user prompt
+## Sample user prompt
 
 > "Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
 > `POST /api/checkout` route. Trace it through order creation, payment, and confirmation

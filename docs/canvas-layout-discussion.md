@@ -27,7 +27,7 @@ Three real weaknesses in what we have:
 
 1. **Monotony.** Seven identical boxes, evenly spaced, one column — it reads like a fancy to-do list. The aesthetic failure isn't linearity, it's *uniformity*. Nothing about the composition rewards looking at it.
 2. **Wasted canvas.** We're using ~340px of a ~1100px field. Margins that big need to either carry meaning or shrink.
-3. **The spine is currently a universal rule, not a special case.** A workflow with genuine parallelism — two tracks that fork and rejoin — would get force-fed into spine + side gutter and look wrong. We built for the shape of our two examples.
+3. **The spine is currently a universal rule, not a special case.** A workflow with genuine parallelism — two tracks that fork and rejoin — would get force-fed into spine + side gutter and look wrong. We built for the shape of two linear fixtures.
 
 ### What I'd actually do
 
@@ -37,7 +37,7 @@ Three real weaknesses in what we have:
 
 **3. Trace-on-hover/select.** Hover a step → its upstream/downstream path stays full-strength, everything else dims. Cheap to build, dramatic for both beauty and comprehension — it answers "what feeds this, what depends on this" with zero clicks. Motion and response is where a restrained design earns its wow, since decoration is off the table.
 
-**4. Fix the demo, not just the engine.** Whatever the layout can do, people judge by the example project. Both our fixtures are pipelines. Add one workflow with genuine parallel branches that rejoin — then the canvas *demonstrates* 2D instead of us asserting it.
+**4. Test the engine with representative graphs.** Both current fixtures are pipelines. Add one test workflow with genuine parallel branches that rejoin so the canvas proves its 2D layout.
 
 Smaller idea worth considering: style the branch gutter lanes like transit lines — continuous colored routes with the label as a station chip. The routing already exists; it's purely a visual treatment, and metro maps are the canonical proof that "mostly linear + meaningful branches" can be gorgeous.
 

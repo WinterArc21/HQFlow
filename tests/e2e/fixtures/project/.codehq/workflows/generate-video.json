@@ -38,10 +38,6 @@
           "handling": "Returns a 400 rejecting the request.",
           "confidence": "verified"
         }
-      ],
-      "tests": [
-        { "file": "tests/unit/lib/validation.test.ts", "symbol": "accepts a valid generation request", "status": "passing" },
-        { "file": "tests/unit/lib/validation.test.ts", "symbol": "rejects a malformed URL", "status": "passing" }
       ]
     },
     {
@@ -77,9 +73,6 @@
           "confidence": "verified",
           "sources": [{ "file": "lib/scraper.ts", "symbol": "scrapeWebsite" }]
         }
-      ],
-      "tests": [
-        { "file": "tests/unit/lib/scraper.test.ts", "symbol": "extracts the title and description", "status": "passing" }
       ]
     },
     {
@@ -117,10 +110,7 @@
         { "file": "app/api/generate/route.ts", "symbol": "POST" }
       ],
       "inputs": [{ "name": "StoryPlan" }],
-      "outputs": [{ "name": "Generation" }],
-      "tests": [
-        { "file": "tests/integration/api/generate.test.ts", "symbol": "returns the generated story plan", "status": "passing" }
-      ]
+      "outputs": [{ "name": "Generation" }]
     },
     {
       "id": "outcome-invalid-request",
@@ -185,7 +175,5 @@
     { "from": "generate-story", "to": "save-result" },
     { "from": "save-result", "to": "outcome-generation-created", "type": "success" }
   ],
-  "notes": [
-    "Reference implementation shipped as HQFlow's example project; see examples/motiona."
-  ]
+  "notes": ["Test fixture for HQFlow's end-to-end suite."]
 }

@@ -2,15 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "codehq-web-fixture",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "vite"],
-      "port": 5173,
-      "env": {
-        "VITE_CODEHQ_FIXTURE": "1"
-      }
-    },
-    {
       "name": "codehq-web-live",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["exec", "vite"],
@@ -19,7 +10,7 @@
     {
       "name": "codehq-app",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["dist/node/cli.js", "open", "--no-open", "--port", "4310", "--root", "examples/motiona"],
+      "runtimeArgs": ["dist/node/cli.js", "open", "--no-open", "--port", "4310"],
       "port": 4310
     }
   ]

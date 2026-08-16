@@ -63,7 +63,6 @@ src/
   cli/        # node-only. commander CLI
   web/        # browser. React app
 templates/codehq/      # files copied by `init`
-examples/motiona/           # a demo repo-shaped fixture with a full .codehq
 tests/
   unit/
   integration/

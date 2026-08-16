@@ -1,6 +1,4 @@
-// Minimal in-memory persistence for generated video plans and uploaded assets. A real
-// deployment would back this with a database and object storage; this fixture only needs
-// to demonstrate the shape of the calls the API routes make.
+// Minimal in-memory persistence for the end-to-end test project.
 
 import type { StoryPlan } from "./story";
 import type { ProductContext } from "./product-model";

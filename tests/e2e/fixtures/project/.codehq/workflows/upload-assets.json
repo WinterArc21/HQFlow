@@ -2,7 +2,7 @@
   "schemaVersion": "0.1",
   "id": "upload-assets",
   "name": "Upload Reference Asset",
-  "purpose": "Accepts a reference image or document to attach to a future video generation.",
+  "purpose": "Accepts a reference image or document for a video generation.",
   "status": "needs-review",
   "entryPoint": { "file": "app/api/upload/route.ts", "symbol": "POST" },
   "steps": [
@@ -43,9 +43,6 @@
           "handling": "Returns a 413.",
           "confidence": "verified"
         }
-      ],
-      "tests": [
-        { "file": "tests/integration/api/upload.test.ts", "symbol": "rejects a request with no file field", "status": "passing" }
       ]
     },
     {
@@ -164,6 +161,6 @@
     { "from": "persist-asset", "to": "outcome-asset-created", "type": "success" }
   ],
   "notes": [
-    "The malware-scanning step is inferred and its source file does not exist yet in this fixture — this is intentional, to demonstrate an honest 'missing source' diagnostic."
+    "The malware-scanning step is inferred and its source file does not exist in this test fixture."
   ]
 }

@@ -30,7 +30,7 @@ import styles from "./WorkflowCanvas.module.css";
  * another unit of work to navigate, so a workflow with a handful of steps and a stack of outcome
  * pills beside them (post edge-grammar redesign, outcomes are now real nodes) should not suddenly
  * earn a minimap it didn't need when outcomes were just coloured terminal markers. Both bundled
- * example workflows (7 and 4 work steps) confirm this keeps the default 1440x900 view intrusion-
+ * test workflows (7 and 4 work steps) confirm this keeps the default 1440x900 view intrusion-
  * free while still growing in for a genuinely large workflow. */
 const MINIMAP_NODE_THRESHOLD = 10;
 

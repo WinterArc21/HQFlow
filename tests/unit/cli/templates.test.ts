@@ -11,7 +11,6 @@ describe("resolveTemplatesDir", () => {
     expect(existsSync(dir)).toBe(true);
     expect(existsSync(path.join(dir, "project.json"))).toBe(true);
     expect(existsSync(path.join(dir, "SKILL.md"))).toBe(true);
-    expect(existsSync(path.join(dir, "workflows", "example-generate-video.json"))).toBe(true);
   });
 
   it("throws a clear, actionable error when no templates directory can be found nearby", () => {

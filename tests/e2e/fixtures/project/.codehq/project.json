@@ -3,7 +3,7 @@
   "project": {
     "id": "motiona",
     "name": "MotionA",
-    "description": "Turns websites into cinematic video-generation prompts."
+    "description": "Test-only project for the HQFlow end-to-end suite."
   },
   "settings": {
     "defaultWorkflowId": "generate-video",

@@ -1,4 +1,4 @@
-// POST /api/upload — accepts a reference image or document to attach to a future generation.
+// Test fixture route for POST /api/upload.
 
 import { saveAsset } from "../../../lib/persistence";
 

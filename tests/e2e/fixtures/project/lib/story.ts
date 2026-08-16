@@ -1,5 +1,4 @@
-// Turns a product context into the narrative structure and visual direction MotionA hands
-// off to the video-rendering pipeline.
+// Turns a product context into the narrative structure used by the test project.
 
 import type { ProductContext } from "./product-model";
 

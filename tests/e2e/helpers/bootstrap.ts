@@ -41,7 +41,7 @@ export function ensureBuilt(): void {
 }
 
 /**
- * Recreates the shared, read-only fixture directory fresh from `examples/motiona`. Runs on
+ * Recreates the shared, read-only fixture directory from the committed test project. Runs on
  * every config load so repeated local runs never accumulate edits from a previous run, and
  * the committed fixture itself is never the directory any server is pointed at.
  */

@@ -1,7 +1,6 @@
 /**
- * Uses a disposable copy of MotionA only as the host repository, then injects the explicitly
- * synthetic e2e fixture. The demo is never committed under examples/motiona and makes no claim
- * about that example's source behavior.
+ * Uses a disposable copy of the test project as the host repository, then injects the
+ * synthetic canvas fixture.
  */
 import { promises as fsp } from "node:fs";
 import path from "node:path";
@@ -283,7 +282,7 @@ test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes w
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "obstacle-routing-after.png"), animations: "disabled" });
 });
 
-test("keeps every example-workflow edge clear of card interiors", async ({ page }) => {
+test("keeps every workflow edge clear of card interiors", async ({ page }) => {
   await page.goto(server.url);
   await waitForBoot(page);
 

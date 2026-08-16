@@ -18,13 +18,13 @@ export const REPO_ROOT = path.resolve(HERE, "..", "..", "..");
  * point a `--root` at this path directly — always go through a temp copy (see
  * `helpers/fixture.ts`) so `.codehq/diagnostics.json` never gets rewritten here and
  * `git status` stays clean. */
-export const SOURCE_FIXTURE_DIR = path.join(REPO_ROOT, "examples", "motiona");
+export const SOURCE_FIXTURE_DIR = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "project");
 
 export const CLI_ENTRY = path.join(REPO_ROOT, "dist", "node", "cli.js");
 export const WEB_DIST_INDEX = path.join(REPO_ROOT, "dist", "web", "index.html");
 
 /**
- * The shared, read-only server: a fresh copy of `examples/motiona`, recreated at
+ * The shared, read-only server: a fresh copy of the test project, recreated at
  * `playwright.config.ts` module-load time (before Playwright's `webServer` plugin starts the
  * process — see `helpers/bootstrap.ts`), reused across every spec that only ever reads
  * `.codehq` (boots, depth-and-selection, search, a11y-basics).
