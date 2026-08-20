@@ -9,6 +9,14 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SourceLookup } from "@schema/wire";
 import { pathExists } from "@core/fs-utils";
+import {
+  assignWorkflowToFolder,
+  createFolder,
+  deleteFolder,
+  readFolders,
+  renameFolder,
+  reorderFolderWorkflows,
+} from "@core/folder-store";
 import { readWorkflowLayout, writeWorkflowLayout, type WorkflowLayoutPositions } from "@core/layout-store";
 import { codeHQPaths } from "@core/repository";
 import { resolveInsideRepository } from "@core/safe-path";
@@ -38,6 +46,10 @@ const exportQuerySchema = z
 
 const layoutPositionSchema = z.object({ x: z.number(), y: z.number() }).strict();
 const saveLayoutBodySchema: z.ZodType<WorkflowLayoutPositions> = z.record(z.string(), layoutPositionSchema);
+
+const folderNameBodySchema = z.object({ name: z.string().min(1, { message: "name must not be empty." }) }).strict();
+const assignFolderBodySchema = z.object({ folderId: z.string().min(1).nullable() }).strict();
+const reorderFolderBodySchema = z.object({ workflowIds: z.array(z.string().min(1)) }).strict();
 
 function buildEditorUrl(absolutePath: string, line: number | undefined): string {
   const forwardSlashPath = absolutePath.split(path.sep).join("/");
@@ -252,6 +264,72 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
     }
     await writeWorkflowLayout(root, request.params.id, parsed.data);
     await reply.code(204).send();
+  });
+
+  app.get("/api/folders", async (_request, reply) => {
+    await reply.send(await readFolders(root));
+  });
+
+  app.post("/api/folders", async (request, reply) => {
+    const parsed = folderNameBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid folder payload.", details: parsed.error.issues });
+      return;
+    }
+    const folder = await createFolder(root, parsed.data.name);
+    await reply.code(201).send(folder);
+  });
+
+  app.patch<{ Params: { id: string } }>("/api/folders/:id", async (request, reply) => {
+    const parsed = folderNameBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid folder payload.", details: parsed.error.issues });
+      return;
+    }
+    try {
+      const folder = await renameFolder(root, request.params.id, parsed.data.name);
+      await reply.send(folder);
+    } catch {
+      await reply.code(404).send({ error: `No folder with id '${request.params.id}'.` });
+    }
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/folders/:id", async (request, reply) => {
+    await deleteFolder(root, request.params.id);
+    await reply.code(204).send();
+  });
+
+  app.put<{ Params: { id: string } }>("/api/workflows/:id/folder", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    const parsed = assignFolderBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid folder assignment payload.", details: parsed.error.issues });
+      return;
+    }
+    try {
+      await assignWorkflowToFolder(root, request.params.id, parsed.data.folderId);
+      await reply.code(204).send();
+    } catch {
+      await reply.code(404).send({ error: `No folder with id '${parsed.data.folderId}'.` });
+    }
+  });
+
+  app.put<{ Params: { id: string } }>("/api/folders/:id/order", async (request, reply) => {
+    const parsed = reorderFolderBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid order payload.", details: parsed.error.issues });
+      return;
+    }
+    try {
+      const folder = await reorderFolderWorkflows(root, request.params.id, parsed.data.workflowIds);
+      await reply.send(folder);
+    } catch (error) {
+      await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   registerSourceRoute(app, root);

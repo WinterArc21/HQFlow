@@ -99,6 +99,8 @@ tests/
 ├── workflows/
 │   └── <id>.json
 └── .runtime/               # gitignored, runtime scratch only
+    ├── layout.json          # manually-saved canvas node positions, per workflow
+    └── folders.json         # local Folder organization of workflows (see §8)
 ```
 
 `init` appends `.codehq/.runtime/` to the repo `.gitignore` (creating it if absent, never
@@ -220,6 +222,12 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | DELETE | `/api/workflows/:id` | Delete a verified workflow; returns the refreshed snapshot. |
 | GET | `/api/workflows/:id/layout` | `{ positions: Record<stepId, {x,y}> }`. Manually-saved canvas node positions; empty object if none saved. 404 if unknown workflow. |
 | PUT | `/api/workflows/:id/layout` | Body: `Record<stepId, {x,y}>`. Overwrites the saved positions for this workflow. 204 on success, 404 if unknown workflow. Stored at `.codehq/.runtime/layout.json` — gitignored per §4, never in workflow JSON. |
+| GET | `/api/folders` | `{ folders: Folder[] }`. `Folder` is `{ id, name, workflowIds: string[] }`. Local, per-clone organization of workflows into flat (non-nested) named Folders; `workflowIds` is both a Folder's membership and its manual order, so a workflow's Folder is whichever Folder's `workflowIds` contains it — a workflow absent from every Folder's `workflowIds` is unassigned. Stored at `.codehq/.runtime/folders.json` — gitignored per §4, never committed. |
+| POST | `/api/folders` | Body: `{ name }`. Creates a Folder with `workflowIds: []`, appended after existing ones (manual/creation order, never forced alphabetical). Returns the created `Folder`. 201 on success, 400 if `name` is missing/empty. |
+| PATCH | `/api/folders/:id` | Body: `{ name }`. Renames a Folder, leaving `workflowIds` unchanged. Returns the updated `Folder`. 200 on success, 404 if unknown folder. |
+| DELETE | `/api/folders/:id` | Deletes a Folder; any workflows that were in it become unassigned (not deleted) since they simply stop appearing in any Folder's `workflowIds`. 204 on success (also 204 if the folder id is already unknown). |
+| PUT | `/api/workflows/:id/folder` | Body: `{ folderId: string \| null }`. Appends the workflow to `folderId`'s `workflowIds`, implicitly removing it from any previous Folder (a workflow belongs to at most one Folder); `null` unassigns it from every Folder. 204 on success, 404 if unknown workflow or unknown `folderId`, 400 if the body is malformed. |
+| PUT | `/api/folders/:id/order` | Body: `{ workflowIds: string[] }`. Replaces a Folder's manual order; the given array must contain exactly the Folder's current members (a reordering, never an add/remove). Returns the updated `Folder`. 200 on success, 400 if the body is malformed, the folder is unknown, or the given ids aren't exactly the current members. |
 | GET | `/api/diagnostics` | `DiagnosticsReport` |
 | GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, line? }`. **Never returns file contents.** |
 | GET | `/api/export/:id?hideFilePaths=<bool>` | Self-contained HTML export; `hideFilePaths` defaults to `false`. |

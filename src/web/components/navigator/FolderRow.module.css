@@ -1,0 +1,77 @@
+.folder {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.folderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.dropActive {
+  background-color: var(--bg-raised);
+  outline: 2px dashed var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.disclosure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.disclosure:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.name {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.items {
+  list-style: none;
+}
+
+.renameForm {
+  flex: 1;
+  min-width: 0;
+}
+
+.renameLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.renameInput {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  background-color: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.renameInput:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
