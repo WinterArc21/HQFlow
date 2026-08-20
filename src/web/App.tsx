@@ -3,6 +3,7 @@ import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
 import { AppShell, TopBar, type CodeHQStatus } from "./components/shell";
 import { WorkflowNavigator } from "./components/navigator";
+import { useFolders } from "./components/navigator/useFolders";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
@@ -27,6 +28,7 @@ function computeConnectionStatus(
 export function App() {
   const { snapshot, status, error, refetch } = useCodeHQSnapshot();
   const [workflowNavigatorCollapsed, setWorkflowNavigatorCollapsed] = useState(false);
+  const folders = useFolders();
 
   const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
@@ -94,6 +96,12 @@ export function App() {
             onSelect={selectWorkflow}
             collapsed={workflowNavigatorCollapsed}
             onToggleCollapsed={() => setWorkflowNavigatorCollapsed((collapsed) => !collapsed)}
+            folderState={folders.folderState}
+            onCreateFolder={(name) => void folders.createFolder(name)}
+            onRenameFolder={(folderId, name) => void folders.renameFolder(folderId, name)}
+            onDeleteFolder={(folderId) => void folders.deleteFolder(folderId)}
+            onAssignWorkflowToFolder={(workflowId, folderId) => void folders.assignWorkflowToFolder(workflowId, folderId)}
+            onReorderFolder={(folderId, workflowIds) => void folders.reorderFolder(folderId, workflowIds)}
           />
         }
       >
