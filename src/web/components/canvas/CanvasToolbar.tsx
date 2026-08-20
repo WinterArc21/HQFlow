@@ -2,6 +2,7 @@ import {
   ArrowCounterClockwise,
   ArrowsInLineVertical,
   DownloadSimple,
+  FloppyDisk,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   Trash,
@@ -13,6 +14,9 @@ export interface CanvasToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetLayout: () => void;
+  /** When provided, a Save Layout button is shown. Omitted in the export viewer */
+  onSaveLayout?: () => void;
+  saveLayoutPending?: boolean;
   onCollapseAll: () => void;
   collapseDisabled: boolean;
   /** When provided, an export button is shown. Omitted in the export viewer. */
@@ -26,6 +30,8 @@ export function CanvasToolbar({
   onZoomIn,
   onZoomOut,
   onResetLayout,
+  onSaveLayout,
+  saveLayoutPending,
   onCollapseAll,
   collapseDisabled,
   onExport,
@@ -42,6 +48,15 @@ export function CanvasToolbar({
           size="sm"
           onClick={onResetLayout}
         />
+        {onSaveLayout !== undefined ? (
+          <IconButton
+            label={saveLayoutPending === true ? "Saving layout…" : "Save layout"}
+            icon={<FloppyDisk size={16} />}
+            size="sm"
+            onClick={onSaveLayout}
+            disabled={saveLayoutPending === true}
+          />
+        ) : null}
       </div>
       <div className={styles.divider} aria-hidden="true" />
       <IconButton

@@ -218,6 +218,8 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
 | DELETE | `/api/workflows/:id` | Delete a verified workflow; returns the refreshed snapshot. |
+| GET | `/api/workflows/:id/layout` | `{ positions: Record<stepId, {x,y}> }`. Manually-saved canvas node positions; empty object if none saved. 404 if unknown workflow. |
+| PUT | `/api/workflows/:id/layout` | Body: `Record<stepId, {x,y}>`. Overwrites the saved positions for this workflow. 204 on success, 404 if unknown workflow. Stored at `.codehq/.runtime/layout.json` — gitignored per §4, never in workflow JSON. |
 | GET | `/api/diagnostics` | `DiagnosticsReport` |
 | GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, line? }`. **Never returns file contents.** |
 | GET | `/api/export/:id?hideFilePaths=<bool>` | Self-contained HTML export; `hideFilePaths` defaults to `false`. |
