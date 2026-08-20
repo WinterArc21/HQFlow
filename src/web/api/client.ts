@@ -90,3 +90,21 @@ export function recheck(): Promise<CodeHQSnapshot> {
 export function deleteWorkflow(id: string): Promise<CodeHQSnapshot> {
   return requestJson<CodeHQSnapshot>(`/api/workflows/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+export type WorkflowLayoutPositions = Record<string, { x: number; y: number }>;
+
+/** `GET /api/workflows/:id/layout` — manually-saved canvas node positions, if any. */
+export function getWorkflowLayout(id: string): Promise<{ positions: WorkflowLayoutPositions }> {
+  return requestJson<{ positions: WorkflowLayoutPositions }>(`/api/workflows/${encodeURIComponent(id)}/layout`);
+}
+
+/** `PUT /api/workflows/:id/layout` — overwrites the saved node positions for this workflow. */
+export async function saveWorkflowLayout(id: string, positions: WorkflowLayoutPositions): Promise<void> {
+  const path = `/api/workflows/${encodeURIComponent(id)}/layout`;
+  const response = await safeFetch(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(positions),
+  });
+  await ensureOk(path, response);
+}

@@ -121,6 +121,56 @@ describe("createCodeHQServer — endpoint shapes", () => {
   });
 });
 
+describe("createCodeHQServer — /api/workflows/:id/layout", () => {
+  it("GET returns 404 for an unknown workflow", async () => {
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/workflows/does-not-exist/layout`);
+    expect(response.status).toBe(404);
+  });
+
+  it("GET returns an empty positions map before anything has been saved", async () => {
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/workflows/sample/layout`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { positions: Record<string, { x: number; y: number }> };
+    expect(body.positions).toEqual({});
+  });
+
+  it("PUT saves positions, and a subsequent GET returns them", async () => {
+    const running = await startServer();
+    const put = await fetch(`${running.url}/api/workflows/sample/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "step-1": { x: 120, y: 340 } }),
+    });
+    expect(put.status).toBe(204);
+
+    const get = await fetch(`${running.url}/api/workflows/sample/layout`);
+    const body = (await get.json()) as { positions: Record<string, { x: number; y: number }> };
+    expect(body.positions).toEqual({ "step-1": { x: 120, y: 340 } });
+  });
+
+  it("PUT rejects a malformed body with 400", async () => {
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/workflows/sample/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "step-1": { x: "not-a-number", y: 0 } }),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("PUT returns 404 for an unknown workflow", async () => {
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/workflows/does-not-exist/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(response.status).toBe(404);
+  });
+});
+
 describe("createCodeHQServer — /api/source", () => {
   it("returns metadata only, and never file contents, for a real file", async () => {
     const running = await startServer();

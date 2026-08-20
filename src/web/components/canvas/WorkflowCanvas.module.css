@@ -180,6 +180,29 @@
   background-image: linear-gradient(to right, transparent, var(--bg-canvas) 85%);
 }
 
+.saveLayoutError {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-4);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 480px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--accent-red);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  box-shadow: var(--canvas-node-shadow);
+}
+
+.saveLayoutError svg {
+  color: var(--accent-red);
+  flex-shrink: 0;
+}
+
 .overflowLabel {
   display: inline-flex;
   align-items: center;

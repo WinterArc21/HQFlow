@@ -9,6 +9,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SourceLookup } from "@schema/wire";
 import { pathExists } from "@core/fs-utils";
+import { readWorkflowLayout, writeWorkflowLayout, type WorkflowLayoutPositions } from "@core/layout-store";
 import { codeHQPaths } from "@core/repository";
 import { resolveInsideRepository } from "@core/safe-path";
 import type { CodeHQStore } from "@core/store";
@@ -34,6 +35,9 @@ const exportQuerySchema = z
     hideFilePaths: z.enum(["true", "false"]).default("false"),
   })
   .strict();
+
+const layoutPositionSchema = z.object({ x: z.number(), y: z.number() }).strict();
+const saveLayoutBodySchema: z.ZodType<WorkflowLayoutPositions> = z.record(z.string(), layoutPositionSchema);
 
 function buildEditorUrl(absolutePath: string, line: number | undefined): string {
   const forwardSlashPath = absolutePath.split(path.sep).join("/");
@@ -223,6 +227,31 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
 
   app.get("/api/diagnostics", async (_request, reply) => {
     await reply.send(store.getSnapshot().diagnostics);
+  });
+
+  app.get<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    const positions = await readWorkflowLayout(root, request.params.id);
+    await reply.send({ positions: positions ?? {} });
+  });
+
+  app.put<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    const parsed = saveLayoutBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid layout payload.", details: parsed.error.issues });
+      return;
+    }
+    await writeWorkflowLayout(root, request.params.id, parsed.data);
+    await reply.code(204).send();
   });
 
   registerSourceRoute(app, root);

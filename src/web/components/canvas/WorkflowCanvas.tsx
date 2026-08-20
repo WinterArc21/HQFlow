@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
+import { WarningCircle, X } from "@phosphor-icons/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
@@ -18,10 +19,12 @@ import { StepNode } from "./nodes/StepNode";
 import type { CanvasFlowNode, WorkflowFlowEdge } from "./types";
 import { useExportMode } from "../../export-viewer/ExportModeContext";
 import { fetchWorkflowExport } from "../../api/client";
+import { IconButton } from "../primitives";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
+import { useSavedLayout } from "./useSavedLayout";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -159,6 +162,12 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(generatedNodes);
+  const { saveLayout, saveStatus, saveError, dismissSaveError } = useSavedLayout({
+    workflowId: workflow.id,
+    nodes,
+    setNodes,
+    enabled: exportMode === null,
+  });
   const previousWorkflowId = useRef(workflow.id);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
@@ -259,6 +268,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
         onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
         onResetLayout={resetLayout}
+        {...(exportMode === null ? { onSaveLayout: saveLayout, saveLayoutPending: saveStatus === "pending" } : {})}
         onCollapseAll={collapseAllSteps}
         collapseDisabled={!hasExpandedSteps}
         {...(exportMode === null ? { onExport: handleExport } : {})}
@@ -293,6 +303,13 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         <CanvasLegend workflow={workflow} dimmed={tracePath !== null} />
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}
         {overflowsBottom ? <CanvasOverflowIndicator direction="bottom" /> : null}
+        {saveStatus === "error" && saveError !== null ? (
+          <div className={styles.saveLayoutError} role="alert">
+            <WarningCircle size={16} aria-hidden="true" />
+            <span>Couldn't save layout — {saveError}</span>
+            <IconButton label="Dismiss" icon={<X size={14} />} size="sm" onClick={dismissSaveError} />
+          </div>
+        ) : null}
       </div>
       {exportDialogOpen ? (
         <ExportDialog
