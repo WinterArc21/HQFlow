@@ -38,7 +38,13 @@ const exportQuerySchema = z
 function buildEditorUrl(absolutePath: string, line: number | undefined): string {
   const forwardSlashPath = absolutePath.split(path.sep).join("/");
   const encodedPath = encodeURI(forwardSlashPath);
-  return line !== undefined ? `vscode://file/${encodedPath}:${line}` : `vscode://file/${encodedPath}`;
+  const suffix = line !== undefined ? `:${line}` : "";
+  const wslDistro = process.env.WSL_DISTRO_NAME;
+  if (wslDistro) {
+    return `vscode://vscode-remote/wsl+${encodeURIComponent(wslDistro)}${encodedPath}${suffix}`;
+  }
+
+  return `vscode://file/${encodedPath}${suffix}`;
 }
 
 function registerSourceRoute(app: FastifyInstance, root: string): void {
