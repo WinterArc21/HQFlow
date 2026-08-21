@@ -10,7 +10,7 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => server.close()));
 });
 
-function createWorkflowRoot(fileName: string, status: "draft" | "verified"): { root: string; workflowFile: string } {
+function createWorkflowRoot(fileName: string): { root: string; workflowFile: string } {
   const root = mkdtempSync(path.join(tmpdir(), "codehq-delete-workflow-"));
   const workflowsDir = path.join(root, ".codehq", "workflows");
   mkdirSync(workflowsDir, { recursive: true });
@@ -26,7 +26,6 @@ function createWorkflowRoot(fileName: string, status: "draft" | "verified"): { r
       id: "sample",
       name: "Sample workflow",
       purpose: "A workflow used by the deletion tests.",
-      status,
       steps: [{ id: "step-1", name: "Step 1", purpose: "Does the thing.", category: "entry" }],
       connections: [],
     }),
@@ -42,7 +41,7 @@ async function startServer(root: string): Promise<CodeHQServer> {
 
 describe("DELETE /api/workflows/:id", () => {
   it("unlinks the exact loaded workflow file and returns the refreshed store snapshot", async () => {
-    const { root, workflowFile } = createWorkflowRoot("renamed.json", "verified");
+    const { root, workflowFile } = createWorkflowRoot("renamed.json");
     try {
       const server = await startServer(root);
 
@@ -59,14 +58,24 @@ describe("DELETE /api/workflows/:id", () => {
     }
   });
 
-  it("rejects a workflow that is not verified and leaves its file and store state intact", async () => {
-    const { root, workflowFile } = createWorkflowRoot("sample.json", "draft");
+  it("rejects a stale workflow and leaves its file and store state intact", async () => {
+    const { root, workflowFile } = createWorkflowRoot("sample.json");
     try {
       const server = await startServer(root);
+      writeFileSync(
+        workflowFile,
+        JSON.stringify({
+          schemaVersion: "0.1",
+          id: "sample",
+          name: "Sample workflow",
+          purpose: "A workflow used by the deletion tests.",
+        }),
+      );
+      await server.store.reload();
 
       const response = await fetch(`${server.url}/api/workflows/sample`, { method: "DELETE" });
       expect(response.status).toBe(409);
-      expect((await response.text()).toLowerCase()).toContain("verified");
+      expect((await response.text()).toLowerCase()).toContain("valid");
       expect(existsSync(workflowFile)).toBe(true);
       expect(server.store.getSnapshot().workflows).toHaveLength(1);
     } finally {

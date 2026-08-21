@@ -195,8 +195,8 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
       return;
     }
 
-    if (record.state !== "valid" || record.workflow.status !== "verified") {
-      await reply.code(409).send({ error: "Only verified workflows can be deleted." });
+    if (record.state !== "valid") {
+      await reply.code(409).send({ error: "Only a valid workflow can be deleted." });
       return;
     }
 

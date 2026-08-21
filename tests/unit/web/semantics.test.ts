@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryToken,
-  confidenceStyle,
   connectionStyle,
   outcomeEdgeStyle,
   outcomeTone,
   RETRY_EDGE_VISUAL,
   sourceStatusTone,
-  statusTone,
 } from "@web/design/semantics";
 import type { SourceStatus } from "@web/api/types";
-import type { Workflow, WorkflowStep } from "@schema/workflow";
+import type { WorkflowStep } from "@schema/workflow";
 
 describe("categoryToken", () => {
   const cases: Array<[WorkflowStep["category"], string]> = [
@@ -37,15 +35,6 @@ describe("categoryToken", () => {
     const result = categoryToken(undefined);
     expect(result.varName).toBe("--accent-neutral");
     expect(result.label).toBeTruthy();
-  });
-});
-
-describe("confidenceStyle", () => {
-  it("maps every confidence state, including the default", () => {
-    expect(confidenceStyle("verified").marker).toBe("solid");
-    expect(confidenceStyle("inferred").marker).toBe("dashed");
-    expect(confidenceStyle("human-confirmed").marker).toBe("solid-dot");
-    expect(confidenceStyle(undefined).marker).toBe("solid");
   });
 });
 
@@ -111,25 +100,9 @@ describe("outcomeTone", () => {
   });
 });
 
-describe("statusTone", () => {
-  const cases: Array<[Workflow["status"], string]> = [
-    ["draft", "neutral"],
-    ["verified", "green"],
-    ["needs-review", "amber"],
-  ];
-
-  it("maps every workflow status and the default", () => {
-    for (const [status, tone] of cases) {
-      expect(statusTone(status).tone, status).toBe(tone);
-    }
-    expect(statusTone(undefined).tone).toBe("neutral");
-  });
-});
-
 describe("sourceStatusTone", () => {
   const cases: Array<[SourceStatus, string]> = [
-    ["verified", "green"],
-    ["file-only", "amber"],
+    ["found", "green"],
     ["missing", "red"],
   ];
 

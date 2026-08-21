@@ -18,7 +18,6 @@ const WORKFLOW: Workflow = {
       name: "Process Payment",
       purpose: "Captures the customer's payment.",
       category: "external",
-      confidence: "verified",
       sources: [
         { file: "src/payments/capture.ts", symbol: "capturePayment", line: 10, endLine: 20 },
         { file: "src/payments/missing.ts", symbol: "doesNotExist" },
@@ -30,10 +29,9 @@ const WORKFLOW: Workflow = {
           name: "Card declined",
           description: "The card issuer declines the charge.",
           handling: "Return 402.",
-          confidence: "inferred",
         },
       ],
-      tests: [{ file: "tests/unit/payments.test.ts", symbol: "declines a bad card", status: "passing" }],
+      tests: [{ file: "tests/unit/payments.test.ts", symbol: "declines a bad card" }],
       externalServices: [{ name: "Stripe", purpose: "Processes the charge.", operation: "POST /charges" }],
       details: {
         implementation: "Uses the Stripe SDK directly.",
@@ -51,7 +49,7 @@ const WORKFLOW: Workflow = {
 };
 
 const SOURCE_CHECKS: Record<string, SourceStatus> = {
-  "src/payments/capture.ts#capturePayment": "verified",
+  "src/payments/capture.ts#capturePayment": "found",
   "src/payments/missing.ts#doesNotExist": "missing",
 };
 
@@ -108,12 +106,6 @@ describe("StepDrawer", () => {
     expect(screen.getByText(/Step 1 of 2/)).toBeInTheDocument();
   });
 
-  it("does not badge the step's own confidence anywhere in the drawer", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
-    expect(screen.queryByText("Confidence")).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Confidence" })).not.toBeInTheDocument();
-  });
-
   it("counts each list section on its heading — the card no longer carries those counts", () => {
     render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
 
@@ -148,10 +140,10 @@ describe("StepDrawer", () => {
     expect(screen.getByText("Connections")).toBeInTheDocument();
   });
 
-  it("renders an honest, distinct label for each source verification state", () => {
+  it("renders an honest, distinct label for each source check state", () => {
     render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
 
-    expect(screen.getByText("File and symbol verified")).toBeInTheDocument();
+    expect(screen.getByText("File found")).toBeInTheDocument();
     expect(screen.getByText("File not found")).toBeInTheDocument();
   });
 

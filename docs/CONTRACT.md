@@ -115,15 +115,14 @@ followed literally. Summary:
   `settings? { defaultWorkflowId?, sourceLinkMode?: "editor"|"github"|"none" }`
 - `Workflow` — `schemaVersion: "0.1"`, `id`, `name`, `purpose`,
   `entryPoint?: SourceReference` (**an object, not a string**),
-  `status?: "draft" | "verified" | "needs-review"` (**a closed enum**),
   `steps[]`, `connections[]`, `notes?: string[]` (**an array of strings**)
-- `WorkflowStep` — `id, name, purpose, category?, confidence?, sources?, inputs?, outputs?,
+- `WorkflowStep` — `id, name, purpose, category?, sources?, inputs?, outputs?,
   edgeCases?, tests?, externalServices?, details? { implementation?, importantDecisions?, assumptions? }`
 - `WorkflowConnection` — `id?, from, to, label?, condition?, type?: "success"|"failure"|"conditional"|"async"`
 - `SourceReference` — `file, symbol?, line?, endLine?, description?`
 - `DataReference` — `name, type?, description?`
-- `EdgeCase` — `name, description?, handling?, confidence?, sources?`
-- `TestReference` — `file, symbol?, description?, status?: "passing"|"failing"|"unknown"`
+- `EdgeCase` — `name, description?, handling?, sources?`
+- `TestReference` — `file, symbol?, description?`
 - `ExternalServiceReference` — `name, purpose?, operation?`
 
 `.strict()` on every object: unknown keys are an error, because they usually mean an agent
@@ -179,7 +178,7 @@ load/revalidation. Must be both human-readable and machine-readable — agents r
 ## 7. Wire model (server → web)
 
 ```ts
-type SourceStatus = "verified" | "file-only" | "missing";
+type SourceStatus = "found" | "missing";
 
 type WorkflowRecord = {
   id: string;
@@ -217,7 +216,7 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
-| DELETE | `/api/workflows/:id` | Delete a verified workflow; returns the refreshed snapshot. |
+| DELETE | `/api/workflows/:id` | Delete a valid workflow; returns the refreshed snapshot. |
 | GET | `/api/diagnostics` | `DiagnosticsReport` |
 | GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, line? }`. **Never returns file contents.** |
 | GET | `/api/export/:id?hideFilePaths=<bool>` | Self-contained HTML export; `hideFilePaths` defaults to `false`. |
@@ -286,8 +285,8 @@ file, ever. Components use `var(--...)` exclusively.
 --text-secondary: #9BA1A9;
 --text-tertiary:  #6B7178;
 --accent-blue:    #5B8DEF;   /* entry */
---accent-green:   #4FA97A;   /* data, verified */
---accent-amber:   #D19A45;   /* decision, needs-review */
+--accent-green:   #4FA97A;   /* found-file badges */
+--accent-amber:   #D19A45;   /* decision, conditional */
 --accent-red:     #C4665C;   /* failure */
 --accent-violet:  #8B7BC7;   /* external */
 --accent-neutral: #7E858D;   /* logic */
@@ -322,9 +321,6 @@ font families (`--font-ui` system sans, `--font-mono` system mono), transitions
 | category `data` | green left marker |
 | category `external` | violet left marker |
 | category `output` | brighter green left marker |
-| confidence `verified` | solid 2px marker |
-| confidence `inferred` | dashed/striped marker + "inferred" micro-label |
-| confidence `human-confirmed` | solid marker + small filled dot |
 | connection `failure` | muted red, dashed |
 | connection `conditional` | amber, dashed, label shown |
 | connection `async` | neutral, dotted |

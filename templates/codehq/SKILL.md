@@ -11,7 +11,7 @@ every file you write, watches this directory, and updates the canvas live. If yo
 mistake, it will tell you exactly what is wrong in `.codehq/diagnostics.json` — read that
 file after every change and fix anything you broke.
 
-## The 18 rules
+## The 16 rules
 
 1. Start from a real user action, route, handler, server action, event consumer, cron task, or system entry point.
 2. Trace the relevant code path through the repository.
@@ -22,15 +22,13 @@ file after every change and fix anything you broke.
 7. Record important inputs and outputs.
 8. Record meaningful failure branches and edge cases.
 9. Attach tests that prove the behavior when they exist.
-10. Mark information as verified only when it is directly supported by the code.
-11. Mark reasonable interpretations as inferred.
-12. Preserve human-written names, notes, and corrections.
-13. Edit only files inside `.codehq` unless the user explicitly asks for source-code changes.
-14. Follow the supplied JSON schema exactly.
-15. Never add layout coordinates, colors, styling, or visual instructions.
-16. Run `hqflow validate` after making changes.
-17. Read `.codehq/diagnostics.json` and repair any errors you introduced.
-18. Write step `name` and `purpose` in product language a non-author can understand (e.g. "Collect website data", not `pollFirecrawlBatch`). Keep type and symbol names in `inputs`/`outputs`/`sources` — the canvas shows the product story; expand a card or open the drawer for files, types, and symbols.
+10. Preserve human-written names, notes, and corrections.
+11. Edit only files inside `.codehq` unless the user explicitly asks for source-code changes.
+12. Follow the supplied JSON schema exactly.
+13. Never add layout coordinates, colors, styling, or visual instructions.
+14. Run `hqflow validate` after making changes.
+15. Read `.codehq/diagnostics.json` and repair any errors you introduced.
+16. Write step `name` and `purpose` in product language a non-author can understand (e.g. "Collect website data", not `pollFirecrawlBatch`). Keep type and symbol names in `inputs`/`outputs`/`sources` — the canvas shows the product story; expand a card or open the drawer for files, types, and symbols.
 
 The goal is not to document every function in the codebase. It is to give the next person (or
 agent) who opens this project a fast, trustworthy map of how a handful of real, important
@@ -50,17 +48,16 @@ than one that is exhaustive and speculative.
 1. Pick a real entry point (rule 1) and read the code path (rule 2).
 2. Group the code into 5–9 top-level steps (rules 3–5).
 3. For each step, record sources, inputs/outputs, edge cases, tests, and external services
-   that you can actually verify in the code (rules 6–10). Mark anything you had to guess or
-   generalize as `"confidence": "inferred"` (rule 11).
+   that you can actually find in the code (rules 6–9).
 4. Write (or update) `.codehq/workflows/<id>.json`. If a human previously edited this
    file, keep their names, notes, and corrections — do not overwrite them with your own
-   guesses (rule 12).
+   guesses (rule 10).
 5. Do not touch anything outside `.codehq` unless the user explicitly asked you to change
-   source code (rule 13). Follow the schema below exactly (rule 14) — do not invent fields,
-   and never add layout, color, or styling (rule 15).
-6. Run `hqflow validate` (rule 16).
+   source code (rule 11). Follow the schema below exactly (rule 12) — do not invent fields,
+   and never add layout, color, or styling (rule 13).
+6. Run `hqflow validate` (rule 14).
 7. Open `.codehq/diagnostics.json`. If it reports any errors for files you touched, fix
-   them and re-run `validate` until it is clean (rule 17). Warnings are not blocking, but they
+   them and re-run `validate` until it is clean (rule 15). Warnings are not blocking, but they
    usually mean the workflow is more complex or less connected than it should be — consider
    whether they point at a real problem.
 
@@ -71,18 +68,18 @@ watches the directory for changes — so you can build the map incrementally as 
 code, not only at the end. Each saved version is a real checkpoint a human could open and
 explore.
 
-1. **Create the file early.** Once you have the entry point and the first verified step, write
+1. **Create the file early.** Once you have the entry point and the first step, write
    a complete, valid workflow — schema-correct, with `schemaVersion`, `id`, `name`, `purpose`,
    `steps` (one is enough), and `connections` (empty is fine). Run `hqflow validate`
    immediately.
-2. **Save in complete, valid increments.** Every time you verify a new step or connection,
+2. **Save in complete, valid increments.** Every time you add a new step or connection,
    rewrite the file as the full, valid workflow — never a partial, malformed, or placeholder
    version. The canvas only advances when the JSON parses and validates; a broken save leaves
    the last valid map on screen and stale diagnostics in the banner.
-3. **Check diagnostics after each increment** (rule 17). Read `.codehq/diagnostics.json`
+3. **Check diagnostics after each increment** (rule 15). Read `.codehq/diagnostics.json`
    and repair anything you introduced before continuing to trace.
 4. **Never fabricate steps, connections, or categories to make the map move.** Every saved
-   version must describe real behavior you have verified — an unverified step that appears then
+   version must describe real behavior you read in the code — a made-up step that appears then
    vanishes was never real, and a reader who saw it has been misled.
 
 ## JSON schema reference
@@ -95,7 +92,7 @@ recognize (especially something like `x`, `y`, `color`, or `style`) will be reje
 
 Never add coordinates, colors, fonts, CSS, icons, or any other visual/layout property,
 anywhere in these files. HQFlow computes all of that automatically from the
-`category`/`confidence`/connection `type` values below.
+`category`/connection `type` values below.
 
 All file paths (`SourceReference.file`, `TestReference.file`) **must be repository-relative**:
 no leading `/`, no drive letters (`C:\`), no UNC paths (`\\server\...`), and no `..` segments.
@@ -110,7 +107,6 @@ Use forward slashes or backslashes, e.g. `"src/server/routes/checkout.ts"`.
 | `name` | string | yes | Short human-readable name, e.g. `"Checkout"`. |
 | `purpose` | string | yes | One or two sentences: what this workflow accomplishes and for whom. |
 | `entryPoint` | `SourceReference` | no | A `SourceReference` pointing at the code that begins this workflow, e.g. the route handler. Example: `{ "file": "app/api/generate/route.ts", "symbol": "POST" }`. |
-| `status` | one of: `"draft"`, `"verified"`, `"needs-review"` | no | Lifecycle status of this workflow document. `"draft"`: not yet reviewed. `"verified"`: a human has confirmed it. `"needs-review"`: something may be stale or uncertain. |
 | `steps` | `WorkflowStep[]` | yes | At least one step. Prefer 5–9 top-level steps; more than 14 triggers a warning. |
 | `connections` | `WorkflowConnection[]` | yes | May be empty. Every `from`/`to` must reference an existing step `id`. |
 | `notes` | `string[]` | no | Free-form notes, corrections, or context a human added, one per array entry. Preserve these. |
@@ -123,7 +119,6 @@ Use forward slashes or backslashes, e.g. `"src/server/routes/checkout.ts"`.
 | `name` | string | yes | Short product-language step name, e.g. `"Collect website data"` — not a function identifier. |
 | `purpose` | string | yes | One plain sentence: what this step does and why. No file paths or type names. |
 | `category` | one of: `"entry"`, `"logic"`, `"decision"`, `"data"`, `"external"`, `"output"` | no | Drives the step's marker color. Use `"entry"` for the step(s) that begin the workflow — this is also how reachability is computed. |
-| `confidence` | one of: `"verified"`, `"inferred"`, `"human-confirmed"` | no | `"verified"`: directly supported by the code you read. `"inferred"`: a reasonable interpretation you could not fully confirm. `"human-confirmed"`: a human explicitly confirmed this — never downgrade it. |
 | `sources` | `SourceReference[]` | no | Real files/symbols that implement this step (shown on expand and in the drawer). |
 | `inputs` | `DataReference[]` | no | What this step consumes (type names belong here, not in `name`). |
 | `outputs` | `DataReference[]` | no | What this step produces (type names belong here, not in `name`). |
@@ -135,7 +130,7 @@ Use forward slashes or backslashes, e.g. `"src/server/routes/checkout.ts"`.
 `details` is an object with:
 - `implementation` (string, optional) — a short prose note on how the step is implemented, when that is non-obvious from the sources alone.
 - `importantDecisions` (string[], optional) — notable design decisions visible in the code.
-- `assumptions` (string[], optional) — things you assumed rather than verified.
+- `assumptions` (string[], optional) — things you assumed rather than read in the code.
 
 ### `WorkflowConnection`
 
@@ -180,7 +175,6 @@ fictional branches merely to demonstrate these canvas forms.
 | `name` | string | yes | Short name for the edge case. |
 | `description` | string | no | What can go wrong or diverge. |
 | `handling` | string | no | How the code handles it today. |
-| `confidence` | one of: `"verified"`, `"inferred"`, `"human-confirmed"` | no | Same meaning as on `WorkflowStep`. |
 | `sources` | `SourceReference[]` | no | Where this handling lives in the code. |
 
 ### `TestReference`
@@ -190,7 +184,6 @@ fictional branches merely to demonstrate these canvas forms.
 | `file` | string | yes | Repository-relative path to the test file. |
 | `symbol` | string | no | Test name or `describe`/`it` block. |
 | `description` | string | no | What the test proves. |
-| `status` | one of: `"passing"`, `"failing"`, `"unknown"` | no | If you did not run it, use `"unknown"`. |
 
 ### `ExternalServiceReference`
 

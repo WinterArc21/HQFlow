@@ -27,45 +27,19 @@ describe("checkSourceReference", () => {
     expect(checkSourceReference(root, { file: "../outside.ts" })).toBe("missing");
   });
 
-  it("marks references without a verifiable code declaration as file-only", () => {
+  it("marks an existing file as found, even when a symbol is attached", () => {
     write("lib/thing.ts", "export function thing() {}\n");
-    expect(checkSourceReference(root, { file: "lib/thing.ts" })).toBe("file-only");
+    expect(checkSourceReference(root, { file: "lib/thing.ts" })).toBe("found");
+    expect(checkSourceReference(root, { file: "lib/thing.ts", symbol: "missingSymbol" })).toBe("found");
     write("README.md", "## thing\n");
-    expect(checkSourceReference(root, { file: "README.md", symbol: "thing" })).toBe("file-only");
-
-    const misses = [
-      ["line-comment.ts", "// function realSymbol() {}\nexport const other = 1;\n", "realSymbol"],
-      ["block-comment.ts", "/* function realSymbol() {} */\nexport const other = 1;\n", "realSymbol"],
-      ["substring.ts", "export function realSymbolExtended() { return 1; }\n", "realSymbol"],
-      ["unknown.ts", "export const somethingElse = 1;\n", "missingSymbol"],
-    ] as const;
-    for (const [file, contents, symbol] of misses) {
-      write(`lib/${file}`, contents);
-      expect(checkSourceReference(root, { file: `lib/${file}`, symbol }), file).toBe("file-only");
-    }
+    expect(checkSourceReference(root, { file: "README.md", symbol: "thing" })).toBe("found");
   });
 
-  it("recognizes supported declaration forms without comment false positives", () => {
-    const declarations = [
-      ["function.ts", "export function doThing() { return 1; }\n", "doThing"],
-      ["route.ts", "export async function POST(request: Request) { return new Response(); }\n", "POST"],
-      ["class.ts", "export class Thing {}\n", "Thing"],
-      ["arrow.ts", "export const doThing = (x: number) => x + 1;\n", "doThing"],
-      ["method.ts", "export class Thing {\n  doThing(x: number) { return x; }\n}\n", "doThing"],
-      ["re-export.ts", "function doThing() { return 1; }\nexport { doThing };\n", "doThing"],
-      ["url.ts", 'const base = "https://example.com"; export function doThing() { return base; }\n', "doThing"],
-    ] as const;
-    for (const [file, contents, symbol] of declarations) {
-      write(`lib/${file}`, contents);
-      expect(checkSourceReference(root, { file: `lib/${file}`, symbol }), file).toBe("verified");
-    }
-  });
-
-  it("re-reads a file after its mtime changes", () => {
-    write("lib/thing.ts", "export const somethingElse = 1;\n");
-    expect(checkSourceReference(root, { file: "lib/thing.ts", symbol: "doThing" })).toBe("file-only");
+  it("re-reads a file after it is deleted", () => {
     write("lib/thing.ts", "export function doThing() { return 1; }\n");
-    expect(checkSourceReference(root, { file: "lib/thing.ts", symbol: "doThing" })).toBe("verified");
+    expect(checkSourceReference(root, { file: "lib/thing.ts", symbol: "doThing" })).toBe("found");
+    rmSync(path.join(root, "lib/thing.ts"));
+    expect(checkSourceReference(root, { file: "lib/thing.ts", symbol: "doThing" })).toBe("missing");
   });
 });
 
@@ -94,7 +68,7 @@ describe("computeWorkflowSourceChecks", () => {
     if (!parsed.ok) throw new Error("expected workflow to parse");
 
     const { sourceChecks, issues } = computeWorkflowSourceChecks(root, parsed.value, ".codehq/workflows/wf.json");
-    expect(sourceChecks["lib/real.ts#realThing"]).toBe("verified");
+    expect(sourceChecks["lib/real.ts#realThing"]).toBe("found");
     expect(sourceChecks["lib/missing.ts"]).toBe("missing");
     expect(issues).toHaveLength(1);
     expect(issues[0]).toEqual(expect.objectContaining({ severity: "warning" }));

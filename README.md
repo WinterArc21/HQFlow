@@ -118,7 +118,7 @@ traces on error.
 └── .runtime/                # gitignored scratch space, ignored by validation
 ```
 
-A workflow is a directed graph of steps an agent has verified against the real code — no
+A workflow is a directed graph of steps an agent has read against the real code — no
 coordinates, colors, or styling, ever; HQFlow owns all of that. A short annotated
 example:
 
@@ -135,7 +135,6 @@ example:
       "name": "Create Order",
       "purpose": "Persists a pending order from the cart contents.",
       "category": "entry",
-      "confidence": "verified",
       "sources": [{ "file": "app/api/checkout/route.ts", "symbol": "POST", "line": 12, "endLine": 30 }],
       "outputs": [{ "name": "Order", "type": "Order" }]
     },

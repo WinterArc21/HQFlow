@@ -12,7 +12,7 @@ export interface DeleteWorkflowDialogProps {
   onConfirm: () => Promise<void>;
 }
 
-/** Confirmation dialog for the destructive removal of a verified workflow file. */
+/** Confirmation dialog for the destructive removal of a workflow file. */
 export function DeleteWorkflowDialog({ workflowName, onClose, onConfirm }: DeleteWorkflowDialogProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -47,7 +47,7 @@ export function DeleteWorkflowDialog({ workflowName, onClose, onConfirm }: Delet
         </header>
         <div className={styles.body}>
           <p id={descriptionId}>
-            Delete <strong className={styles.workflowName}>{workflowName}</strong>? Only verified workflows can be deleted.
+            Delete <strong className={styles.workflowName}>{workflowName}</strong>? This cannot be undone.
           </p>
           {confirm.status === "error" && confirm.message !== null ? (
             <p className={styles.error} role="alert">

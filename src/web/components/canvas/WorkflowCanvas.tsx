@@ -262,7 +262,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         onCollapseAll={collapseAllSteps}
         collapseDisabled={!hasExpandedSteps}
         {...(exportMode === null ? { onExport: handleExport } : {})}
-        {...(exportMode === null && onDeleteWorkflow !== undefined && workflow.status === "verified"
+        {...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
           ? { onDelete: () => setDeleteDialogOpen(true) }
           : {})}
       />

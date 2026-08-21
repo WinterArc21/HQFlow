@@ -116,33 +116,7 @@
     var(--canvas-node-shadow-lifted);
 }
 
-/* Confidence, still as a *shape* and not a second colour (contract §10: "never colour alone").
-   The old spine carried both category and confidence; the gradient took category, so what is left
-   here is only the confidence signal — and it now marks the exceptional case rather than every
-   card. A dashed leading edge means "the agent inferred this"; a clean edge means verified or
-   human-confirmed. Presence-vs-absence of a dash pattern is still a difference that survives
-   greyscale and colour-blindness, and it puts the ink on the ~10% of steps someone actually needs
-   to go check instead of on all of them.
 
-   Absolutely positioned, so unlike the old flex-child spine it consumes no layout width: every
-   card is the same 320px box `layout.ts` computed either way, inferred or not. */
-.inferredEdge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  border-top-left-radius: 9px;
-  border-bottom-left-radius: 9px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--node-accent) 0,
-    var(--node-accent) 5px,
-    transparent 5px,
-    transparent 9px
-  );
-  pointer-events: none;
-}
 
 /* Rounded on all four corners now, not just the right pair: with the spine gone this box spans the
    full card, so clipping only its right corners would square off the leading edge. */

@@ -279,14 +279,14 @@ main { position: relative; }
 
 .node { position: absolute; display: flex; width: 20%; min-height: 11.4%; flex-direction: column; gap: 4px; padding: 8px 10px 8px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-2); text-align: left; background: white; box-shadow: var(--shadow-card); transition: transform 220ms var(--ease), box-shadow 220ms var(--ease); }
 .node::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; border-radius: var(--r-2) 0 0 var(--r-2); background: var(--cat, var(--ink-3)); }
-.node.is-inferred::before { background: repeating-linear-gradient(to bottom, var(--cat) 0 3px, transparent 3px 6px); }
+
 .node:hover { z-index: 2; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0, 0, 0, .08), 0 16px 32px -20px rgba(0, 0, 0, .45); }
 .node.is-selected { z-index: 2; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow-card); }
 .node-head { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
 .node-idx, .node-meta { flex: none; color: var(--ink-3); font: 9px var(--mono); }
 .node-name { flex: 1; overflow: hidden; font-size: clamp(9px, .9vw, 11.5px); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .node-sub { overflow: hidden; color: var(--ink-2); font: clamp(7.5px, .85vw, 10.5px) var(--mono); text-overflow: ellipsis; white-space: nowrap; }
-.node-conf { color: var(--amber-ink); font: 8.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+
 
 /* hero preview reuses the node component at a larger, calmer scale */
 .node-mini { width: 42%; min-height: 13%; padding: 9px 12px 9px 15px; }
@@ -305,8 +305,7 @@ main { position: relative; }
 .drawer-badges, .d-io { display: flex; flex-wrap: wrap; gap: 8px; }
 .drawer-badges { margin-top: 8px; }
 .badge { padding: 2px 7px; border: 1px solid color-mix(in oklch, var(--badge-c, var(--ink-3)) 30%, white); border-radius: var(--r-1); color: color-mix(in oklch, var(--badge-c, var(--ink-3)) 80%, var(--ink)); background: color-mix(in oklch, var(--badge-c, var(--ink-3)) 12%, white); font: 9.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.badge-conf { --badge-c: var(--green); }
-.badge-conf.is-inferred { --badge-c: var(--amber); }
+
 .drawer-body { display: flex; overflow-y: auto; flex-direction: column; gap: 20px; padding: 16px; }
 .d-section > span { display: block; margin-bottom: 8px; }
 .d-purpose, .d-note { color: var(--ink-2); font-size: var(--small); line-height: 1.6; }

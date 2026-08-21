@@ -32,7 +32,7 @@ const RECORD: WorkflowRecord = {
   workflow: WORKFLOW,
   modifiedAt: "2025-01-01T00:00:00.000Z",
   state: "valid",
-  sourceChecks: { "app/api/checkout/route.ts#POST": "verified" },
+  sourceChecks: { "app/api/checkout/route.ts#POST": "found" },
 };
 
 describe("sanitizeExportPayload", () => {
@@ -54,7 +54,7 @@ describe("sanitizeExportPayload", () => {
     expect(payload.exportedAt).toBe("2025-06-01T12:00:00.000Z");
     expect(payload.repositoryName).toBe("my-repo");
     expect(payload.hideFilePaths).toBe(false);
-    expect(payload.sourceChecks).toEqual({ "app/api/checkout/route.ts#POST": "verified" });
+    expect(payload.sourceChecks).toEqual({ "app/api/checkout/route.ts#POST": "found" });
     expect(json).toContain("app/api/checkout/route.ts");
   });
 
@@ -65,7 +65,7 @@ describe("sanitizeExportPayload", () => {
       steps: [
         {
           ...WORKFLOW.steps[0]!,
-          tests: [{ file: "tests/checkout.test.ts", symbol: "checkoutTest", status: "passing" }],
+          tests: [{ file: "tests/checkout.test.ts", symbol: "checkoutTest" }],
           edgeCases: [{ name: "Declined", sources: [{ file: "app/api/payments.ts", line: 8 }] }],
         },
       ],
@@ -74,9 +74,9 @@ describe("sanitizeExportPayload", () => {
       ...RECORD,
       workflow,
       sourceChecks: {
-        "app/api/checkout/route.ts#POST": "verified",
-        "tests/checkout.test.ts#checkoutTest": "verified",
-        "app/api/payments.ts": "file-only",
+        "app/api/checkout/route.ts#POST": "found",
+        "tests/checkout.test.ts#checkoutTest": "found",
+        "app/api/payments.ts": "found",
       },
     };
 
@@ -91,9 +91,9 @@ describe("sanitizeExportPayload", () => {
     expect(payload.workflow.steps[0]?.tests?.[0]?.file).toBe("redacted-file-2");
     expect(payload.workflow.steps[0]?.edgeCases?.[0]?.sources?.[0]?.file).toBe("redacted-file-3");
     expect(payload.sourceChecks).toEqual({
-      "redacted-file-1#POST": "verified",
-      "redacted-file-2#checkoutTest": "verified",
-      "redacted-file-3": "file-only",
+      "redacted-file-1#POST": "found",
+      "redacted-file-2#checkoutTest": "found",
+      "redacted-file-3": "found",
     });
   });
 
@@ -128,7 +128,7 @@ describe("buildContentDisposition", () => {
 describe("buildExportHtml", () => {
   const PAYLOAD: ExportPayload = {
     workflow: WORKFLOW,
-    sourceChecks: { "app/api/checkout/route.ts#POST": "verified" },
+    sourceChecks: { "app/api/checkout/route.ts#POST": "found" },
     hideFilePaths: false,
     workflowName: "Checkout Flow",
     workflowId: "checkout",

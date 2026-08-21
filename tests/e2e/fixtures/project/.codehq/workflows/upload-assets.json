@@ -3,45 +3,66 @@
   "id": "upload-assets",
   "name": "Upload Reference Asset",
   "purpose": "Accepts a reference image or document for a video generation.",
-  "status": "needs-review",
-  "entryPoint": { "file": "app/api/upload/route.ts", "symbol": "POST" },
+  "entryPoint": {
+    "file": "app/api/upload/route.ts",
+    "symbol": "POST"
+  },
   "steps": [
     {
       "id": "receive-upload",
       "name": "Receive Upload",
       "purpose": "Accepts a multipart file upload.",
       "category": "entry",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }],
-      "outputs": [{ "name": "UploadedFile", "type": "File" }]
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "UploadedFile",
+          "type": "File"
+        }
+      ]
     },
     {
       "id": "validate-file",
       "name": "Validate File",
       "purpose": "Checks that a file was provided, its content type is supported, and it is under the size limit.",
       "category": "decision",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }],
-      "inputs": [{ "name": "UploadedFile" }],
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "UploadedFile"
+        }
+      ],
       "edgeCases": [
         {
           "name": "No file field",
           "description": "The multipart body does not contain a 'file' field.",
           "handling": "Returns a 400.",
-          "confidence": "verified",
-          "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }]
+          "sources": [
+            {
+              "file": "app/api/upload/route.ts",
+              "symbol": "POST"
+            }
+          ]
         },
         {
           "name": "Unsupported content type",
           "description": "The file is not a PNG, JPEG, WebP, or PDF.",
-          "handling": "Returns a 415.",
-          "confidence": "verified"
+          "handling": "Returns a 415."
         },
         {
           "name": "File too large",
           "description": "The file exceeds the 10MB limit.",
-          "handling": "Returns a 413.",
-          "confidence": "verified"
+          "handling": "Returns a 413."
         }
       ]
     },
@@ -50,8 +71,12 @@
       "name": "Scan For Malware",
       "purpose": "Scans the uploaded file before it is persisted.",
       "category": "external",
-      "confidence": "inferred",
-      "sources": [{ "file": "lib/malware-scan.ts", "symbol": "scanFile" }],
+      "sources": [
+        {
+          "file": "lib/malware-scan.ts",
+          "symbol": "scanFile"
+        }
+      ],
       "externalServices": [
         {
           "name": "Malware Scanning Service",
@@ -70,45 +95,67 @@
       "name": "Persist Asset",
       "purpose": "Stores the asset's metadata and returns it to the caller.",
       "category": "output",
-      "confidence": "verified",
       "sources": [
-        { "file": "lib/persistence.ts", "symbol": "saveAsset" },
-        { "file": "app/api/upload/route.ts", "symbol": "POST" }
+        {
+          "file": "lib/persistence.ts",
+          "symbol": "saveAsset"
+        },
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
       ],
-      "outputs": [{ "name": "UploadedAsset" }]
+      "outputs": [
+        {
+          "name": "UploadedAsset"
+        }
+      ]
     },
     {
       "id": "outcome-missing-file",
       "name": "400 Bad Request",
       "purpose": "The multipart body did not include a 'file' field.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }]
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ]
     },
     {
       "id": "outcome-unsupported-type",
       "name": "415 Unsupported Type",
       "purpose": "The file is not a PNG, JPEG, WebP, or PDF.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }]
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ]
     },
     {
       "id": "outcome-too-large",
       "name": "413 Too Large",
       "purpose": "The file exceeds the 10MB upload limit.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }]
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ]
     },
     {
       "id": "outcome-malware-flagged",
       "name": "Rejected: Malware",
       "purpose": "The scan reported malware in the uploaded file.",
       "category": "output",
-      "confidence": "inferred",
       "details": {
-        "assumptions": ["The scanning module itself was not found in this repository snapshot, so its exact response shape (and status code) is inferred, not verified."]
+        "assumptions": [
+          "The scanning module itself was not found in this repository snapshot, so its exact response shape (and status code) is inferred, not verified."
+        ]
       }
     },
     {
@@ -116,13 +163,24 @@
       "name": "201 Created",
       "purpose": "Asset metadata saved and returned to the caller.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/upload/route.ts", "symbol": "POST" }]
+      "sources": [
+        {
+          "file": "app/api/upload/route.ts",
+          "symbol": "POST"
+        }
+      ]
     }
   ],
   "connections": [
-    { "from": "receive-upload", "to": "validate-file" },
-    { "from": "validate-file", "to": "scan-for-malware", "type": "success" },
+    {
+      "from": "receive-upload",
+      "to": "validate-file"
+    },
+    {
+      "from": "validate-file",
+      "to": "scan-for-malware",
+      "type": "success"
+    },
     {
       "from": "validate-file",
       "to": "outcome-missing-file",
@@ -158,7 +216,11 @@
       "label": "flagged",
       "condition": "Scan reports malware."
     },
-    { "from": "persist-asset", "to": "outcome-asset-created", "type": "success" }
+    {
+      "from": "persist-asset",
+      "to": "outcome-asset-created",
+      "type": "success"
+    }
   ],
   "notes": [
     "The malware-scanning step is inferred and its source file does not exist in this test fixture."

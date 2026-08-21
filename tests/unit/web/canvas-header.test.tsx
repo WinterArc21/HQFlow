@@ -9,7 +9,6 @@ const WORKFLOW: Workflow = {
   id: "checkout",
   name: "Checkout",
   purpose: "Captures payment for a cart.",
-  status: "verified",
   steps: [{ id: "charge", name: "Charge", purpose: "Captures payment." }],
   connections: [],
 };
@@ -27,7 +26,7 @@ afterEach(() => {
 });
 
 describe("CanvasHeader workflow trust context", () => {
-  it("shows the existing workflow status, stale state, and relative modification time", () => {
+  it("shows stale state and relative modification time", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-10T12:00:00.000Z"));
 
@@ -40,17 +39,15 @@ describe("CanvasHeader workflow trust context", () => {
       />,
     );
 
-    const trust = screen.getByLabelText("Workflow status and freshness");
-    expect(within(trust).getByText("Verified")).toBeInTheDocument();
+    const trust = screen.getByLabelText("Workflow freshness");
     expect(within(trust).getByText("Stale")).toBeInTheDocument();
     expect(within(trust).getByText("Updated 3h ago")).toBeInTheDocument();
   });
 
-  it("still shows workflow status when file freshness metadata is unavailable", () => {
-    render(<CanvasHeader workflow={{ ...WORKFLOW, status: undefined }} {...TOOLBAR_PROPS} />);
+  it("omits freshness metadata when it is unavailable", () => {
+    render(<CanvasHeader workflow={WORKFLOW} {...TOOLBAR_PROPS} />);
 
-    const trust = screen.getByLabelText("Workflow status and freshness");
-    expect(within(trust).getByText("Unspecified")).toBeInTheDocument();
+    const trust = screen.getByLabelText("Workflow freshness");
     expect(within(trust).queryByText("Stale")).not.toBeInTheDocument();
     expect(within(trust).queryByText(/^Updated /)).not.toBeInTheDocument();
   });

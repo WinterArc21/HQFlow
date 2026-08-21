@@ -135,12 +135,11 @@
               <span class="cycle-repeat" aria-hidden="true">↑ repeat</span>
             </div>
             <div class="station-copy">
-              <p>Your agent traces real code paths and writes workflow JSON: steps, sources, edge cases, tests. Every claim marked <em>verified</em> or <em>inferred</em>.</p>
+              <p>Your agent traces real code paths and writes workflow JSON: steps, sources, edge cases, tests.</p>
             </div>
             <pre class="mini" aria-label="Workflow excerpt">{
   "id": "check-quota",
   "category": "decision",
-  "confidence": "verified",
   "sources": [{ "file": "lib/validation.ts",
                "symbol": "hasRemainingQuota" }]
 }</pre>
@@ -166,7 +165,7 @@
     <section class="section" id="canvas">
       <header class="section-head">
         <h2 class="section-title reveal">The system, drawn honestly.</h2>
-        <p class="section-lede reveal">Every node is a real step backed by real files. Colour is meaning. Dashes are doubt. Click a step to see what it touches, what can break, and the tests that prove it.</p>
+        <p class="section-lede reveal">Every node is a real step backed by real files. Colour is meaning. Click a step to see what it touches, what can break, and the tests that prove it.</p>
       </header>
 
       <div class="demo reveal" id="demo" data-sp="canvas-frame">
@@ -192,7 +191,6 @@
                 <h3 id="dName">Validate Request</h3>
                 <div class="drawer-badges">
                   <span class="badge" id="dCat">decision</span>
-                  <span class="badge badge-conf" id="dConf">verified</span>
                 </div>
               </div>
               <button class="icon-btn" id="drawerClose" type="button" aria-label="Close step details">
@@ -204,7 +202,7 @@
         </div>
 
         <footer class="demo-foot">
-          <span class="demo-stats">7 steps · 9 connections · 3 passing tests</span>
+          <span class="demo-stats">7 steps · 9 connections · 3 tests</span>
         </footer>
       </div>
 

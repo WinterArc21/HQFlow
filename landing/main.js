@@ -2,7 +2,7 @@
    HQFlow landing page runtime
 
    Three pieces:
-     1. the workflow canvas preview
+     1. the workflow canvas demo
      2. the hero preview, same components and data at a smaller scale
      3. the spine, one continuous line connecting the whole page
    ========================================================================== */
@@ -21,14 +21,14 @@ const CAT_VAR = {
 
 const STEPS = [
   {
-    id: "receive-request", idx: "01", name: "Receive Request", cat: "entry", conf: "verified",
+    id: "receive-request", idx: "01", name: "Receive Request", cat: "entry",
     x: 4, y: 14, io: "url → GenerateRequestBody",
     purpose: "Accepts the website URL, optional reference images, and tone setting.",
     sources: [{ file: "app/api/generate/route.ts", symbol: "POST", line: "14-39" }],
     inputs: [], outputs: [{ name: "GenerateRequestBody" }], edgeCases: [], tests: [],
   },
   {
-    id: "validate-request", idx: "02", name: "Validate Request", cat: "decision", conf: "verified",
+    id: "validate-request", idx: "02", name: "Validate Request", cat: "decision",
     x: 28, y: 14, io: "request → validated",
     purpose: "Checks the URL and reference images, and normalizes the tone.",
     sources: [{ file: "lib/validation.ts", symbol: "validateGenerateRequest" }],
@@ -38,12 +38,12 @@ const STEPS = [
       { name: "Too many reference images", handling: "Returns a 400 rejecting the request." },
     ],
     tests: [
-      { symbol: "accepts a valid generation request", file: "tests/unit/lib/validation.test.ts", status: "passing" },
-      { symbol: "rejects a malformed URL", file: "tests/unit/lib/validation.test.ts", status: "passing" },
+      { symbol: "accepts a valid generation request", file: "tests/unit/lib/validation.test.ts" },
+      { symbol: "rejects a malformed URL", file: "tests/unit/lib/validation.test.ts" },
     ],
   },
   {
-    id: "check-quota", idx: "03", name: "Check Quota", cat: "decision", conf: "verified",
+    id: "check-quota", idx: "03", name: "Check Quota", cat: "decision",
     x: 52, y: 14, io: "account → allow / 429",
     purpose: "Confirms the account has not exceeded its monthly generation quota.",
     sources: [{ file: "lib/validation.ts", symbol: "hasRemainingQuota" }],
@@ -52,16 +52,16 @@ const STEPS = [
     tests: [],
   },
   {
-    id: "scrape-website", idx: "04", name: "Scrape Website", cat: "logic", conf: "verified",
+    id: "scrape-website", idx: "04", name: "Scrape Website", cat: "logic",
     x: 76, y: 14, io: "request → ScrapedWebsite",
     purpose: "Fetches the submitted page and extracts its title, description, body text, and images.",
     sources: [{ file: "lib/scraper.ts", symbol: "scrapeWebsite" }],
     inputs: [{ name: "ValidatedGenerateRequest" }], outputs: [{ name: "ScrapedWebsite" }],
     edgeCases: [{ name: "Website unreachable or error status", handling: "Returns a 502 without persisting a generation." }],
-    tests: [{ symbol: "extracts the title and description", file: "tests/unit/lib/scraper.test.ts", status: "passing" }],
+    tests: [{ symbol: "extracts the title and description", file: "tests/unit/lib/scraper.test.ts" }],
   },
   {
-    id: "understand-product", idx: "05", name: "Understand Product", cat: "logic", conf: "inferred",
+    id: "understand-product", idx: "05", name: "Understand Product", cat: "logic",
     x: 76, y: 61, io: "website → product model",
     purpose: "Converts the scraped page into a structured product model: name, tagline, summary, hero image, and keywords.",
     sources: [{ file: "lib/product-model.ts", symbol: "buildProductContext" }],
@@ -71,7 +71,7 @@ const STEPS = [
     assumptions: ["The first image found on the page is a reasonable hero image."],
   },
   {
-    id: "generate-story", idx: "06", name: "Generate Story", cat: "logic", conf: "verified",
+    id: "generate-story", idx: "06", name: "Generate Story", cat: "logic",
     x: 52, y: 61, io: "ProductContext → StoryPlan",
     purpose: "Builds a short, tone-appropriate beat sequence (hook, problem, payoff) from the product context.",
     sources: [{ file: "lib/story.ts", symbol: "generateStoryPlan" }],
@@ -79,7 +79,7 @@ const STEPS = [
     edgeCases: [], tests: [],
   },
   {
-    id: "save-result", idx: "07", name: "Save Result", cat: "output", conf: "verified",
+    id: "save-result", idx: "07", name: "Save Result", cat: "output",
     x: 28, y: 61, io: "StoryPlan → 200 / error",
     purpose: "Persists the generation and returns it to the caller, or returns an error response for any failed step above.",
     sources: [
@@ -87,7 +87,7 @@ const STEPS = [
       { file: "app/api/generate/route.ts", symbol: "POST" },
     ],
     inputs: [{ name: "StoryPlan" }], outputs: [],
-    edgeCases: [], tests: [{ symbol: "returns the generated story plan", file: "tests/integration/api/generate.test.ts", status: "passing" }],
+    edgeCases: [], tests: [{ symbol: "returns the generated story plan", file: "tests/integration/api/generate.test.ts" }],
   },
 ];
 
@@ -120,8 +120,7 @@ function nodeMarkup(s) {
       <span class="node-name">${s.name}</span>
       <span class="node-meta">${s.sources.length} src</span>
     </span>
-    <span class="node-sub">${s.purpose ?? s.io}</span>
-    ${s.conf === "inferred" ? '<span class="node-conf">inferred</span>' : ""}`;
+    <span class="node-sub">${s.purpose ?? s.io}</span>`;
 }
 
 /* ==========================================================================
@@ -140,7 +139,7 @@ function initDemo() {
   for (const s of STEPS) {
     const el = document.createElement("button");
     el.type = "button";
-    el.className = "node" + (s.conf === "inferred" ? " is-inferred" : "");
+    el.className = "node";
     el.style.left = s.x + "%";
     el.style.top = s.y + "%";
     el.style.setProperty("--cat", CAT_VAR[s.cat]);
@@ -244,7 +243,6 @@ function initDemo() {
   const dIdx = document.getElementById("dIdx");
   const dName = document.getElementById("dName");
   const dCat = document.getElementById("dCat");
-  const dConf = document.getElementById("dConf");
   const dBody = document.getElementById("drawerBody");
   let selectedId = null;
 
@@ -255,8 +253,6 @@ function initDemo() {
     dName.textContent = s.name;
     dCat.textContent = s.cat;
     dCat.style.setProperty("--badge-c", CAT_VAR[s.cat]);
-    dConf.textContent = s.conf;
-    dConf.classList.toggle("is-inferred", s.conf === "inferred");
 
     const sections = [];
     sections.push(`<div class="d-section"><span>Purpose</span><p class="d-purpose">${esc(s.purpose)}</p></div>`);
@@ -283,7 +279,7 @@ function initDemo() {
     }
     if (s.tests.length) {
       sections.push(`<div class="d-section"><span>Tests</span>${
-        s.tests.map((t) => `<div class="d-test"><span class="dot${t.status === "unknown" ? " unknown" : ""}"></span><span>${esc(t.symbol)}<span class="file">${esc(t.file)}</span></span></div>`).join("")
+        s.tests.map((t) => `<div class="d-test"><span class="dot"></span><span>${esc(t.symbol)}<span class="file">${esc(t.file)}</span></span></div>`).join("")
       }</div>`);
     }
     if (s.impl) {
@@ -294,7 +290,7 @@ function initDemo() {
         s.assumptions.map((a) => `<p class="d-note" style="margin-bottom:6px">${esc(a)}</p>`).join("")
       }</div>`);
     }
-    sections.push(`<p class="d-foot">marked ${s.conf} by agent · ${s.sources.length} source${s.sources.length === 1 ? "" : "s"} attached</p>`);
+    sections.push(`<p class="d-foot">${s.sources.length} source${s.sources.length === 1 ? "" : "s"} attached</p>`);
     dBody.innerHTML = sections.join("");
   };
 

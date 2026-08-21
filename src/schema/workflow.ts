@@ -12,15 +12,9 @@ const repoRelativePathSchema = z.string().min(1, { message: "Path must not be em
   }
 });
 
-const confidenceSchema = z.enum(["verified", "inferred", "human-confirmed"]);
-
 const stepCategorySchema = z.enum(["entry", "logic", "decision", "data", "external", "output"]);
 
 const connectionTypeSchema = z.enum(["success", "failure", "conditional", "async"]);
-
-const testStatusSchema = z.enum(["passing", "failing", "unknown"]);
-
-const workflowStatusSchema = z.enum(["draft", "verified", "needs-review"]);
 
 export const sourceReferenceSchema = z
   .object({
@@ -54,7 +48,6 @@ export const edgeCaseSchema = z
     name: z.string().min(1, { message: "EdgeCase.name must not be empty." }),
     description: z.string().optional(),
     handling: z.string().optional(),
-    confidence: confidenceSchema.optional(),
     sources: z.array(sourceReferenceSchema).optional(),
   })
   .strict();
@@ -64,7 +57,6 @@ export const testReferenceSchema = z
     file: repoRelativePathSchema,
     symbol: z.string().min(1).optional(),
     description: z.string().optional(),
-    status: testStatusSchema.optional(),
   })
   .strict();
 
@@ -90,7 +82,6 @@ export const workflowStepSchema = z
     name: z.string().min(1, { message: "WorkflowStep.name must not be empty." }),
     purpose: z.string().min(1, { message: "WorkflowStep.purpose must not be empty." }),
     category: stepCategorySchema.optional(),
-    confidence: confidenceSchema.optional(),
     sources: z.array(sourceReferenceSchema).optional(),
     inputs: z.array(dataReferenceSchema).optional(),
     outputs: z.array(dataReferenceSchema).optional(),
@@ -121,7 +112,6 @@ export const workflowSchema = z
     name: z.string().min(1, { message: "Workflow.name must not be empty." }),
     purpose: z.string().min(1, { message: "Workflow.purpose must not be empty." }),
     entryPoint: sourceReferenceSchema.optional(),
-    status: workflowStatusSchema.optional(),
     steps: z.array(workflowStepSchema).min(1, { message: "Workflow.steps must contain at least one step." }),
     connections: z.array(workflowConnectionSchema),
     notes: z.array(z.string()).optional(),

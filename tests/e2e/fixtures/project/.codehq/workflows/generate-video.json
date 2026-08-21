@@ -3,40 +3,68 @@
   "id": "generate-video",
   "name": "Generate Video Prompt",
   "purpose": "Turns a submitted website URL into a structured, cinematic video-generation prompt.",
-  "status": "verified",
-  "entryPoint": { "file": "app/api/generate/route.ts", "symbol": "POST", "line": 14, "endLine": 39 },
+  "entryPoint": {
+    "file": "app/api/generate/route.ts",
+    "symbol": "POST",
+    "line": 14,
+    "endLine": 39
+  },
   "steps": [
     {
       "id": "receive-request",
       "name": "Receive Request",
       "purpose": "Accepts the website URL, optional reference images, and tone setting.",
       "category": "entry",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/generate/route.ts", "symbol": "POST" }],
-      "outputs": [{ "name": "GenerateRequestBody", "type": "GenerateRequestBody" }]
+      "sources": [
+        {
+          "file": "app/api/generate/route.ts",
+          "symbol": "POST"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "GenerateRequestBody",
+          "type": "GenerateRequestBody"
+        }
+      ]
     },
     {
       "id": "validate-request",
       "name": "Validate Request",
       "purpose": "Checks the URL and reference images, and normalizes the tone.",
       "category": "decision",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/validation.ts", "symbol": "validateGenerateRequest" }],
-      "inputs": [{ "name": "GenerateRequestBody" }],
-      "outputs": [{ "name": "ValidatedGenerateRequest" }],
+      "sources": [
+        {
+          "file": "lib/validation.ts",
+          "symbol": "validateGenerateRequest"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "GenerateRequestBody"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ValidatedGenerateRequest"
+        }
+      ],
       "edgeCases": [
         {
           "name": "Malformed or unreachable URL",
           "description": "The submitted URL is not a valid http(s) URL.",
           "handling": "Returns a 400 with an explanatory error message.",
-          "confidence": "verified",
-          "sources": [{ "file": "lib/validation.ts", "symbol": "validateGenerateRequest" }]
+          "sources": [
+            {
+              "file": "lib/validation.ts",
+              "symbol": "validateGenerateRequest"
+            }
+          ]
         },
         {
           "name": "Too many reference images",
           "description": "More than six reference images are submitted.",
-          "handling": "Returns a 400 rejecting the request.",
-          "confidence": "verified"
+          "handling": "Returns a 400 rejecting the request."
         }
       ]
     },
@@ -45,14 +73,17 @@
       "name": "Check Quota",
       "purpose": "Confirms the account has not exceeded its monthly generation quota.",
       "category": "decision",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/validation.ts", "symbol": "hasRemainingQuota" }],
+      "sources": [
+        {
+          "file": "lib/validation.ts",
+          "symbol": "hasRemainingQuota"
+        }
+      ],
       "edgeCases": [
         {
           "name": "Monthly quota exceeded",
           "description": "The account has already generated the maximum number of videos this month.",
-          "handling": "Returns a 429.",
-          "confidence": "verified"
+          "handling": "Returns a 429."
         }
       ]
     },
@@ -61,17 +92,33 @@
       "name": "Scrape Website",
       "purpose": "Fetches the submitted page and extracts its title, description, body text, and images.",
       "category": "logic",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/scraper.ts", "symbol": "scrapeWebsite" }],
-      "inputs": [{ "name": "ValidatedGenerateRequest" }],
-      "outputs": [{ "name": "ScrapedWebsite" }],
+      "sources": [
+        {
+          "file": "lib/scraper.ts",
+          "symbol": "scrapeWebsite"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "ValidatedGenerateRequest"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ScrapedWebsite"
+        }
+      ],
       "edgeCases": [
         {
           "name": "Website unreachable or returns an error status",
           "description": "The fetch fails or the response is not ok.",
           "handling": "Returns a 502 without persisting a generation.",
-          "confidence": "verified",
-          "sources": [{ "file": "lib/scraper.ts", "symbol": "scrapeWebsite" }]
+          "sources": [
+            {
+              "file": "lib/scraper.ts",
+              "symbol": "scrapeWebsite"
+            }
+          ]
         }
       ]
     },
@@ -80,13 +127,27 @@
       "name": "Understand Product",
       "purpose": "Converts the scraped page into a structured product model: name, tagline, summary, hero image, and keywords.",
       "category": "logic",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/product-model.ts", "symbol": "buildProductContext" }],
-      "inputs": [{ "name": "ScrapedWebsite" }],
-      "outputs": [{ "name": "ProductContext" }],
+      "sources": [
+        {
+          "file": "lib/product-model.ts",
+          "symbol": "buildProductContext"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "ScrapedWebsite"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ProductContext"
+        }
+      ],
       "details": {
         "implementation": "Ranks the most frequent non-trivial words in the scraped body text as keywords, and assumes the first scraped image is representative of the product.",
-        "assumptions": ["The first image found on the page is a reasonable hero image for the product."]
+        "assumptions": [
+          "The first image found on the page is a reasonable hero image for the product."
+        ]
       }
     },
     {
@@ -94,60 +155,108 @@
       "name": "Generate Story",
       "purpose": "Builds a short, tone-appropriate beat sequence (hook, problem, payoff) from the product context.",
       "category": "logic",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/story.ts", "symbol": "generateStoryPlan" }],
-      "inputs": [{ "name": "ProductContext" }],
-      "outputs": [{ "name": "StoryPlan" }]
+      "sources": [
+        {
+          "file": "lib/story.ts",
+          "symbol": "generateStoryPlan"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "ProductContext"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "StoryPlan"
+        }
+      ]
     },
     {
       "id": "save-result",
       "name": "Save Result",
       "purpose": "Persists the generation and returns it to the caller.",
       "category": "output",
-      "confidence": "verified",
       "sources": [
-        { "file": "lib/persistence.ts", "symbol": "saveGeneration" },
-        { "file": "app/api/generate/route.ts", "symbol": "POST" }
+        {
+          "file": "lib/persistence.ts",
+          "symbol": "saveGeneration"
+        },
+        {
+          "file": "app/api/generate/route.ts",
+          "symbol": "POST"
+        }
       ],
-      "inputs": [{ "name": "StoryPlan" }],
-      "outputs": [{ "name": "Generation" }]
+      "inputs": [
+        {
+          "name": "StoryPlan"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Generation"
+        }
+      ]
     },
     {
       "id": "outcome-invalid-request",
       "name": "400 Bad Request",
       "purpose": "Malformed URL, unreachable URL, or too many reference images.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/validation.ts", "symbol": "validateGenerateRequest" }]
+      "sources": [
+        {
+          "file": "lib/validation.ts",
+          "symbol": "validateGenerateRequest"
+        }
+      ]
     },
     {
       "id": "outcome-quota-exceeded",
       "name": "429 Too Many",
       "purpose": "Monthly generation quota already reached.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/validation.ts", "symbol": "hasRemainingQuota" }]
+      "sources": [
+        {
+          "file": "lib/validation.ts",
+          "symbol": "hasRemainingQuota"
+        }
+      ]
     },
     {
       "id": "outcome-scrape-failed",
       "name": "502 Upstream",
       "purpose": "The submitted website could not be fetched.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "lib/scraper.ts", "symbol": "scrapeWebsite" }]
+      "sources": [
+        {
+          "file": "lib/scraper.ts",
+          "symbol": "scrapeWebsite"
+        }
+      ]
     },
     {
       "id": "outcome-generation-created",
       "name": "201 Created",
       "purpose": "Generation saved and returned to the caller.",
       "category": "output",
-      "confidence": "verified",
-      "sources": [{ "file": "app/api/generate/route.ts", "symbol": "POST" }]
+      "sources": [
+        {
+          "file": "app/api/generate/route.ts",
+          "symbol": "POST"
+        }
+      ]
     }
   ],
   "connections": [
-    { "from": "receive-request", "to": "validate-request" },
-    { "from": "validate-request", "to": "check-quota", "type": "success" },
+    {
+      "from": "receive-request",
+      "to": "validate-request"
+    },
+    {
+      "from": "validate-request",
+      "to": "check-quota",
+      "type": "success"
+    },
     {
       "from": "validate-request",
       "to": "outcome-invalid-request",
@@ -155,7 +264,11 @@
       "label": "invalid",
       "condition": "URL or reference image validation fails."
     },
-    { "from": "check-quota", "to": "scrape-website", "type": "success" },
+    {
+      "from": "check-quota",
+      "to": "scrape-website",
+      "type": "success"
+    },
     {
       "from": "check-quota",
       "to": "outcome-quota-exceeded",
@@ -163,7 +276,11 @@
       "label": "over limit",
       "condition": "The account has reached its monthly generation quota."
     },
-    { "from": "scrape-website", "to": "understand-product", "type": "success" },
+    {
+      "from": "scrape-website",
+      "to": "understand-product",
+      "type": "success"
+    },
     {
       "from": "scrape-website",
       "to": "outcome-scrape-failed",
@@ -171,9 +288,21 @@
       "label": "unreachable",
       "condition": "The website could not be fetched."
     },
-    { "from": "understand-product", "to": "generate-story" },
-    { "from": "generate-story", "to": "save-result" },
-    { "from": "save-result", "to": "outcome-generation-created", "type": "success" }
+    {
+      "from": "understand-product",
+      "to": "generate-story"
+    },
+    {
+      "from": "generate-story",
+      "to": "save-result"
+    },
+    {
+      "from": "save-result",
+      "to": "outcome-generation-created",
+      "type": "success"
+    }
   ],
-  "notes": ["Test fixture for HQFlow's end-to-end suite."]
+  "notes": [
+    "Test fixture for HQFlow's end-to-end suite."
+  ]
 }

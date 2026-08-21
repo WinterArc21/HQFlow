@@ -190,8 +190,8 @@ describe("parseWorkflow — shape and semantic rules", () => {
   });
 });
 
-describe("parseWorkflow — corrected field shapes (status, entryPoint, notes)", () => {
-  it("rejects status: 'active' because it is not in the closed enum, naming the allowed values", () => {
+describe("parseWorkflow — corrected field shapes (entryPoint, notes)", () => {
+  it("rejects an unrecognized status field because the schema no longer includes it", () => {
     const data = loadFixture();
     data.status = "active";
 
@@ -203,9 +203,7 @@ describe("parseWorkflow — corrected field shapes (status, entryPoint, notes)",
     }
     const issue = result.issues.find((i) => i.path === "status");
     expect(issue).toBeDefined();
-    expect(issue?.message).toContain("draft");
-    expect(issue?.message).toContain("verified");
-    expect(issue?.message).toContain("needs-review");
+    expect(issue?.message).toContain("Unrecognized property 'status'");
   });
 
   it("rejects legacy and unsafe entry-point shapes with useful paths", () => {

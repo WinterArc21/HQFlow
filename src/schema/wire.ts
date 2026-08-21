@@ -3,7 +3,7 @@ import type { DiagnosticsReport } from "./diagnostics";
 import type { CodeHQProject } from "./project";
 import type { Workflow } from "./workflow";
 
-export type SourceStatus = "verified" | "file-only" | "missing";
+export type SourceStatus = "found" | "missing";
 
 export type CodeHQStatus = "uninitialized" | "empty" | "ready";
 

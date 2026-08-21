@@ -65,7 +65,7 @@ const RICH_WORKFLOW: Workflow = {
       purpose: "Fetches pages from the target site.",
       sources: [{ file: "lib/scraper.ts", symbol: "scrapeWebsite" }],
       edgeCases: [{ name: "Website blocks automated requests", handling: "Marks the job failed." }],
-      tests: [{ file: "tests/unit/lib/scraper.test.ts", symbol: "handles a 403 response", status: "passing" }],
+      tests: [{ file: "tests/unit/lib/scraper.test.ts", symbol: "handles a 403 response" }],
     },
   ],
   connections: [],

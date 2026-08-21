@@ -1,6 +1,5 @@
 import { Check } from "@phosphor-icons/react";
 import type { WorkflowRecord } from "../../api/types";
-import { statusTone } from "../../design/semantics";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { Badge } from "../primitives";
 import styles from "./WorkflowListItem.module.css";
@@ -17,8 +16,6 @@ export interface WorkflowListItemProps {
  * tech.
  */
 export function WorkflowListItem({ record, selected, onSelect }: WorkflowListItemProps) {
-  const status = statusTone(record.workflow.status);
-
   return (
     <li>
       <button
@@ -35,7 +32,6 @@ export function WorkflowListItem({ record, selected, onSelect }: WorkflowListIte
           </div>
           <p className={styles.purpose}>{record.workflow.purpose}</p>
           <div className={styles.meta}>
-            <Badge tone={status.tone}>{status.label}</Badge>
             {record.state === "stale" ? <Badge tone="amber">Stale</Badge> : null}
             <span className={styles.stepCount}>{record.workflow.steps.length} steps</span>
             <span className={styles.time}>{formatRelativeTime(record.modifiedAt)}</span>
