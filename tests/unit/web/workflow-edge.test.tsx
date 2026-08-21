@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
-import { render } from "@testing-library/react";
+import { fireEvent, render, type RenderResult } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
+import { getBezierPath, Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
 import type { WorkflowConnection } from "@schema/workflow";
 import { buildFlowEdges } from "@web/components/canvas/buildFlowElements";
 import { WorkflowEdge } from "@web/components/canvas/edges/WorkflowEdge";
@@ -30,10 +30,35 @@ function renderEdge(data: WorkflowEdgeData, id = "e1"): HTMLElement {
   } as unknown as EdgeProps<WorkflowFlowEdge>;
   const { container } = render(
     <ReactFlowProvider>
-      <WorkflowEdge {...props} />
+      <svg><WorkflowEdge {...props} /></svg>
     </ReactFlowProvider>,
   );
   return container;
+}
+
+function renderInteractiveEdge(
+  data: WorkflowEdgeData,
+  coordinates: Partial<EdgeProps<WorkflowFlowEdge>> = {},
+): RenderResult {
+  const props = {
+    id: "e1",
+    type: "workflow",
+    source: "a",
+    target: "b",
+    sourceX: 0,
+    sourceY: 0,
+    targetX: 100,
+    targetY: 100,
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+    data,
+    ...coordinates,
+  } as EdgeProps<WorkflowFlowEdge>;
+  return render(
+    <ReactFlowProvider>
+      <svg><WorkflowEdge {...props} /></svg>
+    </ReactFlowProvider>,
+  );
 }
 
 function makeConnection(overrides: Partial<WorkflowConnection> = {}): WorkflowConnection {
@@ -78,6 +103,117 @@ function edgePaths(container: HTMLElement): { semantic: SVGPathElement; halo: SV
 }
 
 describe("WorkflowEdge visual grammar", () => {
+  describe("manual bends", () => {
+    it("keeps the ordinary default path unchanged before interaction", () => {
+      const result = renderInteractiveEdge(makeData());
+      const expected = getBezierPath({
+        sourceX: 0,
+        sourceY: 0,
+        targetX: 100,
+        targetY: 100,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        curvature: 0.35,
+      })[0];
+
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(expected);
+      expect(result.getByRole("button", { name: "Bend edge e1" })).toBeInTheDocument();
+    });
+
+    it("draws a smooth curve through a freely dragged bend point", () => {
+      const result = renderInteractiveEdge(makeData());
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+
+      fireEvent.pointerDown(handle, { pointerId: 1, clientX: 50, clientY: 50 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 40, clientY: 55 });
+      fireEvent.pointerUp(handle, { pointerId: 1 });
+
+      const path = edgePaths(result.container).semantic.getAttribute("d");
+      expect(path).toContain(" C");
+      expect(path).toContain(" 40,55 C");
+      expect(path).toMatch(/^M0,0 L18,0 /);
+      expect(path).toMatch(/ 63\.25,100 82,100 L100,100$/);
+      expect(handle).toHaveAttribute("data-snapped", "false");
+    });
+
+    it("snaps near either valid orthogonal corner to a straight elbow", () => {
+      const result = renderInteractiveEdge(makeData());
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+
+      fireEvent.pointerDown(handle, { pointerId: 1 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 4, clientY: 96 });
+      fireEvent.pointerUp(handle, { pointerId: 1 });
+
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe("M0,0 L0,100 L100,100");
+      expect(handle).toHaveAttribute("data-snapped", "true");
+    });
+
+    it("does not offer a bend handle for branch, retry, or return edges", () => {
+      for (const exclusion of [{ branch: true }, { retry: true }, { returnEdge: true }]) {
+        const result = renderInteractiveEdge(makeData(exclusion));
+        expect(result.queryByRole("button", { name: "Bend edge e1" })).not.toBeInTheDocument();
+        result.unmount();
+      }
+    });
+
+    it("resets a manual bend when the generated layout reset key changes", () => {
+      const firstData = makeData({ bendResetKey: "layout-1" });
+      const result = renderInteractiveEdge(firstData);
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+      fireEvent.pointerDown(handle, { pointerId: 1 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 40, clientY: 55 });
+      fireEvent.pointerUp(handle, { pointerId: 1 });
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toContain(" 40,55 C");
+
+      result.rerender(
+        <ReactFlowProvider>
+          <svg>
+            <WorkflowEdge
+              {...({
+                id: "e1", type: "workflow", source: "a", target: "b",
+                sourceX: 0, sourceY: 0, targetX: 100, targetY: 100,
+                sourcePosition: Position.Right, targetPosition: Position.Left,
+                data: makeData({ bendResetKey: "layout-2" }),
+              } as EdgeProps<WorkflowFlowEdge>)}
+            />
+          </svg>
+        </ReactFlowProvider>,
+      );
+
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(getBezierPath({
+        sourceX: 0, sourceY: 0, targetX: 100, targetY: 100,
+        sourcePosition: Position.Right, targetPosition: Position.Left, curvature: 0.35,
+      })[0]);
+    });
+
+    it("keeps a manual bend while live node movement updates its endpoint", () => {
+      const data = makeData({ bendResetKey: "same-layout" });
+      const result = renderInteractiveEdge(data);
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+      fireEvent.pointerDown(handle, { pointerId: 1 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 40, clientY: 55 });
+      fireEvent.pointerUp(handle, { pointerId: 1 });
+
+      result.rerender(
+        <ReactFlowProvider>
+          <svg>
+            <WorkflowEdge
+              {...({
+                id: "e1", type: "workflow", source: "a", target: "b",
+                sourceX: 0, sourceY: 0, targetX: 140, targetY: 120,
+                sourcePosition: Position.Right, targetPosition: Position.Left, data,
+              } as EdgeProps<WorkflowFlowEdge>)}
+            />
+          </svg>
+        </ReactFlowProvider>,
+      );
+
+      const movedPath = edgePaths(result.container).semantic.getAttribute("d");
+      expect(movedPath).toContain(" 40,55 C");
+      expect(movedPath).toMatch(/L140,120$/);
+    });
+  });
+
   describe("stroke width per connection type", () => {
     it("renders primary edges at 2.75px and every branch edge at 2px", () => {
       expect(edgePaths(renderEdge(makeData({ connection: makeConnection({ type: "success" }) }))).semantic.style.strokeWidth).toBe("2.75");

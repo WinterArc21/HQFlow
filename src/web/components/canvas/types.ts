@@ -72,6 +72,9 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * anchor. Distinct from `!dimmed` (which is also true when no trace is active at all) so the
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
+  /** Changes when generated layout is replaced. The edge renderer uses it to discard its
+   * session-only manual bend without storing that bend in workflow or canvas state. */
+  bendResetKey?: string;
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;

@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
+import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
+import { toPng } from "html-to-image";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
@@ -32,6 +33,9 @@ import styles from "./WorkflowCanvas.module.css";
  * test workflows (7 and 4 work steps) confirm this keeps the default 1440x900 view intrusion-
  * free while still growing in for a genuinely large workflow. */
 const MINIMAP_NODE_THRESHOLD = 10;
+const IMAGE_PADDING = 120;
+const MIN_IMAGE_SIZE = 800;
+const MAX_IMAGE_SIZE = 4096;
 
 const NODE_TYPES = { step: StepNode, outcome: OutcomeNode };
 const EDGE_TYPES = { workflow: WorkflowEdge };
@@ -74,6 +78,10 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
 
   const layout = useMemo(() => computeLayout(workflow, { expandedStepIds }), [workflow, expandedStepIds]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
+  const bendResetKey = useMemo(
+    () => `${layoutResetRevision}:${JSON.stringify(layout.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })))}`,
+    [layout, layoutResetRevision],
+  );
 
   // Path tracing (contract §11): hover wins over keyboard focus, which wins over the persisted
   // selection, matching how each one takes over the user's attention — a hover is the most
@@ -81,9 +89,11 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const [hoveredStepId, setHoveredStepId] = useState<string | null>(null);
   const [focusedStepId, setFocusedStepId] = useState<string | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [imageExporting, setImageExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const realStepIds = useMemo(() => new Set(workflow.steps.map((step) => step.id)), [workflow]);
-  const candidateTraceAnchorId = hoveredStepId ?? focusedStepId ?? selectedStepId;
+  const visualSelectedStepId = imageExporting ? null : selectedStepId;
+  const candidateTraceAnchorId = imageExporting ? null : hoveredStepId ?? focusedStepId ?? selectedStepId;
   const traceAnchorId = candidateTraceAnchorId !== null && realStepIds.has(candidateTraceAnchorId) ? candidateTraceAnchorId : null;
   const tracePath = useMemo(
     () => (traceAnchorId !== null ? computeTracePath(workflow, traceAnchorId) : null),
@@ -130,7 +140,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         backEdgeIds,
         expandedStepIds,
         sourceChecks,
-        selectedStepId,
+        selectedStepId: visualSelectedStepId,
         traceStepIds: tracePath?.stepIds ?? null,
         getTabIndex,
         onToggleExpand: toggleStepExpanded,
@@ -147,7 +157,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       backEdgeIds,
       expandedStepIds,
       sourceChecks,
-      selectedStepId,
+      visualSelectedStepId,
       tracePath,
       getTabIndex,
       toggleStepExpanded,
@@ -177,8 +187,8 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     setNodes((current) => restoreGeneratedNodePositions(current, generatedNodes));
   }, [generatedNodes, layoutResetRevision, setNodes]);
   const baseEdges = useMemo(
-    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null),
-    [layout, backEdgeIds, tracePath],
+    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey),
+    [layout, backEdgeIds, tracePath, bendResetKey],
   );
   const edges = useMemo(() => {
     const nodeBounds = new Map<string, { x: number; y: number; width: number; height: number }>();
@@ -235,6 +245,59 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     link.remove();
     URL.revokeObjectURL(url);
   }, [workflow.id]);
+  const downloadImage = useCallback(async (): Promise<void> => {
+    const viewport = containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport");
+    if (viewport === undefined || viewport === null || nodes.length === 0) {
+      throw new Error("The diagram is not ready. Wait for it to load, then try again.");
+    }
+
+    setImageExporting(true);
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const bounds = getNodesBounds(nodes);
+      const paddedBounds = {
+        x: bounds.x - IMAGE_PADDING,
+        y: bounds.y - IMAGE_PADDING,
+        width: bounds.width + IMAGE_PADDING * 2,
+        height: bounds.height + IMAGE_PADDING * 2,
+      };
+      const width = Math.min(MAX_IMAGE_SIZE, Math.max(MIN_IMAGE_SIZE, Math.ceil(paddedBounds.width)));
+      const height = Math.min(MAX_IMAGE_SIZE, Math.max(MIN_IMAGE_SIZE, Math.ceil(paddedBounds.height)));
+      const transform = getViewportForBounds(paddedBounds, width, height, 0.01, 1, 0);
+      const backgroundColor = getComputedStyle(containerRef.current as HTMLElement).backgroundColor;
+      const dataUrl = await toPng(viewport, {
+        backgroundColor,
+        width,
+        height,
+        pixelRatio: 1,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+        },
+        filter: (element) => !(element instanceof HTMLButtonElement),
+      });
+      const filenameBase = workflow.name
+        .replace(/[^a-zA-Z0-9-_ ]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .toLowerCase()
+        .slice(0, 80) || "workflow";
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${filenameBase}-hqflow.png`;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown image error";
+      throw new Error(`Could not create the diagram image: ${detail}`);
+    } finally {
+      setImageExporting(false);
+    }
+  }, [containerRef, nodes, workflow.name]);
   const shareExport = useCallback(async (hideFilePaths: boolean): Promise<void> => {
     const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths);
     const file = new File([artifact.blob], artifact.filename, { type: "text/html" });
@@ -251,7 +314,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const showMinimap = stepNodeCount > MINIMAP_NODE_THRESHOLD;
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} data-image-exporting={imageExporting ? "true" : undefined}>
       <CanvasHeader
         workflow={workflow}
         {...(modifiedAt !== undefined ? { modifiedAt } : {})}
@@ -298,7 +361,8 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         <ExportDialog
           workflowName={workflow.name}
           onClose={() => setExportDialogOpen(false)}
-          onDownload={downloadExport}
+          onDownloadImage={downloadImage}
+          onDownloadHtml={downloadExport}
           onShare={shareExport}
         />
       ) : null}

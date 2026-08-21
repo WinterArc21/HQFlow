@@ -8,19 +8,22 @@ import styles from "./ExportDialog.module.css";
 export interface ExportDialogProps {
   workflowName: string;
   onClose: () => void;
-  onDownload: (hideFilePaths: boolean) => Promise<void>;
+  onDownloadImage: () => Promise<void>;
+  onDownloadHtml: (hideFilePaths: boolean) => Promise<void>;
   onShare: (hideFilePaths: boolean) => Promise<void>;
 }
 
-type ExportAction = "download" | "share";
+type ExportFormat = "image" | "html";
+type ExportAction = "image" | "html" | "share";
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
 /** Collects the privacy choice immediately before creating a downloadable/shareable artifact. */
-export function ExportDialog({ workflowName, onClose, onDownload, onShare }: ExportDialogProps) {
+export function ExportDialog({ workflowName, onClose, onDownloadImage, onDownloadHtml, onShare }: ExportDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [format, setFormat] = useState<ExportFormat>("image");
   const [hideFilePaths, setHideFilePaths] = useState<boolean | null>(null);
   const [pendingAction, setPendingAction] = useState<ExportAction | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +37,20 @@ export function ExportDialog({ workflowName, onClose, onDownload, onShare }: Exp
   const backdropDismiss = useBackdropDismiss(close);
 
   const submit = async (action: ExportAction): Promise<void> => {
-    if (hideFilePaths === null) {
+    if (action !== "image" && hideFilePaths === null) {
       setError("Choose whether to hide file paths before exporting.");
       return;
     }
     setPendingAction(action);
     setError(null);
     try {
-      await (action === "download" ? onDownload(hideFilePaths) : onShare(hideFilePaths));
+      if (action === "image") {
+        await onDownloadImage();
+      } else if (action === "html") {
+        await onDownloadHtml(hideFilePaths as boolean);
+      } else {
+        await onShare(hideFilePaths as boolean);
+      }
       onClose();
     } catch (actionError) {
       if (!isAbortError(actionError)) {
@@ -69,36 +78,70 @@ export function ExportDialog({ workflowName, onClose, onDownload, onShare }: Exp
 
         <div className={styles.body}>
           <p className={styles.intro}>
-            Choose whether the exported snapshot may include repository-relative file paths. This choice is applied before
-            the HTML is generated.
+            Download a static image of the complete diagram, or an interactive HTML snapshot that works offline.
           </p>
           <fieldset className={styles.choiceGroup}>
-            <legend>Hide file paths?</legend>
-            <label className={`${styles.choice} ${hideFilePaths ? styles.selected : ""}`}>
+            <legend>Format</legend>
+            <label className={`${styles.choice} ${format === "image" ? styles.selected : ""}`}>
               <input
                 type="radio"
-                name="hide-file-paths"
-                checked={hideFilePaths === true}
-                onChange={() => setHideFilePaths(true)}
+                name="export-format"
+                checked={format === "image"}
+                onChange={() => {
+                  setFormat("image");
+                  setError(null);
+                }}
               />
               <span>
-                <strong>Yes, hide them</strong>
-                <small>Redacts every structured file reference and source status key.</small>
+                <strong>Image</strong>
+                <small>PNG of the complete diagram, ready to add to documents or share.</small>
               </span>
             </label>
-            <label className={`${styles.choice} ${hideFilePaths === false ? styles.selected : ""}`}>
+            <label className={`${styles.choice} ${format === "html" ? styles.selected : ""}`}>
               <input
                 type="radio"
-                name="hide-file-paths"
-                checked={hideFilePaths === false}
-                onChange={() => setHideFilePaths(false)}
+                name="export-format"
+                checked={format === "html"}
+                onChange={() => {
+                  setFormat("html");
+                  setError(null);
+                }}
               />
               <span>
-                <strong>No, include them</strong>
-                <small>Includes the repository-relative paths from the workflow description.</small>
+                <strong>HTML (interactive)</strong>
+                <small>Self-contained snapshot with pan, zoom, step details, and theme controls.</small>
               </span>
             </label>
           </fieldset>
+          {format === "html" ? (
+            <fieldset className={styles.choiceGroup}>
+              <legend>Hide file paths?</legend>
+              <label className={`${styles.choice} ${hideFilePaths ? styles.selected : ""}`}>
+                <input
+                  type="radio"
+                  name="hide-file-paths"
+                  checked={hideFilePaths === true}
+                  onChange={() => setHideFilePaths(true)}
+                />
+                <span>
+                  <strong>Yes, hide them</strong>
+                  <small>Redacts every structured file reference and source status key.</small>
+                </span>
+              </label>
+              <label className={`${styles.choice} ${hideFilePaths === false ? styles.selected : ""}`}>
+                <input
+                  type="radio"
+                  name="hide-file-paths"
+                  checked={hideFilePaths === false}
+                  onChange={() => setHideFilePaths(false)}
+                />
+                <span>
+                  <strong>No, include them</strong>
+                  <small>Includes the repository-relative paths from the workflow description.</small>
+                </span>
+              </label>
+            </fieldset>
+          ) : null}
           {error !== null ? (
             <p className={styles.error} role="alert">
               {error}
@@ -111,20 +154,22 @@ export function ExportDialog({ workflowName, onClose, onDownload, onShare }: Exp
             Cancel
           </Button>
           <div className={styles.actions}>
-            <Button
-              variant="secondary"
-              icon={<ShareNetwork size={16} />}
-              onClick={() => void submit("share")}
-              disabled={busy || hideFilePaths === null}
-            >
-              {pendingAction === "share" ? "Preparing..." : "Share"}
-            </Button>
+            {format === "html" ? (
+              <Button
+                variant="secondary"
+                icon={<ShareNetwork size={16} />}
+                onClick={() => void submit("share")}
+                disabled={busy || hideFilePaths === null}
+              >
+                {pendingAction === "share" ? "Preparing..." : "Share HTML"}
+              </Button>
+            ) : null}
             <Button
               icon={<DownloadSimple size={16} />}
-              onClick={() => void submit("download")}
-              disabled={busy || hideFilePaths === null}
+              onClick={() => void submit(format)}
+              disabled={busy || (format === "html" && hideFilePaths === null)}
             >
-              {pendingAction === "download" ? "Preparing..." : "Download HTML"}
+              {pendingAction === format ? "Preparing..." : format === "image" ? "Download image" : "Download HTML"}
             </Button>
           </div>
         </div>

@@ -62,6 +62,14 @@
   cursor: default;
 }
 
+/* The PNG contains the diagram, not transient editor state. Buttons cover per-node expand
+   controls, and selection and path-trace data are suppressed while the DOM is rasterized. */
+.wrapper[data-image-exporting="true"] .flow :global([data-step-node]) {
+  opacity: 1;
+  outline: 0;
+  box-shadow: var(--canvas-node-shadow);
+}
+
 /* Live graph-diff motion (launch item 2): new nodes and edges fade in when a valid SSE snapshot
  * adds them to the map. Existing node positions deliberately do not transition: React Flow
  * recomputes edge geometry immediately, so animating only the node wrapper's transform visibly
