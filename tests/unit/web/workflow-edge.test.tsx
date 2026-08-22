@@ -120,6 +120,21 @@ describe("WorkflowEdge visual grammar", () => {
       expect(result.getByRole("button", { name: "Bend edge e1" })).toBeInTheDocument();
     });
 
+    it("matches the bend dot color to the edge type", () => {
+      const cases = [
+        ["success", "--accent-neutral"],
+        ["failure", "--accent-red"],
+        ["conditional", "--accent-amber"],
+        ["async", "--accent-blue"],
+      ] as const;
+
+      for (const [type, color] of cases) {
+        const result = renderInteractiveEdge(makeData({ connection: makeConnection({ type }) }));
+        expect(result.getByRole("button", { name: "Bend edge e1" }).getAttribute("style")).toContain(`color: var(${color})`);
+        result.unmount();
+      }
+    });
+
     it("draws a smooth curve through a freely dragged bend point", () => {
       const result = renderInteractiveEdge(makeData());
       const handle = result.getByRole("button", { name: "Bend edge e1" });

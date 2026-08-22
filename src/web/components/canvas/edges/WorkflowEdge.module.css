@@ -18,36 +18,49 @@
 }
 
 .bendHandle {
-  display: block;
-  width: 18px;
-  height: 18px;
-  margin: 9px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  margin: 6px;
   padding: 0;
-  border: 2px solid var(--focus-ring);
-  border-radius: 50%;
-  background: var(--bg-raised);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-canvas) 80%, transparent), 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
+  place-items: center;
+  border: 0;
+  background: transparent;
   cursor: grab;
-  opacity: 0.32;
-  transform-origin: center;
-  transition: opacity var(--dur-fast) var(--ease-standard), scale var(--dur-fast) var(--ease-standard), border-radius var(--dur-fast) var(--ease-standard);
+  opacity: 0.78;
+  transition: opacity var(--dur-fast) var(--ease-standard);
   pointer-events: all;
   touch-action: none;
+}
+
+.bendHandle::before {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--bg-raised);
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 1px 5px color-mix(in srgb, currentColor 35%, transparent);
+  content: "";
+  transition: scale var(--dur-fast) var(--ease-standard), border-radius var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .bendHandle:hover,
 .bendHandle:focus-visible,
 .bendHandle[data-active="true"] {
   opacity: 1;
-  scale: 1.12;
+}
+
+.bendHandle:hover::before,
+.bendHandle:focus-visible::before,
+.bendHandle[data-active="true"]::before {
+  scale: 1.25;
 }
 
 .bendHandle[data-active="true"] {
   cursor: grabbing;
 }
 
-.bendHandle[data-snapped="true"] {
-  border-radius: 3px;
-  background: var(--focus-ring);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-ring) 25%, transparent);
+.bendHandle[data-snapped="true"]::before {
+  border-radius: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 22%, transparent);
 }

@@ -283,6 +283,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
             data-edge-bend-handle={id}
             data-active={dragging}
             data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
+            style={{ color: `var(${visual.varName})` }}
             aria-label={`Bend edge ${id}`}
             title={activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
               ? "Snapped to a 90-degree corner; drag to adjust"
