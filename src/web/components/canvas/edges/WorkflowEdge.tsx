@@ -20,6 +20,11 @@ interface BendState {
   resetKey: string | undefined;
 }
 
+interface EdgeEndpoint {
+  point: { x: number; y: number };
+  position: Position;
+}
+
 function portControlPoint(point: { x: number; y: number }, position: Position, reach: number): { x: number; y: number } {
   switch (position) {
     case Position.Left:
@@ -31,6 +36,19 @@ function portControlPoint(point: { x: number; y: number }, position: Position, r
     case Position.Bottom:
       return { x: point.x, y: point.y + reach };
   }
+}
+
+function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Exclude<BendSnap, null>): { point: { x: number; y: number }; path: string } {
+  const sourceLead = portControlPoint(source.point, source.position, BEND_ENDPOINT_LEAD);
+  const targetLead = portControlPoint(target.point, target.position, BEND_ENDPOINT_LEAD);
+  const point = snap === "source-x"
+    ? { x: sourceLead.x, y: targetLead.y }
+    : { x: targetLead.x, y: sourceLead.y };
+
+  return {
+    point,
+    path: `M${source.point.x},${source.point.y} L${sourceLead.x},${sourceLead.y} L${point.x},${point.y} L${targetLead.x},${targetLead.y} L${target.point.x},${target.point.y}`,
+  };
 }
 
 function smoothBendPath(
@@ -167,21 +185,22 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   }
 
   let bendPoint = activeBend?.point;
-  if (activeBend?.snap === "source-x") {
-    bendPoint = { x: sourceX, y: targetY };
-  } else if (activeBend?.snap === "target-x") {
-    bendPoint = { x: targetX, y: sourceY };
-  }
+  const sourceEndpoint = { point: { x: sourceX, y: sourceY }, position: sourcePosition };
+  const targetEndpoint = { point: { x: targetX, y: targetY }, position: targetPosition };
   if (bendable && bendPoint !== undefined) {
-    path = activeBend?.snap === null
-      ? smoothBendPath(
-          { x: sourceX, y: sourceY },
-          sourcePosition,
-          bendPoint,
-          { x: targetX, y: targetY },
-          targetPosition,
-        )
-      : `M${sourceX},${sourceY} L${bendPoint.x},${bendPoint.y} L${targetX},${targetY}`;
+    if (activeBend?.snap === null) {
+      path = smoothBendPath(
+        sourceEndpoint.point,
+        sourceEndpoint.position,
+        bendPoint,
+        targetEndpoint.point,
+        targetEndpoint.position,
+      );
+    } else if (activeBend?.snap !== undefined) {
+      const route = snappedBendRoute(sourceEndpoint, targetEndpoint, activeBend.snap);
+      bendPoint = route.point;
+      path = route.path;
+    }
     labelX = bendPoint.x;
     labelY = bendPoint.y;
   }
@@ -233,8 +252,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
     const snapDistance = BEND_SNAP_DISTANCE_PX / getZoom();
     const candidates = ([
-      { point: { x: sourceX, y: targetY }, snap: "source-x" },
-      { point: { x: targetX, y: sourceY }, snap: "target-x" },
+      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "source-x"), snap: "source-x" },
+      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "target-x"), snap: "target-x" },
     ] satisfies Array<{ point: { x: number; y: number }; snap: Exclude<BendSnap, null> }>).filter(({ point: corner }) => (
       Math.hypot(corner.x - sourceX, corner.y - sourceY) > 1
       && Math.hypot(targetX - corner.x, targetY - corner.y) > 1

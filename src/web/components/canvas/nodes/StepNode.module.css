@@ -73,7 +73,7 @@
     color-mix(in srgb, var(--node-accent) 7%, var(--canvas-node-body)) 42%,
     var(--canvas-node-body) 78%
   );
-  border: 1px solid color-mix(in srgb, var(--node-accent) 26%, var(--canvas-node-border));
+  border: 2px solid color-mix(in srgb, var(--node-accent) 62%, var(--canvas-node-border));
   border-radius: 10px;
   box-shadow: var(--canvas-node-shadow);
   cursor: pointer;
@@ -98,7 +98,7 @@
 /* Hover deepens the card's own accent rather than reaching for the neutral hover token — a card
    that changes hue on hover reads as a different category for the length of the transition. */
 .card:hover {
-  border-color: color-mix(in srgb, var(--node-accent) 45%, var(--canvas-node-border));
+  border-color: color-mix(in srgb, var(--node-accent) 78%, var(--canvas-node-border));
   box-shadow: var(--canvas-node-shadow-lifted);
 }
 

@@ -151,16 +151,23 @@ describe("WorkflowEdge visual grammar", () => {
       expect(handle).toHaveAttribute("data-snapped", "false");
     });
 
-    it("snaps near either valid orthogonal corner to a straight elbow", () => {
-      const result = renderInteractiveEdge(makeData());
-      const handle = result.getByRole("button", { name: "Bend edge e1" });
+    it("snaps to an orthogonal route that follows both endpoint directions", () => {
+      const cases = [
+        { pointer: { clientX: 20, clientY: 80 }, path: "M0,0 L18,0 L18,100 L82,100 L100,100" },
+        { pointer: { clientX: 80, clientY: 20 }, path: "M0,0 L18,0 L82,0 L82,100 L100,100" },
+      ];
 
-      fireEvent.pointerDown(handle, { pointerId: 1 });
-      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 4, clientY: 96 });
-      fireEvent.pointerUp(handle, { pointerId: 1 });
+      for (const { pointer, path } of cases) {
+        const result = renderInteractiveEdge(makeData());
+        const handle = result.getByRole("button", { name: "Bend edge e1" });
+        fireEvent.pointerDown(handle, { pointerId: 1 });
+        fireEvent.pointerMove(handle, { pointerId: 1, ...pointer });
+        fireEvent.pointerUp(handle, { pointerId: 1 });
 
-      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe("M0,0 L0,100 L100,100");
-      expect(handle).toHaveAttribute("data-snapped", "true");
+        expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(path);
+        expect(handle).toHaveAttribute("data-snapped", "true");
+        result.unmount();
+      }
     });
 
     it("does not offer a bend handle for branch, retry, or return edges", () => {
