@@ -42,12 +42,6 @@
   font-size: var(--fs-micro);
 }
 
-.explanation {
-  color: var(--text-tertiary);
-  font-size: var(--fs-micro);
-  font-style: italic;
-}
-
 .sources {
   display: flex;
   flex-direction: column;

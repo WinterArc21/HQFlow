@@ -5,7 +5,7 @@
  * at the store-unit-test level.
  *
  * Isolation: owns port 4502 (PORTS.invalidPreservesBoard) and a private temp copy of
- * examples/motiona, created in `beforeAll` and removed in `afterAll`.
+ * the test project, created in `beforeAll` and removed in `afterAll`.
  */
 import { promises as fsp } from "node:fs";
 import path from "node:path";

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, getState } from "./client";
-import { buildCodeHQFixtureSnapshot, isCodeHQFixtureEnabled } from "./fixture";
 import type { CodeHQSnapshot } from "./types";
 
 export type SnapshotStatus = "loading" | "ready" | "error" | "disconnected";
@@ -39,13 +38,8 @@ const MAX_RECONNECT_DELAY_MS = 15_000;
  * connection reconnects with a capped exponential backoff rather than hammering the server.
  */
 export function useCodeHQSnapshot(): UseCodeHQSnapshotResult {
-  // Read once per hook instance: a lazy initializer (not an effect) sets the fixture data, so
-  // the fixture path never needs to call setState from inside the effect body below.
-  const [fixtureMode] = useState(isCodeHQFixtureEnabled);
-  const [snapshot, setSnapshot] = useState<CodeHQSnapshot | null>(() =>
-    fixtureMode ? buildCodeHQFixtureSnapshot() : null,
-  );
-  const [status, setStatus] = useState<SnapshotStatus>(() => (fixtureMode ? "ready" : "loading"));
+  const [snapshot, setSnapshot] = useState<CodeHQSnapshot | null>(null);
+  const [status, setStatus] = useState<SnapshotStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [refetchToken, setRefetchToken] = useState(0);
 
@@ -56,20 +50,12 @@ export function useCodeHQSnapshot(): UseCodeHQSnapshotResult {
   // Resetting to "loading" happens here, in the event handler that causes the refetch — not
   // inside the effect — so the effect only ever reacts to state, never assigns it up front.
   const refetch = useCallback(() => {
-    if (!fixtureMode) {
-      setStatus("loading");
-      setError(null);
-    }
+    setStatus("loading");
+    setError(null);
     setRefetchToken((token) => token + 1);
-  }, [fixtureMode]);
+  }, []);
 
   useEffect(() => {
-    if (fixtureMode) {
-      // Development affordance only: never opens a network connection. State is already
-      // correct from the lazy initializers above, so there is nothing to synchronize here.
-      return;
-    }
-
     let cancelled = false;
     reconnectDelayRef.current = INITIAL_RECONNECT_DELAY_MS;
 
@@ -137,7 +123,7 @@ export function useCodeHQSnapshot(): UseCodeHQSnapshotResult {
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
     };
-  }, [refetchToken, fixtureMode]);
+  }, [refetchToken]);
 
   return { snapshot, status, error, refetch };
 }

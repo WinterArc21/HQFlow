@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
-import { categoryToken, confidenceStyle } from "../../../design/semantics";
+import { categoryToken } from "../../../design/semantics";
 import { Badge, IconButton } from "../../primitives";
 import { formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
 import type { StepFlowNode } from "../types";
@@ -15,12 +15,9 @@ import styles from "./StepNode.module.css";
  * `onKeyDown` all come from `useCanvasKeyboardNav` via node data) — never measured, its box is
  * exactly the size `layout.ts` computed for it.
  *
- * Deliberately *not* on the card: the confidence badge and the source/edge-case/test counts. A
- * badge reading "Verified" on almost every step spends a row to say nothing, and a count is a
- * number nobody acts on — the counts now live on the drawer's own section headings, where the
- * full lists they summarise already are. Confidence survives as a shape — a dashed leading edge
- * on inferred steps only — and in the card's accessible name, so nothing is lost for a screen
- * reader or for the "which of these did the agent guess at?" question; it just stops shouting.
+ * Deliberately *not* on the card: source/edge-case/test counts. A count is a number nobody
+ * acts on — the counts now live on the drawer's own section headings, where the full lists
+ * they summarise already are.
  *
  * Category is carried by the card's own accent gradient rather than by a spine: see `.card` in the
  * stylesheet for why the leading edge tops out at 15%.
@@ -48,7 +45,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     onBlurStep,
   } = data;
   const category = categoryToken(step.category);
-  const confidence = confidenceStyle(step.confidence);
   const io = stepIoSummary(step);
   const inSummary = formatDataReferenceNames(io.inputs);
   const outSummary = formatDataReferenceNames(io.outputs);
@@ -61,7 +57,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
   const cardClassName = [styles.card, selected ? styles.selected : "", dimmed ? styles.dimmed : ""]
     .filter(Boolean)
     .join(" ");
-  const showInferredEdge = confidence.marker === "dashed";
   const purposeLines = purposeLineCount(step.purpose);
   const purposeClassName =
     purposeLines === 3
@@ -69,7 +64,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       : purposeLines === 2
         ? `${styles.purpose} ${styles.purposeTwoLine}`
         : styles.purpose;
-  const accessibleName = `${index + 1}. ${step.name}. ${category.label} category. ${confidence.label} confidence.${
+  const accessibleName = `${index + 1}. ${step.name}. ${category.label} category.${
     hasMissingSource ? " Missing sources." : ""
   }`;
   const cardStyle = { "--node-accent": `var(${category.varName})` } as CSSProperties;
@@ -110,13 +105,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
           <Handle id="retry-out" type="source" position={Position.Right} className={`${styles.handle} ${styles.retryOutHandle}`} aria-hidden="true" />
         </>
       ) : null}
-
-      {/* Category is now carried by the card's own accent gradient (contract §10: colour always
-          encodes category, never confidence), which leaves this element carrying confidence alone —
-          so it only renders for the case it needs to call out. A dashed leading edge means the
-          agent inferred this step; a clean edge means verified or human-confirmed. Still a shape
-          difference rather than a second colour, so "never colour alone" holds. */}
-      {showInferredEdge ? <span className={styles.inferredEdge} aria-hidden="true" /> : null}
 
       <div className={styles.body}>
         <div className={styles.header}>

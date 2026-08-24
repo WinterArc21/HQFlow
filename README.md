@@ -10,8 +10,7 @@ on `localhost`.
 
 ## See HQFlow in action
 
-This is the real HQFlow canvas rendering the bundled **Generate Video Prompt** workflow from
-[`examples/motiona`](./examples/motiona). The image follows your light or dark system theme.
+The image follows your light or dark system theme.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/hqflow-canvas-dark.webp">
@@ -71,31 +70,17 @@ Then paste this into your coding agent:
 
 ## Commands
 
-### `hqflow init [--force] [--example]`
+### `hqflow init [--force]`
 
 Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, an empty
 `workflows/`, and an initial `diagnostics.json`. Also appends `.codehq/.runtime/` to your
 `.gitignore` (creating it if needed, never duplicating the line).
 
-By default, `workflows/` starts empty. The canvas then shows its guided empty state, where you can
-copy a prompt for your coding agent or recheck the files after the agent creates a workflow.
-
-To open a populated canvas before you map your own code, explicitly install the bundled example:
-
-```sh
-npx hqflow init --example
-npx hqflow open
-```
-
-`--example` copies `.codehq/workflows/generate-video.json`. It is a demonstration workflow, not
-documentation of your repository. Its source paths belong to the MotionA demo scenario, so
-`hqflow validate` can report missing-source warnings in your project. Remove the example when you
-are ready to map your real code.
+`workflows/` starts empty. The canvas then shows its guided empty state, where you can copy a
+prompt for your coding agent or recheck the files after the agent creates a workflow.
 
 - `--force` — overwrite existing `.codehq` files. Without it, an existing file (for
   example a `SKILL.md` you have already edited) is left untouched and reported as unchanged.
-- `--example` — also copy the bundled Generate Video Prompt workflow into `workflows/`. Without
-  it, no workflow file is created.
 
 ### `hqflow open [--port <n>] [--no-open] [--root <path>]`
 
@@ -133,7 +118,7 @@ traces on error.
 └── .runtime/                # gitignored scratch space, ignored by validation
 ```
 
-A workflow is a directed graph of steps an agent has verified against the real code — no
+A workflow is a directed graph of steps an agent has read against the real code — no
 coordinates, colors, or styling, ever; HQFlow owns all of that. A short annotated
 example:
 
@@ -150,7 +135,6 @@ example:
       "name": "Create Order",
       "purpose": "Persists a pending order from the cart contents.",
       "category": "entry",
-      "confidence": "verified",
       "sources": [{ "file": "app/api/checkout/route.ts", "symbol": "POST", "line": 12, "endLine": 30 }],
       "outputs": [{ "name": "Order", "type": "Order" }]
     },

@@ -128,7 +128,7 @@ export interface StepSymbolRow {
 
 /**
  * One row per distinct (file, symbol) pair referenced by a step's `sources`, in first-seen
- * order (depth `symbols`). A source with no `symbol` still produces a file-only row, so nothing
+ * order (depth `symbols`). A source with no `symbol` still produces a file row, so nothing
  * a step references is silently dropped when the card expands.
  */
 export function stepSymbolRows(step: WorkflowStep): StepSymbolRow[] {

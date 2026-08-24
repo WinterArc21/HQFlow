@@ -1,6 +1,6 @@
 /**
  * Exercises the built CLI (`dist/node/cli.js`) the way a user would, in disposable temp
- * directories — never `examples/motiona`.
+ * directories.
  *
  * On the Windows SIGINT question: see the "open" test below and its comments. Short version —
  * confirmed by direct experiment (not just asserted here) that a Node parent process on
@@ -19,7 +19,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { createEmptyTempDir, removeTempDir } from "./helpers/fixture";
 import { runCli } from "./helpers/cli";
-import { PORTS } from "./helpers/paths";
+import { PORTS, SOURCE_FIXTURE_DIR } from "./helpers/paths";
 import { startCodeHQServer, waitForPortFree } from "./helpers/server";
 
 async function fileExists(target: string): Promise<boolean> {
@@ -53,9 +53,6 @@ test("init creates the documented tree and prints the documented banner", async 
     expect(await fileExists(path.join(dir, ".codehq", "project.json"))).toBe(true);
     expect(await fileExists(path.join(dir, ".codehq", "SKILL.md"))).toBe(true);
     expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(true);
-    // The example workflow is opt-in (`init --example`): a plain init leaves workflows/ empty so
-    // the user's first validate is warning-free and their board shows the guided empty state,
-    // rather than diagnostics about a sample workflow they never wrote.
     expect(await fileExists(path.join(dir, ".codehq", "workflows", "generate-video.json"))).toBe(false);
 
     const gitignore = await fsp.readFile(path.join(dir, ".gitignore"), "utf-8");
@@ -68,24 +65,24 @@ test("init creates the documented tree and prints the documented banner", async 
 test("validate exits 0 on a fresh project, then exits 1 naming the step a broken connection points at", async () => {
   const dir = await createEmptyTempDir("cli-validate");
   try {
-    // `--example` is what gives this test a workflow to break — a plain init now leaves
-    // workflows/ empty.
-    const initResult = await runCli(["init", "--example"], { cwd: dir });
+    const initResult = await runCli(["init"], { cwd: dir });
     expect(initResult.exitCode).toBe(0);
+
+    const workflowFile = path.join(dir, ".codehq", "workflows", "generate-video.json");
+    await fsp.copyFile(path.join(SOURCE_FIXTURE_DIR, ".codehq", "workflows", "generate-video.json"), workflowFile);
 
     const freshValidate = await runCli(["validate", "--root", dir]);
     expect(freshValidate.exitCode).toBe(0);
-    // A bare temp dir has none of the source files the example workflow references, so this
+    // A bare temp dir has none of the source files the test workflow references, so this
     // is "0 errors, N warnings" rather than a silent "all valid" — genuinely exercising the
     // exit-code-vs-severity distinction (errors fail validate, warnings do not) rather than a
     // trivial, warning-free happy path.
     expect(freshValidate.stdout).toContain("0 errors");
 
-    const workflowFile = path.join(dir, ".codehq", "workflows", "generate-video.json");
     const workflow = JSON.parse(await fsp.readFile(workflowFile, "utf-8")) as MinimalWorkflowFile;
     const target = workflow.connections.find((connection) => connection.to === "generate-story");
     if (target === undefined) {
-      throw new Error("Fixture changed: expected a connection pointing at 'generate-story' in the example workflow.");
+      throw new Error("Fixture changed: expected a connection pointing at 'generate-story'.");
     }
     target.to = "generate-story-missing";
     await fsp.writeFile(workflowFile, `${JSON.stringify(workflow, null, 2)}\n`, "utf-8");
@@ -116,10 +113,12 @@ test("validate exits 0 on a fresh project, then exits 1 naming the step a broken
 test("open starts the real server and serving stops (and the port is released) when the process is terminated", async () => {
   const dir = await createEmptyTempDir("cli-open");
   try {
-    // `--example` so the served project reaches status "ready" (asserted below) rather than the
-    // "empty" state a workflow-less init now produces.
-    const initResult = await runCli(["init", "--example"], { cwd: dir });
+    const initResult = await runCli(["init"], { cwd: dir });
     expect(initResult.exitCode).toBe(0);
+    await fsp.copyFile(
+      path.join(SOURCE_FIXTURE_DIR, ".codehq", "workflows", "generate-video.json"),
+      path.join(dir, ".codehq", "workflows", "generate-video.json"),
+    );
 
     const server = await startCodeHQServer(dir, PORTS.cliOpen);
     expect(server.stdout()).toContain("HQFlow is running.");

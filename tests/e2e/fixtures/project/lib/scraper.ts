@@ -1,5 +1,4 @@
-// Fetches a submitted website and extracts the text, metadata, and images MotionA needs to
-// understand what product or service it is looking at.
+// Fetches a submitted website and extracts data for the end-to-end test project.
 
 export interface ScrapedWebsite {
   url: string;

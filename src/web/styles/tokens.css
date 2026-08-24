@@ -50,8 +50,8 @@
 
   /* ---- accents (dark) ---- */
   --accent-blue: #5b8def; /* focus + selection rings, async connections — not a category */
-  --accent-green: #4fa97a; /* verified badges — not a category */
-  --accent-amber: #d19a45; /* conditional + retry connections, needs-review — not a category */
+  --accent-green: #4fa97a; /* found-file badges — not a category */
+  --accent-amber: #d19a45; /* conditional + retry connections — not a category */
   --accent-red: #c4665c; /* failure */
   --accent-violet: #8b7bc7; /* connection/badge violet — no longer a category colour */
   --accent-neutral: #7e858d; /* logic, normal connections */

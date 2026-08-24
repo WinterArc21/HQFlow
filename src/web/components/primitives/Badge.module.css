@@ -15,10 +15,6 @@
   white-space: nowrap;
 }
 
-.dashed {
-  border-style: dashed;
-}
-
 .dot {
   width: 6px;
   height: 6px;

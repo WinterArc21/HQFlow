@@ -1,6 +1,5 @@
 import type { Workflow } from "@schema/workflow";
 import type { WorkflowRecord } from "../../api/types";
-import { statusTone } from "../../design/semantics";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { Badge } from "../primitives";
 import { CanvasToolbar, type CanvasToolbarProps } from "./CanvasToolbar";
@@ -14,8 +13,6 @@ export interface CanvasHeaderProps extends CanvasToolbarProps {
 
 /** The canvas title strip and its remaining zoom/collapse actions. */
 export function CanvasHeader({ workflow, modifiedAt, state, ...toolbarProps }: CanvasHeaderProps) {
-  const status = statusTone(workflow.status);
-
   return (
     <div className={styles.header}>
       <div className={styles.identity}>
@@ -25,8 +22,7 @@ export function CanvasHeader({ workflow, modifiedAt, state, ...toolbarProps }: C
         </div>
         <div className={styles.detailsRow}>
           <p className={styles.purpose}>{workflow.purpose}</p>
-          <div className={styles.trust} aria-label="Workflow status and freshness">
-            <Badge tone={status.tone}>{status.label}</Badge>
+          <div className={styles.trust} aria-label="Workflow freshness">
             {state === "stale" ? <Badge tone="amber">Stale</Badge> : null}
             {modifiedAt !== undefined ? (
               <span className={styles.freshness}>Updated {formatRelativeTime(modifiedAt)}</span>

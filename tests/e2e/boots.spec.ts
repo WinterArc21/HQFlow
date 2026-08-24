@@ -1,10 +1,10 @@
 /**
  * Runs against the shared, read-only server (see playwright.config.ts's `webServer`), which
- * serves a private temp copy of `examples/motiona` — never the committed fixture itself.
+ * serves a private temp copy of the test project — never the committed fixture itself.
  */
 import { expect, test } from "@playwright/test";
 
-test("loads the example project, auto-selects the default workflow, and renders its board with no console errors", async ({
+test("loads the test project, auto-selects the default workflow, and renders its board with no console errors", async ({
   page,
 }) => {
   const consoleErrors: string[] = [];

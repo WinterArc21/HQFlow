@@ -3,30 +3,133 @@
   "id": "canvas-grammar-demo",
   "name": "Canvas Grammar Demo",
   "purpose": "Synthetic, test-only coverage for canvas graph forms; it does not describe MotionA behavior.",
-  "status": "needs-review",
   "steps": [
-    { "id": "accept-job", "name": "Accept Job", "purpose": "Starts the synthetic demonstration.", "category": "entry", "confidence": "inferred" },
-    { "id": "encode", "name": "Encode", "purpose": "Demonstrates retry and a real return connection.", "category": "logic", "confidence": "inferred" },
-    { "id": "video-branch", "name": "Video Branch", "purpose": "One success branch.", "category": "logic", "confidence": "inferred" },
-    { "id": "audio-branch", "name": "Audio Branch", "purpose": "Another success branch; placement does not claim concurrency.", "category": "logic", "confidence": "inferred" },
-    { "id": "review", "name": "Review", "purpose": "Joins the two synthetic branches.", "category": "decision", "confidence": "inferred" },
-    { "id": "notify", "name": "Notify", "purpose": "Demonstrates a dotted asynchronous handoff.", "category": "external", "confidence": "inferred" },
-    { "id": "outcome-created", "name": "Created", "purpose": "Synthetic successful terminal.", "category": "output", "confidence": "inferred" },
-    { "id": "outcome-rejected", "name": "Rejected", "purpose": "Synthetic failed terminal.", "category": "output", "confidence": "inferred" },
-    { "id": "outcome-queued", "name": "Queued", "purpose": "Synthetic neutral async terminal.", "category": "output", "confidence": "inferred" }
+    {
+      "id": "accept-job",
+      "name": "Accept Job",
+      "purpose": "Starts the synthetic demonstration.",
+      "category": "entry"
+    },
+    {
+      "id": "encode",
+      "name": "Encode",
+      "purpose": "Demonstrates retry and a real return connection.",
+      "category": "logic"
+    },
+    {
+      "id": "video-branch",
+      "name": "Video Branch",
+      "purpose": "One success branch.",
+      "category": "logic"
+    },
+    {
+      "id": "audio-branch",
+      "name": "Audio Branch",
+      "purpose": "Another success branch; placement does not claim concurrency.",
+      "category": "logic"
+    },
+    {
+      "id": "review",
+      "name": "Review",
+      "purpose": "Joins the two synthetic branches.",
+      "category": "decision"
+    },
+    {
+      "id": "notify",
+      "name": "Notify",
+      "purpose": "Demonstrates a dotted asynchronous handoff.",
+      "category": "external"
+    },
+    {
+      "id": "outcome-created",
+      "name": "Created",
+      "purpose": "Synthetic successful terminal.",
+      "category": "output"
+    },
+    {
+      "id": "outcome-rejected",
+      "name": "Rejected",
+      "purpose": "Synthetic failed terminal.",
+      "category": "output"
+    },
+    {
+      "id": "outcome-queued",
+      "name": "Queued",
+      "purpose": "Synthetic neutral async terminal.",
+      "category": "output"
+    }
   ],
   "connections": [
-    { "id": "start-encode", "from": "accept-job", "to": "encode" },
-    { "id": "retry-encode", "from": "encode", "to": "encode", "type": "conditional", "label": "retry ≤3" },
-    { "id": "encode-video", "from": "encode", "to": "video-branch", "type": "success" },
-    { "id": "encode-audio", "from": "encode", "to": "audio-branch", "type": "success" },
-    { "id": "video-review", "from": "video-branch", "to": "review", "type": "success" },
-    { "id": "audio-review", "from": "audio-branch", "to": "review", "type": "success" },
-    { "id": "review-reencode", "from": "review", "to": "encode", "type": "conditional", "label": "re-encode" },
-    { "id": "review-created", "from": "review", "to": "outcome-created", "type": "success" },
-    { "id": "review-rejected", "from": "review", "to": "outcome-rejected", "type": "failure", "label": "invalid" },
-    { "id": "review-notify", "from": "review", "to": "notify", "type": "async", "label": "handoff" },
-    { "id": "notify-queued", "from": "notify", "to": "outcome-queued", "type": "async", "label": "queued" }
+    {
+      "id": "start-encode",
+      "from": "accept-job",
+      "to": "encode"
+    },
+    {
+      "id": "retry-encode",
+      "from": "encode",
+      "to": "encode",
+      "type": "conditional",
+      "label": "retry \u22643"
+    },
+    {
+      "id": "encode-video",
+      "from": "encode",
+      "to": "video-branch",
+      "type": "success"
+    },
+    {
+      "id": "encode-audio",
+      "from": "encode",
+      "to": "audio-branch",
+      "type": "success"
+    },
+    {
+      "id": "video-review",
+      "from": "video-branch",
+      "to": "review",
+      "type": "success"
+    },
+    {
+      "id": "audio-review",
+      "from": "audio-branch",
+      "to": "review",
+      "type": "success"
+    },
+    {
+      "id": "review-reencode",
+      "from": "review",
+      "to": "encode",
+      "type": "conditional",
+      "label": "re-encode"
+    },
+    {
+      "id": "review-created",
+      "from": "review",
+      "to": "outcome-created",
+      "type": "success"
+    },
+    {
+      "id": "review-rejected",
+      "from": "review",
+      "to": "outcome-rejected",
+      "type": "failure",
+      "label": "invalid"
+    },
+    {
+      "id": "review-notify",
+      "from": "review",
+      "to": "notify",
+      "type": "async",
+      "label": "handoff"
+    },
+    {
+      "id": "notify-queued",
+      "from": "notify",
+      "to": "outcome-queued",
+      "type": "async",
+      "label": "queued"
+    }
   ],
   "notes": [
     "Synthetic e2e-only canvas fixture. It is not mapped from MotionA or any production repository.",

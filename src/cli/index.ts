@@ -47,11 +47,9 @@ function buildProgram(): Command {
     .command("init")
     .description("Scaffold .codehq/ in the current repository")
     .option("--force", "Overwrite existing .codehq files")
-    .option("--example", "Also copy the bundled example workflow into workflows/")
-    .action(async (options: { force?: boolean; example?: boolean }) => {
+    .action(async (options: { force?: boolean }) => {
       const result = await runInit({
         ...(options.force !== undefined ? { force: options.force } : {}),
-        ...(options.example !== undefined ? { example: options.example } : {}),
       });
       printInitResult(result);
       process.exitCode = result.exitCode;

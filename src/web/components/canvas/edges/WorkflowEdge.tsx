@@ -1,22 +1,86 @@
-import type { CSSProperties } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
 import { edgeMarkerId } from "./EdgeMarkers";
-import {
-  chooseObstacleAwareRoute,
-  pathMayNeedObstacleRoute,
-  routeLabelPoint,
-  routeToSmoothSvgPath,
-  type RouteSide,
-} from "./obstacleRouting";
 import styles from "./WorkflowEdge.module.css";
 
 /** Branches turn with a broad radius so they feel routed rather than mechanically elbowed. */
 const EDGE_BORDER_RADIUS = 16;
 const RETRY_LOOP_OUTSET = 80;
 const RETURN_EDGE_LIFT = 84;
+const BEND_SNAP_DISTANCE_PX = 30;
+const BEND_ENDPOINT_LEAD = 18;
+
+type BendSnap = "source-x" | "target-x" | null;
+interface BendState {
+  point: { x: number; y: number };
+  snap: BendSnap;
+  resetKey: string | undefined;
+}
+
+interface EdgeEndpoint {
+  point: { x: number; y: number };
+  position: Position;
+}
+
+function portControlPoint(point: { x: number; y: number }, position: Position, reach: number): { x: number; y: number } {
+  switch (position) {
+    case Position.Left:
+      return { x: point.x - reach, y: point.y };
+    case Position.Right:
+      return { x: point.x + reach, y: point.y };
+    case Position.Top:
+      return { x: point.x, y: point.y - reach };
+    case Position.Bottom:
+      return { x: point.x, y: point.y + reach };
+  }
+}
+
+function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Exclude<BendSnap, null>): { point: { x: number; y: number }; path: string } {
+  const sourceLead = portControlPoint(source.point, source.position, BEND_ENDPOINT_LEAD);
+  const targetLead = portControlPoint(target.point, target.position, BEND_ENDPOINT_LEAD);
+  const point = snap === "source-x"
+    ? { x: sourceLead.x, y: targetLead.y }
+    : { x: targetLead.x, y: sourceLead.y };
+
+  return {
+    point,
+    path: `M${source.point.x},${source.point.y} L${sourceLead.x},${sourceLead.y} L${point.x},${point.y} L${targetLead.x},${targetLead.y} L${target.point.x},${target.point.y}`,
+  };
+}
+
+function smoothBendPath(
+  source: { x: number; y: number },
+  sourcePosition: Position,
+  bend: { x: number; y: number },
+  target: { x: number; y: number },
+  targetPosition: Position,
+): string {
+  const sourceDistance = Math.hypot(bend.x - source.x, bend.y - source.y);
+  const targetDistance = Math.hypot(target.x - bend.x, target.y - bend.y);
+  const length = Math.hypot(target.x - source.x, target.y - source.y) || 1;
+  const tangent = { x: (target.x - source.x) / length, y: (target.y - source.y) / length };
+  const tangentReach = Math.min(
+    sourceDistance,
+    targetDistance,
+    length / 2,
+  ) * 0.35;
+  const sourceLead = portControlPoint(source, sourcePosition, Math.min(BEND_ENDPOINT_LEAD, sourceDistance / 3));
+  const targetLead = portControlPoint(target, targetPosition, Math.min(BEND_ENDPOINT_LEAD, targetDistance / 3));
+  const sourceControl = portControlPoint(
+    sourceLead,
+    sourcePosition,
+    Math.min(20, sourceDistance / 4),
+  );
+  const targetControl = portControlPoint(
+    targetLead,
+    targetPosition,
+    Math.min(20, targetDistance / 4),
+  );
+  return `M${source.x},${source.y} L${sourceLead.x},${sourceLead.y} C${sourceControl.x},${sourceControl.y} ${bend.x - tangent.x * tangentReach},${bend.y - tangent.y * tangentReach} ${bend.x},${bend.y} C${bend.x + tangent.x * tangentReach},${bend.y + tangent.y * tangentReach} ${targetControl.x},${targetControl.y} ${targetLead.x},${targetLead.y} L${target.x},${target.y}`;
+}
 
 /** Stroke width per connection type: normal sync flow is the strongest weight; every branch —
  * conditional, failure, async, retry — reads as subordinate but still intentional and legible.
@@ -65,11 +129,18 @@ const DIMMED_OPACITY_FACTOR = 0.25;
  * parsing colour.
  */
 export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps<WorkflowFlowEdge>) {
+  const { screenToFlowPosition, getZoom } = useReactFlow();
+  const [bend, setBend] = useState<BendState | null>(null);
+  const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
+
   if (data === undefined) {
     return null;
   }
 
   const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced } = data;
+  const activeBend = bend?.resetKey === data.bendResetKey ? bend : null;
+  const dragging = draggingForKey === data.bendResetKey;
+  const bendable = !retry && !returnEdge && !branch;
   const isRetryLoop = retry;
   const visual = isRetryLoop
     ? RETRY_EDGE_VISUAL
@@ -111,33 +182,27 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         })
       : getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.35 });
     [path, labelX, labelY] = geometry;
+  }
 
-    // Retry and return edges deliberately stay on their existing custom paths above. For ordinary
-    // and branch edges, a conservative default-path envelope skips candidate generation when no
-    // unrelated card can affect the existing path. If every bounded orthogonal candidate is
-    // blocked, leaving `path` untouched is the exact pre-change React Flow fallback.
-    const routingContext = data.routingContext;
-    if (
-      routingContext !== undefined
-      && pathMayNeedObstacleRoute(path, routingContext, source, target)
-    ) {
-      const route = chooseObstacleAwareRoute({
-        source: { x: sourceX, y: sourceY },
-        target: { x: targetX, y: targetY },
-        sourcePosition: sourcePosition as RouteSide,
-        targetPosition: targetPosition as RouteSide,
-        obstacles: routingContext.obstacles,
-        sourceId: source,
-        targetId: target,
-        context: routingContext,
-      });
-      if (route !== null) {
-        path = routeToSmoothSvgPath(route.points);
-        const label = routeLabelPoint(route.points);
-        labelX = label.x;
-        labelY = label.y;
-      }
+  let bendPoint = activeBend?.point;
+  const sourceEndpoint = { point: { x: sourceX, y: sourceY }, position: sourcePosition };
+  const targetEndpoint = { point: { x: targetX, y: targetY }, position: targetPosition };
+  if (bendable && bendPoint !== undefined) {
+    if (activeBend?.snap === null) {
+      path = smoothBendPath(
+        sourceEndpoint.point,
+        sourceEndpoint.position,
+        bendPoint,
+        targetEndpoint.point,
+        targetEndpoint.position,
+      );
+    } else if (activeBend?.snap !== undefined) {
+      const route = snappedBendRoute(sourceEndpoint, targetEndpoint, activeBend.snap);
+      bendPoint = route.point;
+      path = route.path;
     }
+    labelX = bendPoint.x;
+    labelY = bendPoint.y;
   }
 
   const baseStrokeWidth = edgeStrokeWidth(markerVariant ?? "success");
@@ -177,6 +242,29 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
 
   const labelText = isRetryLoop ? (connectionLabelText(connection) ?? "retry") : connectionLabelText(connection);
   const showLabel = labelText !== undefined;
+  const handlePoint = bendPoint ?? { x: labelX, y: labelY };
+
+  const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
+    if (!dragging) {
+      return;
+    }
+    event.stopPropagation();
+    const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const snapDistance = BEND_SNAP_DISTANCE_PX / getZoom();
+    const candidates = ([
+      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "source-x"), snap: "source-x" },
+      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "target-x"), snap: "target-x" },
+    ] satisfies Array<{ point: { x: number; y: number }; snap: Exclude<BendSnap, null> }>).filter(({ point: corner }) => (
+      Math.hypot(corner.x - sourceX, corner.y - sourceY) > 1
+      && Math.hypot(targetX - corner.x, targetY - corner.y) > 1
+    ));
+    const nearest = candidates
+      .map((candidate) => ({ ...candidate, distance: Math.hypot(point.x - candidate.point.x, point.y - candidate.point.y) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    setBend(nearest !== undefined && nearest.distance <= snapDistance
+      ? { point: nearest.point, snap: nearest.snap, resetKey: data.bendResetKey }
+      : { point, snap: null, resetKey: data.bendResetKey });
+  };
 
   return (
     <>
@@ -199,6 +287,41 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
             {labelText}
           </div>
         </EdgeLabelRenderer>
+      ) : null}
+      {bendable ? (
+        <foreignObject
+          className={styles.bendHandleRegion}
+          x={handlePoint.x - 18}
+          y={handlePoint.y - 18}
+          width={36}
+          height={36}
+        >
+          <button
+            type="button"
+            className={styles.bendHandle}
+            data-edge-bend-handle={id}
+            data-active={dragging}
+            data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
+            style={{ color: `var(${visual.varName})` }}
+            aria-label={`Bend edge ${id}`}
+            title={activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
+              ? "Snapped to a 90-degree corner; drag to adjust"
+              : "Drag to bend; move near a corner to snap"}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              setDraggingForKey(data.bendResetKey);
+            }}
+            onPointerMove={handleBendMove}
+            onPointerUp={(event) => {
+              event.stopPropagation();
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+              setDraggingForKey(null);
+            }}
+            onPointerCancel={() => setDraggingForKey(null)}
+          />
+        </foreignObject>
       ) : null}
     </>
   );

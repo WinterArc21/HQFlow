@@ -10,8 +10,7 @@ import { formatLineRange, sourceCheckKey } from "./sourceKey";
 import styles from "./SourceReferenceRow.module.css";
 
 const STATUS_TEXT: Record<SourceStatus, string> = {
-  verified: "File and symbol verified",
-  "file-only": "File verified, symbol not checked",
+  found: "File found",
   missing: "File not found",
 };
 

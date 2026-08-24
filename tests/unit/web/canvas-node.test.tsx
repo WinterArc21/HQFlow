@@ -34,7 +34,6 @@ function makeStep(overrides: Partial<WorkflowStep> = {}): WorkflowStep {
     name: "Scrape Website",
     purpose: "Fetches the submitted pages and extracts useful text.",
     category: "logic",
-    confidence: "verified",
     ...overrides,
   };
 }
@@ -104,15 +103,6 @@ describe("StepNode", () => {
     expect(screen.getByText("Fetches the submitted pages and extracts useful text.")).toBeInTheDocument();
     expect(screen.getByText("Logic")).toBeInTheDocument();
     expect(screen.getByText("03")).toBeInTheDocument();
-  });
-
-  it("keeps confidence accessible without rendering visual badges", () => {
-    for (const confidence of ["verified", "inferred", "human-confirmed"] as const) {
-      const { unmount } = renderStepNode(makeProps(makeData({ step: makeStep({ confidence }) })));
-      expect(screen.queryByText(/^(Verified|Inferred|Human-confirmed)$/)).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: new RegExp(`${confidence} confidence`, "i") })).toBeInTheDocument();
-      unmount();
-    }
   });
 
   it("does not put source, edge-case, or test counts on the card", () => {

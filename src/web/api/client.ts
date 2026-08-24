@@ -86,7 +86,7 @@ export function recheck(): Promise<CodeHQSnapshot> {
   return requestJson<CodeHQSnapshot>("/api/recheck", { method: "POST" });
 }
 
-/** `DELETE /api/workflows/:id` — removes a verified workflow and returns the refreshed snapshot. */
+/** `DELETE /api/workflows/:id` — removes a valid workflow and returns the refreshed snapshot. */
 export function deleteWorkflow(id: string): Promise<CodeHQSnapshot> {
   return requestJson<CodeHQSnapshot>(`/api/workflows/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

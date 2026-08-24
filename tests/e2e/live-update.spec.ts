@@ -3,7 +3,7 @@
  * SSE, with no `page.reload()` anywhere in this file.
  *
  * Isolation: owns port 4501 (helpers/paths.ts PORTS.liveUpdate) and uses a private temp copy of
- * examples/motiona for every test. This file runs serially because its tests intentionally share
+ * the test project for every test. This file runs serially because its tests intentionally share
  * that one port; other spec files still run in parallel on their own dedicated ports.
  */
 import { promises as fsp } from "node:fs";
@@ -66,7 +66,6 @@ test("renaming a step, then adding a step and connection, both appear live witho
     name: "Post-process Video",
     purpose: "Applies final color and audio mastering before delivery.",
     category: "logic",
-    confidence: "verified",
   });
   withNewStep.connections.push({ from: "save-result", to: "post-process-video" });
   await fsp.writeFile(workflowFile, `${JSON.stringify(withNewStep, null, 2)}\n`, "utf-8");
@@ -96,7 +95,6 @@ test("new graph elements animate in without detaching existing connectors", asyn
     name: "Quality Check",
     purpose: "Verifies output quality before delivery.",
     category: "decision",
-    confidence: "verified",
   });
   // Turning an existing terminal outcome into a work step forces it to move from the outcome
   // column back to the main line. Connectors must snap with it rather than remaining at the final

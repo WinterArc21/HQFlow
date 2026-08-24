@@ -25,12 +25,11 @@ describe("EmptyState", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the copy and recheck actions plus discoverable examples", () => {
+  it("renders the copy and recheck actions", () => {
     render(<EmptyState onRecheck={() => Promise.resolve()} />);
 
     expect(screen.getByRole("button", { name: "Copy prompt" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recheck files" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Copy example" })).toHaveLength(2);
   });
 
   it("copies the context-neutral prompt string", async () => {

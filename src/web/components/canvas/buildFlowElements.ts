@@ -270,6 +270,7 @@ export function buildFlowEdges(
   layout: LayoutResult,
   backEdgeIds: ReadonlySet<string>,
   traceEdgeIds: ReadonlySet<string> | null,
+  bendResetKey?: string,
 ): WorkflowFlowEdge[] {
   const nodeById = new Map(layout.nodes.map((node) => [node.id, node] as const));
 
@@ -319,6 +320,7 @@ export function buildFlowEdges(
         ...(outcomeBand !== undefined ? { outcomeBand } : {}),
         dimmed,
         traced,
+        ...(bendResetKey !== undefined ? { bendResetKey } : {}),
       },
     };
   });

@@ -1,5 +1,4 @@
-// Converts scraped website material into a structured product model that the story planner
-// can reason about.
+// Converts scraped website material into a structured product model for tests.
 
 import type { ScrapedWebsite } from "./scraper";
 

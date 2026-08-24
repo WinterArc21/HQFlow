@@ -1,4 +1,4 @@
-// Request validation for the video-generation and asset-upload endpoints.
+// Request validation for the test project's endpoints.
 
 export interface GenerateRequestBody {
   url: string;

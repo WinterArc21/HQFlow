@@ -1,7 +1,6 @@
 /**
  * `tsx`-runnable dev entry point (`pnpm dev:server`). Starts the API server without the
- * static web build, against `CODEHQ_ROOT` (or `examples/motiona` by default, so the
- * parallel web app has real data to render against).
+ * static web build, against `CODEHQ_ROOT` or the current repository by default.
  */
 
 import path from "node:path";
@@ -12,8 +11,7 @@ const PORT = 4310;
 
 async function main(): Promise<void> {
   const envRoot = process.env.CODEHQ_ROOT;
-  const startDir =
-    envRoot !== undefined && envRoot.length > 0 ? path.resolve(envRoot) : path.resolve(process.cwd(), "examples/motiona");
+  const startDir = envRoot !== undefined && envRoot.length > 0 ? path.resolve(envRoot) : process.cwd();
   const root = resolveRepositoryRoot(startDir);
 
   const server = await createCodeHQServer({ root, port: PORT, serveWeb: false, logger: false });

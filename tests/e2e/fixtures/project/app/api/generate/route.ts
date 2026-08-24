@@ -1,4 +1,4 @@
-// POST /api/generate — accepts a website URL and returns a generated video story plan.
+// Test fixture route for POST /api/generate.
 
 import { validateGenerateRequest, hasRemainingQuota, type GenerateRequestBody } from "../../../lib/validation";
 import { scrapeWebsite } from "../../../lib/scraper";

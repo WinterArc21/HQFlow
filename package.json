@@ -79,6 +79,7 @@
     "@xyflow/react": "^12.11.2",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "html-to-image": "^1.11.13",
     "jsdom": "^29.1.1",
     "npm-run-all2": "^8.0.4",
     "react": "^19.2.8",
