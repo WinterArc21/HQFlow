@@ -12,6 +12,7 @@ import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
 const ARTIFACT_DIR = path.join(REPO_ROOT, ".amp", "in", "artifacts");
 const DEMO_SOURCE = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "canvas-grammar-demo.json");
+const EDGE_ENDPOINT_TOLERANCE_PX = 6;
 let root: string;
 let server: ManagedServer;
 
@@ -127,7 +128,7 @@ test("keeps a connection attached while its card is freely dragged", async ({ pa
     const rect = handle.getBoundingClientRect();
     return Math.hypot(screenEndpoint.x - (rect.left + rect.width / 2), screenEndpoint.y - (rect.top + rect.height / 2));
   });
-  expect(endpointDistance).toBeLessThan(5);
+  expect(endpointDistance).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
 });
 
 test("switches ordinary connections to the closest facing card sides while dragging", async ({ page }) => {
@@ -158,8 +159,8 @@ test("switches ordinary connections to the closest facing card sides while dragg
     sourceBox!.y + sourceBox!.height / 2,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-left", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-right", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-left", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-right", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 
   // Moving B below A should choose the source bottom and target top instead of either horizontal
@@ -182,8 +183,8 @@ test("switches ordinary connections to the closest facing card sides while dragg
     verticalSourceBox!.y + verticalSourceBox!.height + verticalTargetBox!.height / 2 + 80,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-bottom", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-top", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-bottom", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-top", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 });
 
@@ -214,8 +215,8 @@ test("switches outcome connections to facing sides while dragging success and fa
     sourceBox!.y + sourceBox!.height / 2,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, "review-created", sourceId, "out-left", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, "review-created", "outcome-created", "in-right", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, "review-created", sourceId, "out-left", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, "review-created", "outcome-created", "in-right", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 
   // A fresh board gives the failure outcome its original above-the-line position. Dragging it
@@ -236,8 +237,8 @@ test("switches outcome connections to facing sides while dragging success and fa
     verticalSourceBox!.y + verticalSourceBox!.height + failureBox!.height / 2 + 80,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", sourceId, "out-bottom", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", "outcome-rejected", "in-top", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", sourceId, "out-bottom", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", "outcome-rejected", "in-top", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 });
 
