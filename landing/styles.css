@@ -127,6 +127,16 @@ h1, h2, h3 { font-family: var(--display); }
 .head-nav a { color: var(--ink-2); font-size: var(--small); font-weight: 500; transition: color 160ms; }
 .head-nav a:hover { color: var(--ink); }
 .head-right { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.github-link {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: var(--ink-2);
+  border-radius: var(--r-1);
+  transition: color 160ms;
+}
+.github-link:hover { color: var(--ink); }
 
 /* ==========================================================================
    THE SPINE
