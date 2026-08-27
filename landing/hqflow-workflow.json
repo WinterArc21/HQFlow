@@ -1,0 +1,406 @@
+{
+  "schemaVersion": "0.1",
+  "id": "how-hqflow-works",
+  "name": "How HQFlow Works",
+  "purpose": "Maps HQFlow's local-first loop from repository setup to an explorable, exportable workflow canvas.",
+  "entryPoint": {
+    "file": "src/cli/commands/init.ts",
+    "symbol": "runInit",
+    "line": 114,
+    "endLine": 152
+  },
+  "steps": [
+    {
+      "id": "initialize-workspace",
+      "name": "Initialize Workspace",
+      "purpose": "Scaffolds the .codehq contract, agent skill, diagnostics file, and workflows directory.",
+      "category": "entry",
+      "sources": [
+        {
+          "file": "src/cli/commands/init.ts",
+          "symbol": "runInit",
+          "line": 114,
+          "endLine": 152
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Repository root",
+          "type": "string"
+        }
+      ],
+      "outputs": [
+        {
+          "name": ".codehq workspace"
+        }
+      ],
+      "tests": [
+        {
+          "file": "tests/unit/cli/init.test.ts"
+        }
+      ]
+    },
+    {
+      "id": "open-local-canvas",
+      "name": "Open Local Canvas",
+      "purpose": "Starts HQFlow's local server and opens the browser without uploading repository data.",
+      "category": "logic",
+      "sources": [
+        {
+          "file": "src/cli/commands/open.ts",
+          "symbol": "runOpen",
+          "line": 78,
+          "endLine": 112
+        }
+      ],
+      "inputs": [
+        {
+          "name": ".codehq workspace"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Local HQFlow server"
+        }
+      ],
+      "edgeCases": [
+        {
+          "name": "Requested port is busy",
+          "handling": "HQFlow tries the next available local port."
+        }
+      ]
+    },
+    {
+      "id": "agent-maps-code",
+      "name": "Agent Maps Code",
+      "purpose": "Your coding agent traces a real code path and writes sourced workflow JSON.",
+      "category": "external",
+      "sources": [
+        {
+          "file": "templates/codehq/SKILL.md",
+          "description": "Instructions that teach the coding agent how to author HQFlow maps."
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Repository source"
+        },
+        {
+          "name": "Mapping request"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Workflow JSON"
+        }
+      ],
+      "externalServices": [
+        {
+          "name": "Your coding agent",
+          "purpose": "Reads the repository and authors the workflow map."
+        }
+      ],
+      "details": {
+        "importantDecisions": [
+          "The agent writes meaning and source references; HQFlow owns all visual layout."
+        ]
+      }
+    },
+    {
+      "id": "validate-workflow",
+      "name": "Validate Workflow",
+      "purpose": "Parses workflow JSON, checks its strict schema, and applies semantic graph rules.",
+      "category": "decision",
+      "sources": [
+        {
+          "file": "src/core/load.ts",
+          "symbol": "loadHQ",
+          "line": 175
+        },
+        {
+          "file": "src/schema/validate.ts",
+          "symbol": "parseWorkflow",
+          "line": 107
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Workflow JSON"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Validated workflow"
+        },
+        {
+          "name": "Diagnostics"
+        }
+      ],
+      "edgeCases": [
+        {
+          "name": "Unknown fields or broken connections",
+          "handling": "Reports precise errors and keeps the invalid map out of live state."
+        }
+      ],
+      "tests": [
+        {
+          "file": "tests/unit/schema/workflow.test.ts"
+        }
+      ]
+    },
+    {
+      "id": "check-source-references",
+      "name": "Check Source References",
+      "purpose": "Checks that every referenced source and test file exists inside the repository.",
+      "category": "decision",
+      "sources": [
+        {
+          "file": "src/core/source-check.ts",
+          "symbol": "computeWorkflowSourceChecks",
+          "line": 83
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Validated workflow"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Source status"
+        }
+      ],
+      "edgeCases": [
+        {
+          "name": "Referenced file is missing",
+          "handling": "Adds a warning without rejecting an otherwise valid workflow."
+        }
+      ],
+      "tests": [
+        {
+          "file": "tests/unit/core/source-check.test.ts"
+        }
+      ]
+    },
+    {
+      "id": "watch-and-preserve",
+      "name": "Watch & Preserve State",
+      "purpose": "Watches .codehq changes and keeps the last valid map visible during invalid edits.",
+      "category": "data",
+      "sources": [
+        {
+          "file": "src/core/watcher.ts",
+          "symbol": "watchHQ",
+          "line": 39
+        },
+        {
+          "file": "src/core/store.ts",
+          "symbol": "createCodeHQStore",
+          "line": 81
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Validated workflow"
+        },
+        {
+          "name": "Source status"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CodeHQSnapshot"
+        }
+      ],
+      "edgeCases": [
+        {
+          "name": "A live edit becomes invalid",
+          "handling": "Marks the cached workflow stale and continues to serve its last valid version."
+        }
+      ],
+      "details": {
+        "implementation": "File changes are debounced before a guarded reload rebuilds diagnostics and notifies subscribers."
+      }
+    },
+    {
+      "id": "stream-live-snapshot",
+      "name": "Stream Live Snapshot",
+      "purpose": "Pushes each current repository snapshot to the browser over server-sent events.",
+      "category": "logic",
+      "sources": [
+        {
+          "file": "src/server/events.ts",
+          "symbol": "registerEventsRoute",
+          "line": 16
+        },
+        {
+          "file": "src/web/api/events.ts",
+          "symbol": "useCodeHQSnapshot",
+          "line": 40
+        }
+      ],
+      "inputs": [
+        {
+          "name": "CodeHQSnapshot"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Live browser state"
+        }
+      ],
+      "edgeCases": [
+        {
+          "name": "Browser connection drops",
+          "handling": "Reconnects with capped exponential backoff."
+        }
+      ]
+    },
+    {
+      "id": "explore-workflow",
+      "name": "Explore Workflow",
+      "purpose": "Lays out the graph and lets users trace paths, inspect details, and reshape the canvas.",
+      "category": "logic",
+      "sources": [
+        {
+          "file": "src/web/App.tsx",
+          "symbol": "App",
+          "line": 27
+        },
+        {
+          "file": "src/web/components/canvas/WorkflowCanvas.tsx",
+          "symbol": "WorkflowCanvas",
+          "line": 52
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Live browser state"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Interactive workflow review"
+        }
+      ],
+      "tests": [
+        {
+          "file": "tests/e2e/canvas-grammar-demo.spec.ts"
+        },
+        {
+          "file": "tests/e2e/depth-and-selection.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "export-review",
+      "name": "Export Review",
+      "purpose": "Packages the complete graph as a PNG or self-contained interactive HTML file.",
+      "category": "logic",
+      "sources": [
+        {
+          "file": "src/web/components/canvas/WorkflowCanvas.tsx",
+          "symbol": "WorkflowCanvasInner",
+          "line": 235,
+          "endLine": 310
+        },
+        {
+          "file": "src/server/export.ts",
+          "symbol": "buildExportHtml",
+          "line": 192
+        }
+      ],
+      "inputs": [
+        {
+          "name": "Interactive workflow review"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Review artifact"
+        }
+      ],
+      "tests": [
+        {
+          "file": "tests/e2e/export.spec.ts"
+        }
+      ]
+    },
+    {
+      "id": "outcome-fix-diagnostics",
+      "name": "Actionable Diagnostics",
+      "purpose": "The agent gets exact errors and can repair the workflow without blanking the canvas.",
+      "category": "output",
+      "sources": [
+        {
+          "file": "src/core/diagnostics.ts",
+          "symbol": "writeDiagnostics"
+        }
+      ]
+    },
+    {
+      "id": "outcome-share-artifact",
+      "name": "PNG or Interactive HTML",
+      "purpose": "A portable architecture review ready for documents, teammates, or offline use.",
+      "category": "output",
+      "sources": [
+        {
+          "file": "src/web/components/canvas/ExportDialog.tsx",
+          "symbol": "ExportDialog"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "initialize-workspace",
+      "to": "open-local-canvas"
+    },
+    {
+      "from": "open-local-canvas",
+      "to": "agent-maps-code"
+    },
+    {
+      "from": "agent-maps-code",
+      "to": "validate-workflow"
+    },
+    {
+      "from": "validate-workflow",
+      "to": "check-source-references",
+      "type": "success"
+    },
+    {
+      "from": "validate-workflow",
+      "to": "outcome-fix-diagnostics",
+      "type": "failure",
+      "label": "invalid map",
+      "condition": "Schema or semantic validation fails."
+    },
+    {
+      "from": "check-source-references",
+      "to": "watch-and-preserve"
+    },
+    {
+      "from": "watch-and-preserve",
+      "to": "stream-live-snapshot",
+      "type": "async",
+      "label": "snapshot"
+    },
+    {
+      "from": "stream-live-snapshot",
+      "to": "explore-workflow"
+    },
+    {
+      "from": "explore-workflow",
+      "to": "export-review"
+    },
+    {
+      "from": "export-review",
+      "to": "outcome-share-artifact",
+      "type": "success"
+    }
+  ],
+  "notes": [
+    "Landing-page map of HQFlow's own main product loop, sourced from the current implementation."
+  ]
+}

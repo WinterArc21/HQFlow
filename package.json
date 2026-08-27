@@ -50,6 +50,7 @@
     "build:node": "tsup",
     "build:web": "vite build",
     "build:export": "vite build --config vite.export.config.ts",
+    "build:landing": "vite build --config vite.landing.config.ts",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

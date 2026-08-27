@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "node -e \"\"",
-  "buildCommand": "node -e \"\"",
-  "outputDirectory": "landing",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build:landing",
+  "outputDirectory": "dist/landing",
   "cleanUrls": true
 }
