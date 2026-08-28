@@ -4,8 +4,8 @@ HQFlow is a local-first web app that renders your coding agent's understanding o
 your codebase as an interactive workflow canvas. You run it inside your own repository; your
 existing agent (Cursor, Claude Code, Codex, or similar) reads `.codehq/SKILL.md`,
 inspects your real source code, and writes structured workflow JSON into `.codehq/`.
-HQFlow validates those files, watches them, and renders them in your browser as you
-work. **It contains no LLM of its own and never uploads your code anywhere** — everything runs
+HQFlow watches those files and renders them in your browser as you work. **It contains no LLM
+of its own and never uploads your code anywhere** — everything runs
 on `localhost`.
 
 ## See HQFlow in action
@@ -44,15 +44,8 @@ you run `hqflow open`
   agent writes .codehq/workflows/checkout.json
         |
         v
-  HQFlow validates it, writes diagnostics.json
-        |
-        v
   the board updates live, in your browser, no refresh
 ```
-
-If the agent writes something invalid, `.codehq/diagnostics.json` explains exactly what
-is wrong and how to fix it, and the board keeps showing the last valid version of the workflow
-in the meantime — it never blanks out.
 
 ## Quickstart
 
@@ -65,8 +58,7 @@ Then paste this into your coding agent:
 
 > Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
 > `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
-> email, and write the result to `.codehq/workflows/checkout.json`. Then run
-> `hqflow validate` and fix anything it flags.
+> email, and write the result to `.codehq/workflows/checkout.json`.
 
 ## Commands
 
@@ -94,9 +86,9 @@ Starts the local server and opens the workflow canvas in your browser.
 
 Stop it with `Ctrl+C`.
 
-### `hqflow validate [--root <path>] [--json]`
+### Automation and debugging: `hqflow validate [--root <path>] [--json]`
 
-Validates everything under `.codehq/`, writes the result to
+Runs HQFlow's checks without starting the browser, writes the result to
 `.codehq/diagnostics.json`, and prints it. Exits non-zero if there are any errors.
 
 - `--root <path>` — repository root, same resolution rules as `open`.

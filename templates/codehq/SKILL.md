@@ -40,8 +40,7 @@ than one that is exhaustive and speculative.
 
 > "Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
 > `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
-> email, and write the result to `.codehq/workflows/checkout.json`. Then run
-> `hqflow validate` and fix anything it flags."
+> email, and write the result to `.codehq/workflows/checkout.json`."
 
 ## Workflow authoring loop
 

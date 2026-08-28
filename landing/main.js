@@ -269,8 +269,8 @@ function initSpine() {
    ========================================================================== */
 
 const TOUR_INSTRUCTIONS = {
-  details: "Click “Validate Workflow” to inspect the real sources, edge cases, inputs, and outputs.",
-  trace: "Hover “Watch & Preserve State.” HQFlow strengthens its full path and quiets everything else.",
+  details: "Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.",
+  trace: "Hover “Agent Maps Code.” HQFlow strengthens its visible path and quiets everything else.",
   arrange: "Drag a card to reshape the flow. Then drag the dot on a solid edge to bend or snap it.",
   export: "Export the complete diagram as a PNG, or take an interactive HTML snapshot offline.",
 };

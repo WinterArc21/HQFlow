@@ -13,7 +13,7 @@
     {
       "id": "initialize-workspace",
       "name": "Initialize Workspace",
-      "purpose": "Scaffolds the .codehq contract, agent skill, diagnostics file, and workflows directory.",
+      "purpose": "Scaffolds the .codehq contract, agent skill, and workflows directory.",
       "category": "entry",
       "sources": [
         {
@@ -107,85 +107,9 @@
       }
     },
     {
-      "id": "validate-workflow",
-      "name": "Validate Workflow",
-      "purpose": "Parses workflow JSON, checks its strict schema, and applies semantic graph rules.",
-      "category": "decision",
-      "sources": [
-        {
-          "file": "src/core/load.ts",
-          "symbol": "loadHQ",
-          "line": 175
-        },
-        {
-          "file": "src/schema/validate.ts",
-          "symbol": "parseWorkflow",
-          "line": 107
-        }
-      ],
-      "inputs": [
-        {
-          "name": "Workflow JSON"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Validated workflow"
-        },
-        {
-          "name": "Diagnostics"
-        }
-      ],
-      "edgeCases": [
-        {
-          "name": "Unknown fields or broken connections",
-          "handling": "Reports precise errors and keeps the invalid map out of live state."
-        }
-      ],
-      "tests": [
-        {
-          "file": "tests/unit/schema/workflow.test.ts"
-        }
-      ]
-    },
-    {
-      "id": "check-source-references",
-      "name": "Check Source References",
-      "purpose": "Checks that every referenced source and test file exists inside the repository.",
-      "category": "decision",
-      "sources": [
-        {
-          "file": "src/core/source-check.ts",
-          "symbol": "computeWorkflowSourceChecks",
-          "line": 83
-        }
-      ],
-      "inputs": [
-        {
-          "name": "Validated workflow"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Source status"
-        }
-      ],
-      "edgeCases": [
-        {
-          "name": "Referenced file is missing",
-          "handling": "Adds a warning without rejecting an otherwise valid workflow."
-        }
-      ],
-      "tests": [
-        {
-          "file": "tests/unit/core/source-check.test.ts"
-        }
-      ]
-    },
-    {
-      "id": "watch-and-preserve",
-      "name": "Watch & Preserve State",
-      "purpose": "Watches .codehq changes and keeps the last valid map visible during invalid edits.",
+      "id": "detect-workflow-changes",
+      "name": "Detect Workflow Changes",
+      "purpose": "Watches .codehq and refreshes the local project snapshot after each workflow change.",
       "category": "data",
       "sources": [
         {
@@ -201,10 +125,7 @@
       ],
       "inputs": [
         {
-          "name": "Validated workflow"
-        },
-        {
-          "name": "Source status"
+          "name": "Workflow JSON"
         }
       ],
       "outputs": [
@@ -212,14 +133,8 @@
           "name": "CodeHQSnapshot"
         }
       ],
-      "edgeCases": [
-        {
-          "name": "A live edit becomes invalid",
-          "handling": "Marks the cached workflow stale and continues to serve its last valid version."
-        }
-      ],
       "details": {
-        "implementation": "File changes are debounced before a guarded reload rebuilds diagnostics and notifies subscribers."
+        "implementation": "File changes are debounced before a guarded reload refreshes the snapshot and notifies subscribers."
       }
     },
     {
@@ -327,18 +242,6 @@
       ]
     },
     {
-      "id": "outcome-fix-diagnostics",
-      "name": "Actionable Diagnostics",
-      "purpose": "The agent gets exact errors and can repair the workflow without blanking the canvas.",
-      "category": "output",
-      "sources": [
-        {
-          "file": "src/core/diagnostics.ts",
-          "symbol": "writeDiagnostics"
-        }
-      ]
-    },
-    {
       "id": "outcome-share-artifact",
       "name": "PNG or Interactive HTML",
       "purpose": "A portable architecture review ready for documents, teammates, or offline use.",
@@ -362,26 +265,10 @@
     },
     {
       "from": "agent-maps-code",
-      "to": "validate-workflow"
+      "to": "detect-workflow-changes"
     },
     {
-      "from": "validate-workflow",
-      "to": "check-source-references",
-      "type": "success"
-    },
-    {
-      "from": "validate-workflow",
-      "to": "outcome-fix-diagnostics",
-      "type": "failure",
-      "label": "invalid map",
-      "condition": "Schema or semantic validation fails."
-    },
-    {
-      "from": "check-source-references",
-      "to": "watch-and-preserve"
-    },
-    {
-      "from": "watch-and-preserve",
+      "from": "detect-workflow-changes",
       "to": "stream-live-snapshot",
       "type": "async",
       "label": "snapshot"

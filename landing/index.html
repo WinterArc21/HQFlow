@@ -113,7 +113,7 @@
     <section class="section" id="loop">
       <header class="section-head">
         <h2 class="section-title reveal">One loop, three moves.</h2>
-        <p class="section-lede reveal">Your agent writes. HQFlow validates and draws. You read the result and ask for the next workflow.</p>
+        <p class="section-lede reveal">Your agent writes. HQFlow watches and draws. You read the result and ask for the next workflow.</p>
       </header>
 
       <div class="cycle">
@@ -129,7 +129,6 @@
             <pre class="mini" aria-label="Scaffolded files">.codehq/
 ├── project.json
 ├── SKILL.md          agent contract
-├── diagnostics.json  repair loop
 └── workflows/</pre>
           </article>
 
@@ -143,10 +142,10 @@
               <p>Your agent traces real code paths and writes workflow JSON: steps, sources, edge cases, tests.</p>
             </div>
             <pre class="mini" aria-label="Workflow excerpt">{
-  "id": "check-quota",
-  "category": "decision",
-  "sources": [{ "file": "lib/validation.ts",
-               "symbol": "hasRemainingQuota" }]
+  "id": "create-order",
+  "category": "logic",
+  "sources": [{ "file": "app/api/checkout/route.ts",
+               "symbol": "POST" }]
 }</pre>
           </article>
 
@@ -154,12 +153,12 @@
             <span class="sp-node" data-sp="loop-3" aria-hidden="true"></span>
             <div class="station-copy">
               <h3>Observe</h3>
-              <p>HQFlow validates every file, watches for changes, and re-renders the canvas live. Invalid files become precise diagnostics, never a blank board.</p>
+              <p>HQFlow watches workflow files and re-renders the canvas live as your agent maps more of the system.</p>
             </div>
-            <pre class="mini" aria-label="Diagnostics excerpt">issues[0]: error
-  connections[3].to  step "send-receipt"
-  does not exist.
-  hint: point to an existing step id.</pre>
+            <pre class="mini" aria-label="Live canvas update">workflow changed
+  checkout.json
+  6 steps · 7 connections
+  canvas updated</pre>
             <span class="sp-anchor" data-sp="loop-out" aria-hidden="true"></span>
           </article>
         </div>
@@ -196,7 +195,7 @@
         <div class="tour-stage">
           <div class="tour-instruction" id="tourInstruction" role="status">
             <span>Try it</span>
-            <strong>Click “Validate Workflow” to inspect the real sources, edge cases, inputs, and outputs.</strong>
+            <strong>Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.</strong>
           </div>
           <iframe
             class="tour-frame"
@@ -229,7 +228,7 @@
 
         <footer class="tour-foot">
           <span><span class="live-dot" aria-hidden="true"></span> Real production canvas</span>
-          <span>9 stages · 2 outcomes · local data only</span>
+          <span>7 stages · 1 outcome · local data only</span>
         </footer>
       </div>
 
@@ -255,13 +254,13 @@
         </article>
         <article class="tap reveal">
           <span class="sp-node" data-sp="prin-3" aria-hidden="true"></span>
-          <h3>Agent-proof schema</h3>
-          <p>Strict Zod schemas reject invented fields, especially visual ones. Layout, colour and typography are computed by HQFlow, never authored by a model.</p>
+          <h3>Evidence attached</h3>
+          <p>Steps carry their real source files, symbols, inputs, outputs, edge cases and tests. The map stays connected to the code it explains.</p>
         </article>
         <article class="tap reveal">
           <span class="sp-node" data-sp="prin-4" aria-hidden="true"></span>
-          <h3>Last-valid-state</h3>
-          <p>A half-written file never blanks the board. The last valid map stays on screen while diagnostics guide the repair.</p>
+          <h3>Built for review</h3>
+          <p>Open details, trace paths, rearrange the canvas and export the result. HQFlow turns an agent's map into something people can inspect together.</p>
         </article>
       </div>
     </section>
@@ -277,7 +276,6 @@
         <div class="cmd cmd-lg reveal" role="group" aria-label="Getting started commands">
           <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow init</code><span class="cmd-comment">scaffold .codehq/</span></div>
           <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow open</code><span class="cmd-comment">start the local canvas</span></div>
-          <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow validate</code><span class="cmd-comment">check what your agent wrote</span></div>
           <button class="cmd-copy" type="button" data-copy aria-label="Copy commands">
             <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 2.5h7A1.5 1.5 0 0 1 13.5 4v7M3.5 5H11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
             <span>copy</span>
