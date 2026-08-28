@@ -1,194 +1,21 @@
 /* ==========================================================================
    HQFlow landing page runtime
 
-   Three pieces:
-     1. the hero preview, rendered from workflow data
-     2. the feature walkthrough around the embedded production canvas
-     3. the spine, one continuous line connecting the whole page
+   Two pieces:
+     1. the feature walkthrough around the embedded production canvas
+     2. the spine, one continuous line connecting the whole page
    ========================================================================== */
 
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const NS = "http://www.w3.org/2000/svg";
 
-/* ==========================================================================
-   DATA
-   ========================================================================== */
+function initLayout() {
+  const canvas = document.getElementById("canvas");
+  const hero = document.querySelector(".hero");
+  if (!canvas || !hero) return;
 
-const CAT_VAR = {
-  entry: "var(--blue)", decision: "var(--amber)", logic: "var(--ink-3)",
-  data: "var(--green)", external: "var(--violet)", output: "var(--green)",
-};
-
-const STEPS = [
-  {
-    id: "receive-request", idx: "01", name: "Receive Request", cat: "entry",
-    x: 4, y: 14, io: "url → GenerateRequestBody",
-    purpose: "Accepts the website URL, optional reference images, and tone setting.",
-    sources: [{ file: "app/api/generate/route.ts", symbol: "POST", line: "14-39" }],
-    inputs: [], outputs: [{ name: "GenerateRequestBody" }], edgeCases: [], tests: [],
-  },
-  {
-    id: "validate-request", idx: "02", name: "Validate Request", cat: "decision",
-    x: 28, y: 14, io: "request → validated",
-    purpose: "Checks the URL and reference images, and normalizes the tone.",
-    sources: [{ file: "lib/validation.ts", symbol: "validateGenerateRequest" }],
-    inputs: [{ name: "GenerateRequestBody" }], outputs: [{ name: "ValidatedGenerateRequest" }],
-    edgeCases: [
-      { name: "Malformed or unreachable URL", handling: "Returns a 400 with an explanatory error message." },
-      { name: "Too many reference images", handling: "Returns a 400 rejecting the request." },
-    ],
-    tests: [
-      { symbol: "accepts a valid generation request", file: "tests/unit/lib/validation.test.ts" },
-      { symbol: "rejects a malformed URL", file: "tests/unit/lib/validation.test.ts" },
-    ],
-  },
-  {
-    id: "check-quota", idx: "03", name: "Check Quota", cat: "decision",
-    x: 52, y: 14, io: "account → allow / 429",
-    purpose: "Confirms the account has not exceeded its monthly generation quota.",
-    sources: [{ file: "lib/validation.ts", symbol: "hasRemainingQuota" }],
-    inputs: [], outputs: [],
-    edgeCases: [{ name: "Monthly quota exceeded", handling: "Returns a 429." }],
-    tests: [],
-  },
-  {
-    id: "scrape-website", idx: "04", name: "Scrape Website", cat: "logic",
-    x: 76, y: 14, io: "request → ScrapedWebsite",
-    purpose: "Fetches the submitted page and extracts its title, description, body text, and images.",
-    sources: [{ file: "lib/scraper.ts", symbol: "scrapeWebsite" }],
-    inputs: [{ name: "ValidatedGenerateRequest" }], outputs: [{ name: "ScrapedWebsite" }],
-    edgeCases: [{ name: "Website unreachable or error status", handling: "Returns a 502 without persisting a generation." }],
-    tests: [{ symbol: "extracts the title and description", file: "tests/unit/lib/scraper.test.ts" }],
-  },
-  {
-    id: "understand-product", idx: "05", name: "Understand Product", cat: "logic",
-    x: 76, y: 61, io: "website → product model",
-    purpose: "Converts the scraped page into a structured product model: name, tagline, summary, hero image, and keywords.",
-    sources: [{ file: "lib/product-model.ts", symbol: "buildProductContext" }],
-    inputs: [{ name: "ScrapedWebsite" }], outputs: [{ name: "ProductContext" }],
-    edgeCases: [], tests: [],
-    impl: "Ranks the most frequent non-trivial words in the body text as keywords, and assumes the first scraped image is representative of the product.",
-    assumptions: ["The first image found on the page is a reasonable hero image."],
-  },
-  {
-    id: "generate-story", idx: "06", name: "Generate Story", cat: "logic",
-    x: 52, y: 61, io: "ProductContext → StoryPlan",
-    purpose: "Builds a short, tone-appropriate beat sequence (hook, problem, payoff) from the product context.",
-    sources: [{ file: "lib/story.ts", symbol: "generateStoryPlan" }],
-    inputs: [{ name: "ProductContext" }], outputs: [{ name: "StoryPlan" }],
-    edgeCases: [], tests: [],
-  },
-  {
-    id: "save-result", idx: "07", name: "Save Result", cat: "output",
-    x: 28, y: 61, io: "StoryPlan → 200 / error",
-    purpose: "Persists the generation and returns it to the caller, or returns an error response for any failed step above.",
-    sources: [
-      { file: "lib/persistence.ts", symbol: "saveGeneration" },
-      { file: "app/api/generate/route.ts", symbol: "POST" },
-    ],
-    inputs: [{ name: "StoryPlan" }], outputs: [],
-    edgeCases: [], tests: [{ symbol: "returns the generated story plan", file: "tests/integration/api/generate.test.ts" }],
-  },
-];
-
-function nodeMarkup(s) {
-  return `
-    <span class="node-head">
-      <span class="node-idx">${s.idx}</span>
-      <span class="node-name">${s.name}</span>
-      <span class="node-meta">${s.sources.length} src</span>
-    </span>
-    <span class="node-sub">${s.purpose ?? s.io}</span>`;
-}
-
-/* ==========================================================================
-   1. HERO PREVIEW
-   The first four steps of the same workflow, same node component, no
-   interaction. It is a real preview of the product, not a picture of one.
-   ========================================================================== */
-
-const HERO_LAYOUT = [
-  { id: "receive-request", x: 2, y: 3 },
-  { id: "validate-request", x: 50, y: 24 },
-  { id: "check-quota", x: 6, y: 46 },
-  { id: "scrape-website", x: 52, y: 69 },
-];
-
-function initHeroGraph() {
-  const wrap = document.getElementById("heroGraph");
-  const svg = document.getElementById("heroEdges");
-  const nodesEl = document.getElementById("heroNodes");
-  if (!wrap || !svg || !nodesEl) return;
-
-  const els = new Map();
-  for (const spot of HERO_LAYOUT) {
-    const s = STEPS.find((x) => x.id === spot.id);
-    if (!s) continue;
-    const el = document.createElement("div");
-    el.className = "node node-mini";
-    el.style.left = spot.x + "%";
-    el.style.top = spot.y + "%";
-    el.style.setProperty("--cat", CAT_VAR[s.cat]);
-    el.innerHTML = nodeMarkup(s);
-    nodesEl.appendChild(el);
-    els.set(s.id, el);
-  }
-
-  const draw = () => {
-    const w = nodesEl.clientWidth, h = nodesEl.clientHeight;
-    if (!w || !h) return;
-    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.replaceChildren();
-
-    const defs = document.createElementNS(NS, "defs");
-    defs.innerHTML = `
-      <marker id="hero-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-        <path d="M0 0 L8 4 L0 8 z" fill="oklch(0.74 0 0)"/>
-      </marker>
-      <marker id="hero-arr-r" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-        <path d="M0 0 L8 4 L0 8 z" fill="oklch(0.545 0.115 38)"/>
-      </marker>`;
-    svg.appendChild(defs);
-
-    for (let i = 0; i < HERO_LAYOUT.length - 1; i += 1) {
-      const a = els.get(HERO_LAYOUT[i].id), b = els.get(HERO_LAYOUT[i + 1].id);
-      if (!a || !b) continue;
-      const p0 = [a.offsetLeft + a.offsetWidth / 2, a.offsetTop + a.offsetHeight];
-      const p1 = [b.offsetLeft + b.offsetWidth / 2, b.offsetTop];
-      const dy = Math.max(22, (p1[1] - p0[1]) * 0.6);
-      const path = document.createElementNS(NS, "path");
-      path.setAttribute("d", `M ${p0[0]} ${p0[1]} C ${p0[0]} ${p0[1] + dy}, ${p1[0]} ${p1[1] - dy}, ${p1[0]} ${p1[1]}`);
-      path.setAttribute("class", "edge");
-      path.setAttribute("marker-end", "url(#hero-arr)");
-      svg.appendChild(path);
-    }
-
-    /* the real failure edge off Validate Request, heading out of frame */
-    const v = els.get("validate-request");
-    if (v) {
-      const p0 = [v.offsetLeft + v.offsetWidth * 0.82, v.offsetTop + v.offsetHeight];
-      const ex = Math.min(w - 8, p0[0] + 64), ey = p0[1] + h * 0.2;
-      const fail = document.createElementNS(NS, "path");
-      fail.setAttribute("d", `M ${p0[0]} ${p0[1]} C ${p0[0]} ${p0[1] + 30}, ${ex} ${ey - 34}, ${ex} ${ey}`);
-      fail.setAttribute("class", "edge is-failure");
-      fail.setAttribute("marker-end", "url(#hero-arr-r)");
-      svg.appendChild(fail);
-      const t = document.createElementNS(NS, "text");
-      t.setAttribute("x", String(ex + 2));
-      t.setAttribute("y", String(ey - 42));
-      t.setAttribute("text-anchor", "end");
-      t.setAttribute("class", "edge-label is-failure");
-      t.textContent = "rejected";
-      svg.appendChild(t);
-    }
-  };
-
-  draw();
-  let raf = 0;
-  new ResizeObserver(() => {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(draw);
-  }).observe(nodesEl);
+  document.body.classList.add("layout-a");
+  hero.after(canvas);
 }
 
 /* ==========================================================================
@@ -202,6 +29,7 @@ function initSpine() {
   const main = document.querySelector("main");
   const svg = document.getElementById("spine");
   if (!main || !svg) return;
+  const productFirst = document.body.classList.contains("layout-a");
 
   let M = null;
   const box = (name) => {
@@ -265,8 +93,15 @@ function initSpine() {
       return `M ${from.cx} ${from.bottom} C ${from.cx} ${c1y}, ${to.cx} ${c2y}, ${to.cx} ${to.y}`;
     };
 
-    /* hero into the fork */
-    if (why3) push("why", `M ${railX} ${origin.bottom + 6} V ${why3.cy}`);
+    /* Product-first variants enter the playable canvas before the argument. */
+    if (productFirst && frame && why3) {
+      push("canvas", elbowRight(railX, origin.bottom + 6, frame.y + 46, frame.x - 4), "", true, true);
+      push("canvas", elbowLeft(frame.x - 3, frame.bottom - 46, railX, frame.bottom + 34));
+      push("why", `M ${railX} ${frame.bottom + 34} V ${why3.cy}`);
+    } else if (why3) {
+      /* Default layout enters the argument first. */
+      push("why", `M ${railX} ${origin.bottom + 6} V ${why3.cy}`);
+    }
 
     /* two branches peel off and dead-end, the trunk continues.
        when the layout is too narrow to fit a branch, the red marker on the
@@ -319,14 +154,15 @@ function initSpine() {
 
     /* the line enters the canvas frame and the workflow graph continues it,
        then it picks back up on the way out */
-    if (l3 && frame && joinY != null) {
+    if (!productFirst && l3 && frame && joinY != null) {
       push("canvas", elbowRight(railX, joinY, frame.y + 46, frame.x - 4), "", true, true);
       push("canvas", elbowLeft(frame.x - 3, frame.bottom - 46, railX, frame.bottom + 34));
     }
 
     /* the bus, with a tap per principle */
-    if (frame && p1 && p4) {
-      push("principles", `M ${railX} ${frame.bottom + 34} V ${p4.cy}`);
+    if (frame && p1 && p4 && joinY != null) {
+      const principlesStart = productFirst ? joinY : frame.bottom + 34;
+      push("principles", `M ${railX} ${principlesStart} V ${p4.cy}`);
       for (const n of ["prin-1", "prin-2", "prin-3", "prin-4"]) {
         const t = box(n);
         if (t) push("principles", `M ${t.right + 3} ${t.cy} H ${contentX - 10}`);
@@ -635,7 +471,7 @@ function initUI() {
 }
 
 /* ---- boot ---- */
-initHeroGraph();
+initLayout();
 initWalkthrough();
 initUI();
 initSpine();

@@ -25,14 +25,6 @@ function LandingDemo() {
   return (
     <>
       <main className={styles.app}>
-        <header className={styles.topbar}>
-          <div className={styles.brand}>
-            <span className={styles.mark} aria-hidden="true">H</span>
-            <strong>HQFlow</strong>
-            <span className={styles.repo}>hqflow / how-hqflow-works</span>
-          </div>
-          <span className={styles.live}><span aria-hidden="true" /> playable demo</span>
-        </header>
         <div className={styles.canvas}>
           <WorkflowCanvas workflow={workflow} sourceChecks={{}} />
         </div>

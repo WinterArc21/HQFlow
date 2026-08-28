@@ -152,7 +152,7 @@ main { position: relative; }
 .sp-text { fill: var(--ink-3); stroke: var(--paper); stroke-width: 5px; paint-order: stroke; font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 
 .hero, .section { position: relative; z-index: 1; }
-.section { padding-block: var(--section-y); padding-left: var(--rail-gap); }
+.section { padding-block: var(--section-y); padding-left: var(--rail-gap); scroll-margin-top: calc(var(--head-h) + 24px); }
 
 .sp-node { position: absolute; z-index: 2; left: var(--sp-x); width: 13px; height: 13px; border: 1px solid var(--wire); border-radius: var(--r-1); background: white; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
 .sp-node::after { content: ""; position: absolute; inset: 3px; border-radius: 1px; background: var(--node-c, var(--line-strong)); }
@@ -190,10 +190,10 @@ main { position: relative; }
 .hero-sub { max-width: 44ch; color: var(--ink-2); font-size: 17.5px; line-height: 1.6; }
 .hero-cta { margin-top: 30px; }
 
-.hero-graph { position: relative; width: 100%; aspect-ratio: 10 / 6.2; }
-.hero-edges, .hero-nodes { position: absolute; inset: 0; width: 100%; height: 100%; }
-.hero-nodes .node { pointer-events: none; }
-.hero-edges .edge-label { stroke: var(--paper); }
+/* A: show the product directly after the hero, then explain it. */
+.layout-a .hero-inner { grid-template-columns: 1fr; }
+.layout-a .hero-lede { max-width: 720px; }
+.layout-a #canvas { padding-top: clamp(38px, 4vw, 58px); }
 
 .cmd { position: relative; display: flex; width: min(100%, 430px); flex-direction: column; padding: 11px 54px 11px 18px; border: 1px solid var(--line-strong); border-radius: var(--r-3); color: var(--ink); background: white; box-shadow: var(--shadow-panel); }
 .cmd-line { display: flex; min-height: 33px; align-items: baseline; gap: 12px; padding-block: 6px; font: 13.5px var(--mono); white-space: nowrap; }
@@ -246,7 +246,7 @@ main { position: relative; }
 .cycle { position: relative; padding-top: 96px; }
 .cycle-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 28px); align-items: stretch; }
 .sp-node.is-hub { left: 50%; top: 0; width: 14px; height: 14px; transform: translateX(-50%); --node-c: var(--ink); border-color: var(--ink); }
-.station { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 28px 22px 20px; border: 1px solid var(--line-strong); border-radius: var(--r-2); background: white; box-shadow: var(--shadow-card); }
+.station { position: relative; display: flex; min-width: 0; flex-direction: column; gap: 14px; padding: 28px 22px 20px; border: 1px solid var(--line-strong); border-radius: var(--r-2); background: white; box-shadow: var(--shadow-card); }
 .station .sp-node { left: 50%; top: 0; transform: translate(-50%, -50%); }
 .sp-anchor { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; pointer-events: none; }
 .station-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -256,30 +256,6 @@ main { position: relative; }
 .station-copy p { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
 .station-copy p em { color: var(--amber-ink); font-style: normal; padding: 1px 5px; border-radius: var(--r-1); background: color-mix(in oklch, var(--amber) 14%, white); }
 .station .mini { margin-top: auto; width: 100%; overflow: auto; padding: 14px 14px; border: 1px solid var(--line); border-radius: var(--r-2); color: var(--ink-2); background: var(--paper-2); box-shadow: none; font-size: 11px; line-height: 1.7; white-space: pre; }
-
-/* The hero preview uses a small rendering of the workflow card and edge grammar. */
-.edge { fill: none; stroke: var(--line-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.edge.is-failure { opacity: .8; stroke: var(--red); stroke-dasharray: 5 5; }
-.edge.is-conditional { opacity: .9; stroke: var(--amber); stroke-dasharray: 5 4; }
-.edge-label { fill: var(--ink-3); stroke: var(--paper); stroke-width: 6px; paint-order: stroke; font: 11px var(--mono); }
-.edge-label.is-failure { fill: var(--red); }
-.edge-label.is-conditional { fill: var(--amber-ink); }
-
-.node { position: absolute; display: flex; width: 20%; min-height: 11.4%; flex-direction: column; gap: 4px; padding: 8px 10px 8px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-2); text-align: left; background: white; box-shadow: var(--shadow-card); transition: transform 220ms var(--ease), box-shadow 220ms var(--ease); }
-.node::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; border-radius: var(--r-2) 0 0 var(--r-2); background: var(--cat, var(--ink-3)); }
-
-.node:hover { z-index: 2; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0, 0, 0, .08), 0 16px 32px -20px rgba(0, 0, 0, .45); }
-.node.is-selected { z-index: 2; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), var(--shadow-card); }
-.node-head { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
-.node-idx, .node-meta { flex: none; color: var(--ink-3); font: 9px var(--mono); }
-.node-name { flex: 1; overflow: hidden; font-size: clamp(9px, .9vw, 11.5px); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.node-sub { overflow: hidden; color: var(--ink-2); font: clamp(7.5px, .85vw, 10.5px) var(--mono); text-overflow: ellipsis; white-space: nowrap; }
-
-
-/* hero preview reuses the node component at a larger, calmer scale */
-.node-mini { width: 42%; min-height: 13%; padding: 9px 12px 9px 15px; }
-.node-mini .node-name { font-size: clamp(10px, .85vw, 12.5px); }
-.node-mini .node-sub { font-size: clamp(8.5px, .7vw, 11px); }
 
 /* ==========================================================================
    PLAYABLE PRODUCT WALKTHROUGH
@@ -372,7 +348,6 @@ main { position: relative; }
   .hero-title .reveal + .reveal { animation-delay: .07s; }
   .hero-sub.reveal { animation-delay: .14s; }
   .hero-cta.reveal { animation-delay: .2s; }
-  .hero-graph.reveal { animation-delay: .16s; }
   main .section .reveal { opacity: 0; translate: 0 14px; transition: opacity .7s var(--ease), translate .7s var(--ease); }
   main .section .reveal.in { opacity: 1; translate: 0; }
 
@@ -406,7 +381,6 @@ main { position: relative; }
 
 @media (max-width: 960px) {
   .hero-inner { grid-template-columns: 1fr; }
-  .hero-graph { max-width: 560px; }
   .cycle-row { grid-template-columns: 1fr; gap: 28px; }
   .sp-node.is-hub { left: var(--sp-x); transform: none; }
   .station .sp-node { left: var(--sp-x); top: 30px; transform: none; }
