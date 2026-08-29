@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
-import { AppShell, TopBar, type CodeHQStatus } from "./components/shell";
+import { AgentPromptDialog, AppShell, TopBar, type CodeHQStatus } from "./components/shell";
 import { WorkflowNavigator } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
@@ -27,6 +27,7 @@ function computeConnectionStatus(
 export function App() {
   const { snapshot, status, error, refetch } = useCodeHQSnapshot();
   const [workflowNavigatorCollapsed, setWorkflowNavigatorCollapsed] = useState(false);
+  const [agentPromptOpen, setAgentPromptOpen] = useState(false);
 
   const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
@@ -85,6 +86,7 @@ export function App() {
             status={connectionStatus}
             {...(connectionStatus === "invalid" ? { errorCount } : {})}
             onOpenSearch={openSearch}
+            {...(selectedRecord !== null ? { onOpenAgentPrompt: () => setAgentPromptOpen(true) } : {})}
           />
         }
         aside={
@@ -125,7 +127,14 @@ export function App() {
       {diagnosticsOpen ? (
         <DiagnosticsPanel diagnostics={snapshot.diagnostics} onClose={closeDiagnostics} onRecheck={handleRecheck} />
       ) : null}
-      <CommandPalette snapshot={snapshot} onRecheck={handleRecheck} />
+      <CommandPalette snapshot={snapshot} onRecheck={handleRecheck} onOpenAgentPrompt={() => setAgentPromptOpen(true)} />
+      {agentPromptOpen && selectedRecord !== null ? (
+        <AgentPromptDialog
+          workflowId={selectedRecord.workflow.id}
+          workflowName={selectedRecord.workflow.name}
+          onClose={() => setAgentPromptOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

@@ -1,7 +1,6 @@
-import { MagnifyingGlass } from "@phosphor-icons/react";
-import { AGENT_PROMPT } from "../../lib/agentPrompt";
+import { ChatTeardropText, MagnifyingGlass } from "@phosphor-icons/react";
 import { searchShortcutLabel } from "../../lib/platform";
-import { CopyButton, Kbd } from "../primitives";
+import { Button, Kbd } from "../primitives";
 import { LocalOnlyBadge } from "./LocalOnlyBadge";
 import { StatusIndicator, type CodeHQStatus } from "./StatusIndicator";
 import styles from "./TopBar.module.css";
@@ -12,9 +11,10 @@ export interface TopBarProps {
   status: CodeHQStatus;
   errorCount?: number;
   onOpenSearch: () => void;
+  onOpenAgentPrompt?: () => void;
 }
 
-export function TopBar({ repositoryName, status, errorCount, onOpenSearch }: TopBarProps) {
+export function TopBar({ repositoryName, status, errorCount, onOpenSearch, onOpenAgentPrompt }: TopBarProps) {
   return (
     <div className={styles.bar}>
       <div className={styles.left}>
@@ -33,7 +33,11 @@ export function TopBar({ repositoryName, status, errorCount, onOpenSearch }: Top
           Search
           <Kbd>{searchShortcutLabel()}</Kbd>
         </button>
-        <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
+        {onOpenAgentPrompt !== undefined ? (
+          <Button variant="secondary" size="sm" icon={<ChatTeardropText size={14} />} onClick={onOpenAgentPrompt}>
+            Refine with agent
+          </Button>
+        ) : null}
         <ThemeToggle />
       </div>
     </div>

@@ -11,6 +11,14 @@ every file you write, watches this directory, and updates the canvas live. If yo
 mistake, it will tell you exactly what is wrong in `.codehq/diagnostics.json` — read that
 file after every change and fix anything you broke.
 
+## Workflow mentions
+
+HQFlow derives each workflow's stable mention directly from its ID. Resolve a mention such as
+`@checkout` to `.codehq/workflows/checkout.json`. The mention adds no new schema field: remove the
+leading `@` and use the remaining ID as the file name. When a user names a workflow this way,
+read that exact file before you update it and preserve its human-written names, notes, and
+corrections.
+
 ## The 16 rules
 
 1. Start from a real user action, route, handler, server action, event consumer, cron task, or system entry point.

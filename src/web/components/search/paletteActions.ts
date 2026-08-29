@@ -13,14 +13,24 @@ export interface PaletteAction {
  * (contract). Each wires to the exact same API functions the rest of the app already uses —
  * nothing here is a placeholder.
  */
-export function buildPaletteActions(onRecheck: () => Promise<void>, onResetLayout?: () => void): PaletteAction[] {
+export function buildPaletteActions(
+  onRecheck: () => Promise<void>,
+  onResetLayout?: () => void,
+  onOpenAgentPrompt?: () => void,
+): PaletteAction[] {
   const actions: PaletteAction[] = [
     {
       id: "action:copy-prompt",
-      label: "Copy agent prompt",
-      detail: "Copies an instruction for your coding agent.",
+      label: onOpenAgentPrompt === undefined ? "Copy agent prompt" : "Refine workflow with agent",
+      detail: onOpenAgentPrompt === undefined
+        ? "Copies an instruction for your coding agent."
+        : "Opens a prompt for the selected workflow.",
       run: async () => {
-        await copyToClipboard(AGENT_PROMPT);
+        if (onOpenAgentPrompt === undefined) {
+          await copyToClipboard(AGENT_PROMPT);
+        } else {
+          onOpenAgentPrompt();
+        }
       },
     },
     {

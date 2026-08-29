@@ -13,13 +13,14 @@ import styles from "./CommandPalette.module.css";
 export interface CommandPaletteProps {
   snapshot: CodeHQSnapshot | null;
   onRecheck: () => Promise<void>;
+  onOpenAgentPrompt?: () => void;
 }
 
 /**
  * Global search / command palette (contract §11). Always mounted so the Ctrl/Cmd+K shortcut
  * works regardless of whether the dialog is currently open; renders nothing until it is.
  */
-export function CommandPalette({ snapshot, onRecheck }: CommandPaletteProps) {
+export function CommandPalette({ snapshot, onRecheck, onOpenAgentPrompt }: CommandPaletteProps) {
   const searchOpen = useCodeHQStore((state) => state.searchOpen);
   const openSearch = useCodeHQStore((state) => state.openSearch);
   const closeSearch = useCodeHQStore((state) => state.closeSearch);
@@ -87,12 +88,21 @@ export function CommandPalette({ snapshot, onRecheck }: CommandPaletteProps) {
     closeSearch();
   }, [closeSearch, resetLayout]);
 
+  const handleOpenAgentPrompt = useCallback(() => {
+    closeSearch();
+    onOpenAgentPrompt?.();
+  }, [closeSearch, onOpenAgentPrompt]);
+
   if (!searchOpen) {
     return null;
   }
 
   const canResetLayout = selectedWorkflowId !== null && snapshot?.workflows.some((record) => record.id === selectedWorkflowId) === true;
-  const actions = buildPaletteActions(onRecheck, canResetLayout ? handleResetLayout : undefined);
+  const actions = buildPaletteActions(
+    onRecheck,
+    canResetLayout ? handleResetLayout : undefined,
+    canResetLayout && onOpenAgentPrompt !== undefined ? handleOpenAgentPrompt : undefined,
+  );
   const groups = snapshot !== null ? buildPaletteGroups(searchQuery, snapshot, actions, handleActivateResult) : [];
 
   let cursor = 0;
