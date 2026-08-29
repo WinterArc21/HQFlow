@@ -61,9 +61,9 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().stepPanRequest).toBeNull();
   });
 
-  it("selecting a workflow clears step selection and expansion", () => {
+  it("restores expansion separately for each selected workflow", () => {
     useCodeHQStore.getState().selectStep("step-1");
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "step-1");
     expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
 
@@ -71,45 +71,85 @@ describe("useCodeHQStore", () => {
 
     expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
     expect(useCodeHQStore.getState().selectedStepId).toBeNull();
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
+
+    useCodeHQStore.getState().selectWorkflow("workflow-b");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
+
+    useCodeHQStore.getState().selectWorkflow("workflow-a");
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
   });
 
   it("toggleStepExpanded toggles a single step id on and off", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "a");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({ a: true });
 
-    useCodeHQStore.getState().toggleStepExpanded("a");
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "a");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
   it("collapseAllSteps clears every expanded step", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    useCodeHQStore.getState().toggleStepExpanded("b");
-    useCodeHQStore.getState().collapseAllSteps();
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "a");
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "b");
+    useCodeHQStore.getState().collapseAllSteps("workflow-a");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
   it("signals a layout reset without changing workflow or step selection", () => {
     useCodeHQStore.getState().selectWorkflow("workflow-a");
     useCodeHQStore.getState().selectStep("step-1");
+    useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 20, y: 30 });
 
     useCodeHQStore.getState().resetLayout();
 
     expect(useCodeHQStore.getState().layoutResetRevision).toBe(1);
     expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
     expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
+    expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toBeUndefined();
   });
 
-  it("persists only theme, under one namespaced localStorage key", () => {
+  it("persists versioned visual state by workflow under the UI storage key", () => {
     useCodeHQStore.getState().setTheme("light");
-    useCodeHQStore.getState().selectWorkflow("some-workflow");
+    useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
+    useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
+    useCodeHQStore.getState().saveCanvasViewport("workflow-a", { x: -90, y: 45, zoom: 1.25 });
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "step-1");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
     expect(raw).not.toBeNull();
-    const parsed: { state: Record<string, unknown> } = JSON.parse(raw as string);
+    const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
+    expect(parsed.version).toBe(3);
     expect(parsed.state.theme).toBe("light");
-    expect(Object.keys(parsed.state)).toEqual(["theme"]);
+    expect(parsed.state.canvasLayouts).toEqual({
+      "workflow-a": {
+        nodePositions: { "step-1": { x: 12, y: 34 } },
+        edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
+        viewport: { x: -90, y: 45, zoom: 1.25 },
+        expandedStepIds: { "step-1": true },
+      },
+    });
+    expect(Object.keys(parsed.state)).toEqual(["theme", "canvasLayouts"]);
+  });
+
+  it("prunes visual state for removed nodes and edges without touching known entries", () => {
+    useCodeHQStore.getState().saveNodePosition("workflow-a", "known", { x: 1, y: 2 });
+    useCodeHQStore.getState().saveNodePosition("workflow-a", "removed", { x: 3, y: 4 });
+    useCodeHQStore.getState().saveEdgeBend("workflow-a", "known-edge", { point: { x: 5, y: 6 }, snap: "source-x" });
+    useCodeHQStore.getState().saveEdgeBend("workflow-a", "removed-edge", { point: { x: 7, y: 8 }, snap: null });
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "removed");
+
+    useCodeHQStore.getState().reconcileCanvasLayout(
+      "workflow-a",
+      new Set(["known"]),
+      new Set(["known-edge"]),
+    );
+
+    expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toMatchObject({
+      nodePositions: { known: { x: 1, y: 2 } },
+      edgeBends: { "known-edge": { point: { x: 5, y: 6 }, snap: "source-x" } },
+      expandedStepIds: {},
+    });
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {

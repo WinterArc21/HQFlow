@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, type RenderResult } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getBezierPath, Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
 import type { WorkflowConnection } from "@schema/workflow";
 import { buildFlowEdges } from "@web/components/canvas/buildFlowElements";
@@ -149,6 +149,22 @@ describe("WorkflowEdge visual grammar", () => {
       expect(path).toMatch(/^M0,0 L18,0 /);
       expect(path).toMatch(/ 63\.25,100 82,100 L100,100$/);
       expect(handle).toHaveAttribute("data-snapped", "false");
+    });
+
+    it("restores a saved bend and reports later bend changes", () => {
+      const onBendChange = vi.fn();
+      const result = renderInteractiveEdge(makeData({
+        savedBend: { point: { x: 40, y: 55 }, snap: null },
+        onBendChange,
+      }));
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toContain(" 40,55 C");
+
+      fireEvent.pointerDown(handle, { pointerId: 1 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 45, clientY: 60 });
+
+      expect(onBendChange).toHaveBeenLastCalledWith({ point: { x: 45, y: 60 }, snap: null });
     });
 
     it("snaps to an orthogonal route that follows both endpoint directions", () => {

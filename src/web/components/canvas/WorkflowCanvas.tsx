@@ -1,5 +1,5 @@
 import "@xyflow/react/dist/style.css";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
 import { toPng } from "html-to-image";
 import type { Workflow } from "@schema/workflow";
@@ -36,6 +36,7 @@ const MINIMAP_NODE_THRESHOLD = 10;
 const IMAGE_PADDING = 120;
 const MIN_IMAGE_SIZE = 800;
 const MAX_IMAGE_SIZE = 4096;
+const NO_EXPANDED_STEPS: Record<string, true> = {};
 
 const NODE_TYPES = { step: StepNode, outcome: OutcomeNode };
 const EDGE_TYPES = { workflow: WorkflowEdge };
@@ -67,10 +68,15 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
-  const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
+  const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[workflow.id]);
+  const expandedStepIds = canvasLayout?.expandedStepIds ?? NO_EXPANDED_STEPS;
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
+  const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
+  const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
+  const saveCanvasViewport = useCodeHQStore((state) => state.saveCanvasViewport);
+  const reconcileCanvasLayout = useCodeHQStore((state) => state.reconcileCanvasLayout);
   const layoutResetRevision = useCodeHQStore((state) => state.layoutResetRevision);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const stepPanRequest = useCodeHQStore((state) => state.stepPanRequest);
@@ -105,12 +111,13 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const onBlurStep = useCallback(() => setFocusedStepId(null), []);
   const handleClearSelection = useCallback(() => selectStep(null), [selectStep]);
 
-  const { containerRef, overflowsRight, overflowsBottom, updateOverflow } = useCanvasFit({
+  const { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow } = useCanvasFit({
     layoutBounds: layout.bounds,
     workflowId: workflow.id,
     workflowRevision,
     reactFlowInstance,
     reducedMotion,
+    ...(canvasLayout?.viewport !== undefined ? { savedViewport: canvasLayout.viewport } : {}),
   });
 
   const { getTabIndex, handleNodeKeyDown, setRovingId, panToNode } = useCanvasKeyboardNav({
@@ -143,7 +150,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         selectedStepId: visualSelectedStepId,
         traceStepIds: tracePath?.stepIds ?? null,
         getTabIndex,
-        onToggleExpand: toggleStepExpanded,
+        onToggleExpand: (stepId) => toggleStepExpanded(workflow.id, stepId),
         onNodeKeyDown: handleNodeKeyDown,
         onHoverStart,
         onHoverEnd,
@@ -168,7 +175,14 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       onBlurStep,
     ],
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(generatedNodes);
+  const initialNodes = useMemo(
+    () => generatedNodes.map((node) => ({
+      ...node,
+      position: canvasLayout?.nodePositions[node.id] ?? node.position,
+    })),
+    [canvasLayout?.nodePositions, generatedNodes],
+  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(initialNodes);
   const previousWorkflowId = useRef(workflow.id);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
@@ -176,20 +190,37 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     previousWorkflowId.current = workflow.id;
     setNodes((current) => {
       const positions = new Map(current.map((node) => [node.id, node.position]));
-      return generatedNodes.map((node) => reset ? node : { ...node, position: positions.get(node.id) ?? node.position });
+      return generatedNodes.map((node) => ({
+        ...node,
+        position: reset
+          ? canvasLayout?.nodePositions[node.id] ?? node.position
+          : positions.get(node.id) ?? canvasLayout?.nodePositions[node.id] ?? node.position,
+      }));
     });
-  }, [generatedNodes, setNodes, workflow.id]);
+  }, [canvasLayout?.nodePositions, generatedNodes, setNodes, workflow.id]);
   useLayoutEffect(() => {
     if (handledLayoutResetRevision.current === layoutResetRevision) {
       return;
     }
     handledLayoutResetRevision.current = layoutResetRevision;
     setNodes((current) => restoreGeneratedNodePositions(current, generatedNodes));
-  }, [generatedNodes, layoutResetRevision, setNodes]);
-  const baseEdges = useMemo(
-    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey),
-    [layout, backEdgeIds, tracePath, bendResetKey],
+    fitToViewport(reducedMotion ? 0 : 400);
+  }, [fitToViewport, generatedNodes, layoutResetRevision, reducedMotion, setNodes]);
+  const handleBendChange = useCallback(
+    (edgeId: string, bend: Parameters<typeof saveEdgeBend>[2]) => saveEdgeBend(workflow.id, edgeId, bend),
+    [saveEdgeBend, workflow.id],
   );
+  const baseEdges = useMemo(
+    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey, canvasLayout?.edgeBends, handleBendChange),
+    [layout, backEdgeIds, tracePath, bendResetKey, canvasLayout?.edgeBends, handleBendChange],
+  );
+  useEffect(() => {
+    reconcileCanvasLayout(
+      workflow.id,
+      new Set(layout.nodes.map((node) => node.id)),
+      new Set(layout.edges.map((edge) => edge.id)),
+    );
+  }, [layout.edges, layout.nodes, reconcileCanvasLayout, workflow.id]);
   const edges = useMemo(() => {
     const nodeBounds = new Map<string, { x: number; y: number; width: number; height: number }>();
     const initialPositions = new Map(
@@ -319,10 +350,14 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         workflow={workflow}
         {...(modifiedAt !== undefined ? { modifiedAt } : {})}
         {...(state !== undefined ? { state } : {})}
-        onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
-        onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
-        onResetLayout={resetLayout}
-        onCollapseAll={collapseAllSteps}
+        onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 }).then(() => {
+          saveCanvasViewport(workflow.id, reactFlowInstance.getViewport());
+        })}
+        onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 }).then(() => {
+          saveCanvasViewport(workflow.id, reactFlowInstance.getViewport());
+        })}
+        onResetLayout={() => resetLayout(workflow.id)}
+        onCollapseAll={() => collapseAllSteps(workflow.id)}
         collapseDisabled={!hasExpandedSteps}
         {...(exportMode === null ? { onExport: handleExport } : {})}
         {...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
@@ -346,6 +381,12 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           minZoom={0.2}
           maxZoom={2}
           onMove={(_event, viewport) => updateOverflow(viewport)}
+          onMoveEnd={(event, viewport) => {
+            if (event !== null) {
+              saveCanvasViewport(workflow.id, viewport);
+            }
+          }}
+          onNodeDragStop={(_event, node) => saveNodePosition(workflow.id, node.id, node.position)}
           onNodeClick={handleNodeClick}
           onNodesChange={onNodesChange}
           onPaneClick={handleClearSelection}

@@ -9,6 +9,7 @@ import { computeIncomingTypes } from "./graph";
 import type { LayoutResult } from "./layout";
 import { effectiveDepthForStep, stepHasMissingSource } from "./nodeContent";
 import type { OutcomeFlowNode, StepFlowNode, WorkflowFlowEdge } from "./types";
+import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export function restoreGeneratedNodePositions<
   NodeType extends { id: string; position: { x: number; y: number } },
@@ -271,6 +272,8 @@ export function buildFlowEdges(
   backEdgeIds: ReadonlySet<string>,
   traceEdgeIds: ReadonlySet<string> | null,
   bendResetKey?: string,
+  savedBends: Record<string, CanvasBend> = {},
+  onBendChange?: (edgeId: string, bend: CanvasBend) => void,
 ): WorkflowFlowEdge[] {
   const nodeById = new Map(layout.nodes.map((node) => [node.id, node] as const));
 
@@ -321,6 +324,8 @@ export function buildFlowEdges(
         dimmed,
         traced,
         ...(bendResetKey !== undefined ? { bendResetKey } : {}),
+        ...(savedBends[edge.id] !== undefined ? { savedBend: savedBends[edge.id] } : {}),
+        ...(onBendChange !== undefined ? { onBendChange: (bend: CanvasBend) => onBendChange(edge.id, bend) } : {}),
       },
     };
   });

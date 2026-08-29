@@ -5,6 +5,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
 import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
+import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
@@ -72,9 +73,11 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * anchor. Distinct from `!dimmed` (which is also true when no trace is active at all) so the
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
-  /** Changes when generated layout is replaced. The edge renderer uses it to discard its
-   * session-only manual bend without storing that bend in workflow or canvas state. */
+  /** Changes when generated layout is replaced. The edge renderer uses it to discard stale
+   * component state and restore the browser-local bend for this workflow. */
   bendResetKey?: string;
+  savedBend?: CanvasBend;
+  onBendChange?: (bend: CanvasBend) => void;
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;

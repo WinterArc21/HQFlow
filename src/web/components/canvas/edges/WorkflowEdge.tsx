@@ -3,6 +3,7 @@ import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
+import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
 import { edgeMarkerId } from "./EdgeMarkers";
 import styles from "./WorkflowEdge.module.css";
 
@@ -13,7 +14,7 @@ const RETURN_EDGE_LIFT = 84;
 const BEND_SNAP_DISTANCE_PX = 30;
 const BEND_ENDPOINT_LEAD = 18;
 
-type BendSnap = "source-x" | "target-x" | null;
+type BendSnap = CanvasBendSnap;
 interface BendState {
   point: { x: number; y: number };
   snap: BendSnap;
@@ -138,7 +139,11 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   }
 
   const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced } = data;
-  const activeBend = bend?.resetKey === data.bendResetKey ? bend : null;
+  const activeBend = bend !== null && bend.resetKey === data.bendResetKey
+    ? bend
+    : data.savedBend === undefined
+      ? null
+      : { ...data.savedBend, resetKey: data.bendResetKey };
   const dragging = draggingForKey === data.bendResetKey;
   const bendable = !retry && !returnEdge && !branch;
   const isRetryLoop = retry;
@@ -261,9 +266,11 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     const nearest = candidates
       .map((candidate) => ({ ...candidate, distance: Math.hypot(point.x - candidate.point.x, point.y - candidate.point.y) }))
       .sort((a, b) => a.distance - b.distance)[0];
-    setBend(nearest !== undefined && nearest.distance <= snapDistance
+    const next: BendState = nearest !== undefined && nearest.distance <= snapDistance
       ? { point: nearest.point, snap: nearest.snap, resetKey: data.bendResetKey }
-      : { point, snap: null, resetKey: data.bendResetKey });
+      : { point, snap: null, resetKey: data.bendResetKey };
+    setBend(next);
+    data.onBendChange?.({ point: next.point, snap: next.snap });
   };
 
   return (

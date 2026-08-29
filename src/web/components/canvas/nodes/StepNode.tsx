@@ -119,7 +119,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
               under the pointer). It keeps its box at all times — `opacity`, never `display` — so
               revealing it can't reflow the header, and it stays reachable and hit-testable for
               keyboard and assistive tech regardless of what the mouse is doing. */}
-          <span className={`${styles.expandToggle} ${expanded ? styles.expandTogglePinned : ""}`}>
+          <span className={`${styles.expandToggle} ${expanded ? styles.expandTogglePinned : ""} nodrag`}>
             <IconButton
               label={expanded ? `Collapse ${step.name}` : `Expand ${step.name} to show code details`}
               icon={expanded ? <CaretUp size={12} /> : <CaretDown size={12} />}
