@@ -64,9 +64,9 @@ Then paste this into your coding agent:
 
 ### `hqflow init [--force]`
 
-Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, an empty
-`workflows/`, and an initial `diagnostics.json`. Also appends `.codehq/.runtime/` to your
-`.gitignore` (creating it if needed, never duplicating the line).
+Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, and an empty
+`workflows/`. It also appends `.codehq/.runtime/` to your `.gitignore` (creating it if needed,
+never duplicating the line).
 
 `workflows/` starts empty. The canvas then shows its guided empty state, where you can copy a
 prompt for your coding agent or recheck the files after the agent creates a workflow.
@@ -86,14 +86,16 @@ Starts the local server and opens the workflow canvas in your browser.
 
 Stop it with `Ctrl+C`.
 
-### Automation and debugging: `hqflow validate [--root <path>] [--json]`
+### Canvas layouts
 
-Runs HQFlow's checks without starting the browser, writes the result to
-`.codehq/diagnostics.json`, and prints it. Exits non-zero if there are any errors.
+HQFlow automatically saves node positions after you move a card and edge bends after you adjust
+a connection. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
+after you close the browser, stop HQFlow, or restart your computer. The file stays local to the
+repository and is ignored by Git.
 
-- `--root <path>` — repository root, same resolution rules as `open`.
-- `--json` — print only the `DiagnosticsReport` as JSON, so an agent (or a script) can parse
-  the result without scraping human-readable text.
+Pan, zoom, and expanded cards describe the current view, so they reset when you reopen HQFlow.
+Use **Reset layout** to delete the saved node positions and edge bends and restore the generated
+layout.
 
 Also available: `--help`, `--version`, `--debug` (or `HQFLOW_DEBUG=1`) for full stack
 traces on error.
@@ -104,10 +106,11 @@ traces on error.
 .codehq/
 ├── project.json          # project id/name and a few display settings
 ├── SKILL.md               # instructions for the agent authoring workflows
-├── diagnostics.json        # written by HQFlow, read by agents
+├── diagnostics.json        # appears only when validation errors need repair
 ├── workflows/
 │   └── <id>.json           # one workflow per file
-└── .runtime/                # gitignored scratch space, ignored by validation
+└── .runtime/                # local, gitignored runtime state
+    └── layout.json           # automatically saved node positions and edge bends
 ```
 
 A workflow is a directed graph of steps an agent has read against the real code — no

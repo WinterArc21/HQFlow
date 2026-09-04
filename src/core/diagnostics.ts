@@ -1,7 +1,8 @@
 /**
- * Builds and atomically persists `.codehq/diagnostics.json` (contract §6).
+ * Builds diagnostics and persists validation failures to `.codehq/diagnostics.json`.
  */
 
+import { promises as fs } from "node:fs";
 import type { DiagnosticsReport, Issue } from "@schema/diagnostics";
 import { pathExists, writeFileAtomic } from "./fs-utils";
 import { codeHQPaths } from "./repository";
@@ -32,15 +33,21 @@ export function buildDiagnostics(issues: Issue[]): DiagnosticsReport {
 }
 
 /**
- * Writes `report` to `.codehq/diagnostics.json`, pretty-printed with a trailing
- * newline, atomically (write-then-rename) so a watching agent never observes a
- * half-written file. A no-op when `.codehq/` does not exist (uninitialized repo).
+ * Writes failed reports to `.codehq/diagnostics.json`, atomically (write-then-rename)
+ * so a watching agent never observes a half-written file. A successful report removes
+ * any prior failure file. A no-op when `.codehq/` does not exist (uninitialized repo).
  */
 export async function writeDiagnostics(root: string, report: DiagnosticsReport): Promise<void> {
   const paths = codeHQPaths(root);
   if (!(await pathExists(paths.dir))) {
     return;
   }
+
+  if (report.valid) {
+    await fs.rm(paths.diagnosticsFile, { force: true });
+    return;
+  }
+
   const contents = `${JSON.stringify(report, null, 2)}\n`;
   await writeFileAtomic(paths.diagnosticsFile, contents);
 }

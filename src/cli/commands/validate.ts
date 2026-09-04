@@ -1,6 +1,6 @@
 /**
- * `hqflow validate` — loads and validates `.codehq/`, writes
- * `diagnostics.json`, and reports the result (contract §9, product brief §E).
+ * `hqflow validate` — loads and validates `.codehq/`, persists failures, and reports
+ * the result (contract §9, product brief §E).
  */
 
 import type { DiagnosticsReport } from "@schema/diagnostics";
@@ -20,7 +20,7 @@ export type ValidateResult =
   | { exitCode: 0 | 1; root: string; kind: "missing-codehq"; message: string }
   | { exitCode: 0 | 1; root: string; kind: "report"; report: DiagnosticsReport; workflowCount: number };
 
-/** Loads, validates, and (when `.codehq/` exists) writes `diagnostics.json`. */
+/** Loads, validates, and synchronizes the error-only `diagnostics.json` file. */
 export async function runValidate(options: ValidateOptions): Promise<ValidateResult> {
   const root = resolveCliRoot(options.root);
   const paths = codeHQPaths(root);

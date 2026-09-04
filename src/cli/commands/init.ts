@@ -6,8 +6,7 @@
 
 import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
-import { buildDiagnostics } from "@core/diagnostics";
-import { pathExists, toRepoRelativePosix, writeFileAtomic } from "@core/fs-utils";
+import { pathExists, toRepoRelativePosix } from "@core/fs-utils";
 import { codeHQPaths } from "@core/repository";
 import { yellow } from "../output";
 import { resolveCliRoot } from "../resolve-root";
@@ -143,9 +142,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   const fixedOutcomes = [projectOutcome, workflowsDirOutcome, skillOutcome];
   const created = fixedOutcomes.filter((o) => o.action !== "unchanged").map((o) => o.displayPath);
   const unchanged = fixedOutcomes.filter((o) => o.action === "unchanged").map((o) => o.displayPath);
-
-  const initialDiagnostics = buildDiagnostics([]);
-  await writeFileAtomic(paths.diagnosticsFile, `${JSON.stringify(initialDiagnostics, null, 2)}\n`);
 
   await ensureGitignoreEntry(root);
 
