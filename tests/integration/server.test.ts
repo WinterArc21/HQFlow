@@ -7,6 +7,7 @@ import { createCodeHQServer, findAvailablePort, type CodeHQServer } from "@serve
 
 let root: string;
 let server: CodeHQServer | null = null;
+const originalWslDistroName = process.env.WSL_DISTRO_NAME;
 
 beforeAll(() => {
   root = mkdtempSync(path.join(tmpdir(), "codehq-server-"));
@@ -51,6 +52,11 @@ afterEach(async () => {
   if (server !== null) {
     await server.close();
     server = null;
+  }
+  if (originalWslDistroName === undefined) {
+    delete process.env.WSL_DISTRO_NAME;
+  } else {
+    process.env.WSL_DISTRO_NAME = originalWslDistroName;
   }
 });
 
@@ -123,6 +129,7 @@ describe("createCodeHQServer — endpoint shapes", () => {
 
 describe("createCodeHQServer — /api/source", () => {
   it("returns metadata only, and never file contents, for a real file", async () => {
+    delete process.env.WSL_DISTRO_NAME;
     const running = await startServer();
     const response = await fetch(`${running.url}/api/source?file=real-source.ts&line=1`);
     expect(response.status).toBe(200);
@@ -131,6 +138,16 @@ describe("createCodeHQServer — /api/source", () => {
     expect(body.editorUrl).toMatch(/^vscode:\/\/file\//);
     expect(body.editorUrl).toContain(":1");
     expect(JSON.stringify(body)).not.toContain("realFunction() {}");
+  });
+
+  it("routes editor links through the current WSL distribution", async () => {
+    process.env.WSL_DISTRO_NAME = "Ubuntu 24.04";
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/source?file=real-source.ts&line=7`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { editorUrl: string };
+    const encodedPath = encodeURI(path.join(root, "real-source.ts").split(path.sep).join("/"));
+    expect(body.editorUrl).toBe(`vscode://vscode-remote/wsl+Ubuntu%2024.04${encodedPath}:7`);
   });
 
   it("rejects a traversal attempt with 400", async () => {
