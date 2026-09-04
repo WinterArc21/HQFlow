@@ -9,6 +9,12 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SourceLookup } from "@schema/wire";
 import { pathExists } from "@core/fs-utils";
+import {
+  deleteWorkflowCanvasLayout,
+  readWorkflowCanvasLayout,
+  workflowCanvasLayoutSchema,
+  writeWorkflowCanvasLayout,
+} from "@core/layout-store";
 import { codeHQPaths } from "@core/repository";
 import { resolveInsideRepository } from "@core/safe-path";
 import type { CodeHQStore } from "@core/store";
@@ -192,6 +198,40 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
       return;
     }
     await reply.send(record);
+  });
+
+  app.get<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    await reply.send({ layout: await readWorkflowCanvasLayout(root, request.params.id) });
+  });
+
+  app.put<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    const parsed = workflowCanvasLayoutSchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid canvas layout.", details: parsed.error.issues });
+      return;
+    }
+    await writeWorkflowCanvasLayout(root, request.params.id, parsed.data);
+    await reply.code(204).send();
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    await deleteWorkflowCanvasLayout(root, request.params.id);
+    await reply.code(204).send();
   });
 
   app.delete<{ Params: { id: string } }>("/api/workflows/:id", async (request, reply) => {

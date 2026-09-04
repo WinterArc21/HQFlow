@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { connectionLabelText } from "../edgeLabel";
@@ -133,6 +133,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const { screenToFlowPosition, getZoom } = useReactFlow();
   const [bend, setBend] = useState<BendState | null>(null);
   const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
+  const pendingBend = useRef<BendState | null>(null);
 
   if (data === undefined) {
     return null;
@@ -270,7 +271,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       ? { point: nearest.point, snap: nearest.snap, resetKey: data.bendResetKey }
       : { point, snap: null, resetKey: data.bendResetKey };
     setBend(next);
-    data.onBendChange?.({ point: next.point, snap: next.snap });
+    pendingBend.current = next;
   };
 
   return (
@@ -318,6 +319,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               event.preventDefault();
               event.stopPropagation();
               event.currentTarget.setPointerCapture?.(event.pointerId);
+              pendingBend.current = null;
               setDraggingForKey(data.bendResetKey);
             }}
             onPointerMove={handleBendMove}
@@ -325,8 +327,16 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               event.stopPropagation();
               event.currentTarget.releasePointerCapture?.(event.pointerId);
               setDraggingForKey(null);
+              const completedBend = pendingBend.current;
+              pendingBend.current = null;
+              if (completedBend !== null) {
+                data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
+              }
             }}
-            onPointerCancel={() => setDraggingForKey(null)}
+            onPointerCancel={() => {
+              pendingBend.current = null;
+              setDraggingForKey(null);
+            }}
           />
         </foreignObject>
       ) : null}

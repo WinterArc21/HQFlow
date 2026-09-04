@@ -53,6 +53,7 @@ afterEach(async () => {
     await server.close();
     server = null;
   }
+  rmSync(path.join(root, ".codehq", ".runtime"), { recursive: true, force: true });
   if (originalWslDistroName === undefined) {
     delete process.env.WSL_DISTRO_NAME;
   } else {
@@ -168,6 +169,52 @@ describe("createCodeHQServer — /api/source", () => {
     const running = await startServer();
     const response = await fetch(`${running.url}/api/source?file=real-source.ts&bogus=1`);
     expect(response.status).toBe(400);
+  });
+});
+
+describe("createCodeHQServer — /api/workflows/:id/layout", () => {
+  const layout = {
+    nodePositions: { "step-1": { x: 12, y: 34 } },
+    edgeBends: { "step-1->done#0": { point: { x: 56, y: 78 }, snap: null } },
+    viewport: { x: -90, y: 45, zoom: 1.25 },
+    expandedStepIds: { "step-1": true },
+  };
+
+  it("writes, reads, and deletes the complete layout", async () => {
+    const running = await startServer();
+    const endpoint = `${running.url}/api/workflows/sample/layout`;
+
+    const empty = await fetch(endpoint);
+    expect(empty.status).toBe(200);
+    await expect(empty.json()).resolves.toEqual({ layout: null });
+
+    const saved = await fetch(endpoint, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(layout),
+    });
+    expect(saved.status).toBe(204);
+
+    const loaded = await fetch(endpoint);
+    await expect(loaded.json()).resolves.toEqual({ layout });
+
+    const deleted = await fetch(endpoint, { method: "DELETE" });
+    expect(deleted.status).toBe(204);
+    const afterDelete = await fetch(endpoint);
+    await expect(afterDelete.json()).resolves.toEqual({ layout: null });
+  });
+
+  it("rejects malformed layouts and unknown workflows", async () => {
+    const running = await startServer();
+    const malformed = await fetch(`${running.url}/api/workflows/sample/layout`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...layout, viewport: { x: 0, y: 0, zoom: -1 } }),
+    });
+    expect(malformed.status).toBe(400);
+
+    const missing = await fetch(`${running.url}/api/workflows/missing/layout`);
+    expect(missing.status).toBe(404);
   });
 });
 

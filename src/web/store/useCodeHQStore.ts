@@ -1,5 +1,13 @@
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import type {
+  CanvasBend,
+  CanvasPoint,
+  CanvasViewport,
+  WorkflowCanvasLayout,
+} from "@schema/wire";
+
+export type { CanvasBend, CanvasBendSnap, CanvasPoint, CanvasViewport, WorkflowCanvasLayout } from "@schema/wire";
 
 /**
  * UI state only (contract §11) — workflow/step/project data always comes from the server
@@ -13,31 +21,8 @@ export interface StepPanRequest {
   stepId: string;
 }
 
-export interface CanvasPoint {
-  x: number;
-  y: number;
-}
-
-export type CanvasBendSnap = "source-x" | "target-x" | null;
-
-export interface CanvasBend {
-  point: CanvasPoint;
-  snap: CanvasBendSnap;
-}
-
-export interface CanvasViewport extends CanvasPoint {
-  zoom: number;
-}
-
-export interface WorkflowCanvasLayout {
-  nodePositions: Record<string, CanvasPoint>;
-  edgeBends: Record<string, CanvasBend>;
-  viewport?: CanvasViewport;
-  expandedStepIds: Record<string, true>;
-}
-
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 3;
+const PERSIST_VERSION = 4;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -46,7 +31,7 @@ interface CodeHQUiState {
   stepPanRequest: StepPanRequest | null;
   /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
   expandedStepIds: Record<string, true>;
-  /** Browser-local visual state, isolated by workflow id. */
+  /** In-memory visual state loaded from the active repository's local server. */
   canvasLayouts: Record<string, WorkflowCanvasLayout>;
   /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
   layoutResetRevision: number;
@@ -65,6 +50,7 @@ interface CodeHQUiActions {
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   saveCanvasViewport: (workflowId: string, viewport: CanvasViewport) => void;
+  hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
   reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
   resetLayout: (workflowId?: string) => void;
   setSearchQuery: (query: string) => void;
@@ -92,9 +78,8 @@ function getInitialTheme(): Theme {
 }
 
 /**
- * Wraps `window.localStorage` so a failure (quota exceeded, private browsing, storage
- * disabled by policy) can never crash the app — persistence is a convenience, not a
- * requirement, so every failure is swallowed after being reduced to a no-op.
+ * Wraps `window.localStorage` so a theme-preference write failure (quota exceeded, private
+ * browsing, storage disabled by policy) can never crash the app.
  */
 const safeStorage: StateStorage = {
   getItem: (name) => {
@@ -212,6 +197,19 @@ export const useCodeHQStore = create<CodeHQStore>()(
         return { canvasLayouts: { ...state.canvasLayouts, [workflowId]: { ...layout, viewport } } };
       }),
 
+      hydrateCanvasLayout: (workflowId, layout) => set((state) => {
+        const canvasLayouts = { ...state.canvasLayouts };
+        if (layout === null) {
+          delete canvasLayouts[workflowId];
+        } else {
+          canvasLayouts[workflowId] = layout;
+        }
+        return {
+          canvasLayouts,
+          ...(state.selectedWorkflowId === workflowId ? { expandedStepIds: layout?.expandedStepIds ?? {} } : {}),
+        };
+      }),
+
       reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
         const layout = state.canvasLayouts[workflowId];
         if (layout === undefined) {
@@ -266,7 +264,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme, canvasLayouts: state.canvasLayouts }),
+      partialize: (state) => ({ theme: state.theme }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        */
@@ -276,6 +274,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
         }
         const state = { ...(persisted as Record<string, unknown>) };
         delete state.depth;
+        delete state.canvasLayouts;
         return state as unknown as CodeHQUiState;
       },
     },

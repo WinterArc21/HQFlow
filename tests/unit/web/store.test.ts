@@ -108,7 +108,7 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toBeUndefined();
   });
 
-  it("persists versioned visual state by workflow under the UI storage key", () => {
+  it("keeps canvas state in memory while persisting only the theme", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
@@ -119,9 +119,9 @@ describe("useCodeHQStore", () => {
     expect(raw).not.toBeNull();
     const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
-    expect(parsed.version).toBe(3);
+    expect(parsed.version).toBe(4);
     expect(parsed.state.theme).toBe("light");
-    expect(parsed.state.canvasLayouts).toEqual({
+    expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
         nodePositions: { "step-1": { x: 12, y: 34 } },
         edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
@@ -129,7 +129,21 @@ describe("useCodeHQStore", () => {
         expandedStepIds: { "step-1": true },
       },
     });
-    expect(Object.keys(parsed.state)).toEqual(["theme", "canvasLayouts"]);
+    expect(Object.keys(parsed.state)).toEqual(["theme"]);
+  });
+
+  it("hydrates repository-local canvas state for the selected workflow", () => {
+    useCodeHQStore.getState().selectWorkflow("workflow-a");
+    useCodeHQStore.getState().hydrateCanvasLayout("workflow-a", {
+      nodePositions: { "step-1": { x: 12, y: 34 } },
+      edgeBends: {},
+      expandedStepIds: { "step-1": true },
+    });
+
+    expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]?.nodePositions).toEqual({
+      "step-1": { x: 12, y: 34 },
+    });
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
   });
 
   it("prunes visual state for removed nodes and edges without touching known entries", () => {

@@ -1,4 +1,4 @@
-import type { CodeHQSnapshot, SourceLookup } from "./types";
+import type { CodeHQSnapshot, SourceLookup, WorkflowCanvasLayout } from "./types";
 
 /** Base URL is empty: Vite proxies `/api` to the local server (contract §8). */
 const BASE_URL = "";
@@ -70,6 +70,36 @@ export async function fetchWorkflowExport(workflowId: string, hideFilePaths: boo
 /** `GET /api/state` — the primary full snapshot. */
 export function getState(): Promise<CodeHQSnapshot> {
   return requestJson<CodeHQSnapshot>("/api/state");
+}
+
+/** Reads repository-local visual state for one workflow. */
+export async function getWorkflowCanvasLayout(workflowId: string): Promise<WorkflowCanvasLayout | null> {
+  const path = `/api/workflows/${encodeURIComponent(workflowId)}/layout`;
+  const response = await requestJson<{ layout: WorkflowCanvasLayout | null }>(path);
+  return response.layout;
+}
+
+/** Replaces repository-local visual state for one workflow. */
+export async function saveWorkflowCanvasLayout(
+  workflowId: string,
+  layout: WorkflowCanvasLayout,
+  keepalive = false,
+): Promise<void> {
+  const path = `/api/workflows/${encodeURIComponent(workflowId)}/layout`;
+  const response = await safeFetch(path, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(layout),
+    keepalive,
+  });
+  await ensureOk(path, response);
+}
+
+/** Deletes repository-local visual state for one workflow. */
+export async function deleteWorkflowCanvasLayout(workflowId: string, keepalive = false): Promise<void> {
+  const path = `/api/workflows/${encodeURIComponent(workflowId)}/layout`;
+  const response = await safeFetch(path, { method: "DELETE", keepalive });
+  await ensureOk(path, response);
 }
 
 /** `GET /api/source` — metadata only, never file contents (contract §8). */

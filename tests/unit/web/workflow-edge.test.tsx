@@ -163,6 +163,8 @@ describe("WorkflowEdge visual grammar", () => {
 
       fireEvent.pointerDown(handle, { pointerId: 1 });
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 45, clientY: 60 });
+      expect(onBendChange).not.toHaveBeenCalled();
+      fireEvent.pointerUp(handle, { pointerId: 1 });
 
       expect(onBendChange).toHaveBeenLastCalledWith({ point: { x: 45, y: 60 }, snap: null });
     });

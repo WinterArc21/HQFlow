@@ -74,7 +74,7 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
   /** Changes when generated layout is replaced. The edge renderer uses it to discard stale
-   * component state and restore the browser-local bend for this workflow. */
+   * component state and restore the repository-local bend for this workflow. */
   bendResetKey?: string;
   savedBend?: CanvasBend;
   onBendChange?: (bend: CanvasBend) => void;

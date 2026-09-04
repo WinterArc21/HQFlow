@@ -33,6 +33,30 @@ export interface CodeHQSnapshot {
   diagnostics: DiagnosticsReport;
 }
 
+export interface CanvasPoint {
+  x: number;
+  y: number;
+}
+
+export type CanvasBendSnap = "source-x" | "target-x" | null;
+
+export interface CanvasBend {
+  point: CanvasPoint;
+  snap: CanvasBendSnap;
+}
+
+export interface CanvasViewport extends CanvasPoint {
+  zoom: number;
+}
+
+/** Repository-local visual state for one workflow. Never stored in workflow JSON. */
+export interface WorkflowCanvasLayout {
+  nodePositions: Record<string, CanvasPoint>;
+  edgeBends: Record<string, CanvasBend>;
+  viewport?: CanvasViewport | undefined;
+  expandedStepIds: Record<string, true>;
+}
+
 /** `GET /api/source` response shape. It contains metadata only, never file contents. */
 export interface SourceLookup {
   file: string;

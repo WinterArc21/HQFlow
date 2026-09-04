@@ -1,21 +1,37 @@
-import { expect, test, type Page } from "@playwright/test";
+/** Uses a private project copy because this spec writes repository-local runtime state. */
+import { promises as fsp } from "node:fs";
+import path from "node:path";
+import { expect, test } from "@playwright/test";
+import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
+import { PORTS } from "./helpers/paths";
+import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
 const WORKFLOW_ID = "generate-video";
 const NODE_ID = "receive-request";
 const EDGE_ID = "receive-request->validate-request#0";
+let root: string;
+let server: ManagedServer;
 
-async function storedLayout(page: Page): Promise<Record<string, unknown> | undefined> {
-  return page.evaluate((workflowId) => {
-    const raw = localStorage.getItem("codehq.ui");
-    if (raw === null) return undefined;
-    const persisted = JSON.parse(raw) as { state?: { canvasLayouts?: Record<string, Record<string, unknown>> } };
-    return persisted.state?.canvasLayouts?.[workflowId];
-  }, WORKFLOW_ID);
+async function storedLayout(): Promise<Record<string, unknown> | undefined> {
+  const raw = await fsp.readFile(path.join(root, ".codehq", ".runtime", "layout.json"), "utf-8").catch(() => null);
+  if (raw === null) return undefined;
+  const persisted = JSON.parse(raw) as { workflows?: Record<string, Record<string, unknown>> };
+  return persisted.workflows?.[WORKFLOW_ID];
 }
 
-test("persists canvas visuals across reload and resets to the generated layout", async ({ page }) => {
+test.beforeAll(async () => {
+  root = await createTempFixtureCopy("persistent-layout");
+  server = await startCodeHQServer(root, PORTS.persistentLayout);
+});
+
+test.afterAll(async () => {
+  await server.stop();
+  await removeTempDir(root);
+});
+
+test("persists complete canvas visuals across a server restart and resets them", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto(server.url);
   await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
 
   const node = page.locator(`.react-flow__node[data-id="${NODE_ID}"]`);
@@ -26,7 +42,7 @@ test("persists canvas visuals across reload and resets to the generated layout",
   const initialViewportTransform = await viewport.getAttribute("style");
 
   await page.getByRole("button", { name: "Expand Receive Request to show code details" }).click();
-  await expect.poll(() => storedLayout(page)).toMatchObject({ expandedStepIds: { [NODE_ID]: true } });
+  await expect.poll(storedLayout).toMatchObject({ expandedStepIds: { [NODE_ID]: true } });
   await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
 
   const nodeBox = await node.boundingBox();
@@ -52,7 +68,7 @@ test("persists canvas visuals across reload and resets to the generated layout",
   await page.mouse.up();
   await page.getByRole("button", { name: "Zoom in" }).click();
 
-  await expect.poll(() => storedLayout(page)).toMatchObject({
+  await expect.poll(storedLayout).toMatchObject({
     nodePositions: { [NODE_ID]: { x: expect.any(Number), y: expect.any(Number) } },
     edgeBends: { [EDGE_ID]: { point: { x: expect.any(Number), y: expect.any(Number) }, snap: null } },
     viewport: { x: expect.any(Number), y: expect.any(Number), zoom: expect.any(Number) },
@@ -62,7 +78,7 @@ test("persists canvas visuals across reload and resets to the generated layout",
   const persistedNodeTransform = await node.getAttribute("style");
   const persistedEdgePath = await edgePath.getAttribute("d");
   const persistedViewportTransform = await viewport.getAttribute("style");
-  const persistedLayout = await storedLayout(page) as {
+  const persistedLayout = await storedLayout() as {
     edgeBends: Record<string, { point: { x: number; y: number }; snap: null }>;
   };
   const persistedBend = persistedLayout.edgeBends[EDGE_ID]!;
@@ -70,11 +86,14 @@ test("persists canvas visuals across reload and resets to the generated layout",
   expect(persistedEdgePath).not.toBe(initialEdgePath);
   expect(persistedViewportTransform).not.toBe(initialViewportTransform);
 
-  await page.reload();
+  await page.evaluate(() => localStorage.clear());
+  await server.stop();
+  server = await startCodeHQServer(root, PORTS.persistentLayoutRestart);
+  await page.goto(server.url);
   await node.waitFor({ state: "visible", timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
   await expect(node).toHaveAttribute("style", persistedNodeTransform!);
-  await expect.poll(async () => (await storedLayout(page) as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
+  await expect.poll(async () => (await storedLayout() as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
   await expect.poll(async () => (await edgePath.getAttribute("d")) ?? "").toContain(`${persistedBend.point.x},${persistedBend.point.y}`);
   await expect(viewport).toHaveAttribute("style", persistedViewportTransform!);
 
@@ -83,5 +102,5 @@ test("persists canvas visuals across reload and resets to the generated layout",
   await expect(node).toHaveAttribute("style", initialNodeTransform!);
   await expect(edgePath).toHaveAttribute("d", initialEdgePath!);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
-  await expect.poll(() => storedLayout(page)).toBeUndefined();
+  await expect.poll(storedLayout).toBeUndefined();
 });

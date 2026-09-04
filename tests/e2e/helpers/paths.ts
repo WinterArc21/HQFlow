@@ -46,4 +46,6 @@ export const PORTS = {
   empty: 4504,
   cliOpen: 4505,
   canvasGrammar: 4506,
+  persistentLayout: 4507,
+  persistentLayoutRestart: 4508,
 } as const;

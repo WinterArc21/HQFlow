@@ -21,6 +21,7 @@ import { useExportMode } from "../../export-viewer/ExportModeContext";
 import { fetchWorkflowExport } from "../../api/client";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
+import { useCanvasLayoutPersistence } from "./useCanvasLayoutPersistence";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
 import styles from "./WorkflowCanvas.module.css";
@@ -51,6 +52,11 @@ export interface WorkflowCanvasProps {
 
 /** Public entry point: owns the `ReactFlowProvider` so `useReactFlow` is available below it. */
 export function WorkflowCanvas(props: WorkflowCanvasProps) {
+  const exportMode = useExportMode();
+  const layoutReady = useCanvasLayoutPersistence(props.workflow.id, exportMode === null);
+  if (!layoutReady) {
+    return <div className={styles.wrapper} aria-busy="true" aria-label="Loading saved canvas layout" />;
+  }
   return (
     <ReactFlowProvider>
       <WorkflowCanvasInner {...props} />
