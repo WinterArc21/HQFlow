@@ -29,7 +29,7 @@ test.afterAll(async () => {
   await removeTempDir(root);
 });
 
-test("persists complete canvas visuals across a server restart and resets them", async ({ page }) => {
+test("persists geometry across restart while resetting temporary view state", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
   await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
@@ -37,12 +37,12 @@ test("persists complete canvas visuals across a server restart and resets them",
   const node = page.locator(`.react-flow__node[data-id="${NODE_ID}"]`);
   const edgePath = page.locator(`.react-flow__edge[data-id="${EDGE_ID}"] path.react-flow__edge-path`);
   const viewport = page.locator(".react-flow__viewport");
-  const initialNodeTransform = await node.getAttribute("style");
+  const initialNodeTransform = await node.evaluate((element) => (element as HTMLElement).style.transform);
   const initialEdgePath = await edgePath.getAttribute("d");
   const initialViewportTransform = await viewport.getAttribute("style");
 
   await page.getByRole("button", { name: "Expand Receive Request to show code details" }).click();
-  await expect.poll(storedLayout).toMatchObject({ expandedStepIds: { [NODE_ID]: true } });
+  await expect.poll(storedLayout).toBeUndefined();
   await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
 
   const nodeBox = await node.boundingBox();
@@ -71,11 +71,10 @@ test("persists complete canvas visuals across a server restart and resets them",
   await expect.poll(storedLayout).toMatchObject({
     nodePositions: { [NODE_ID]: { x: expect.any(Number), y: expect.any(Number) } },
     edgeBends: { [EDGE_ID]: { point: { x: expect.any(Number), y: expect.any(Number) }, snap: null } },
-    viewport: { x: expect.any(Number), y: expect.any(Number), zoom: expect.any(Number) },
-    expandedStepIds: { [NODE_ID]: true },
   });
+  expect(Object.keys((await storedLayout()) ?? {}).sort()).toEqual(["edgeBends", "nodePositions"]);
 
-  const persistedNodeTransform = await node.getAttribute("style");
+  const persistedNodeTransform = await node.evaluate((element) => (element as HTMLElement).style.transform);
   const persistedEdgePath = await edgePath.getAttribute("d");
   const persistedViewportTransform = await viewport.getAttribute("style");
   const persistedLayout = await storedLayout() as {
@@ -91,15 +90,15 @@ test("persists complete canvas visuals across a server restart and resets them",
   server = await startCodeHQServer(root, PORTS.persistentLayoutRestart);
   await page.goto(server.url);
   await node.waitFor({ state: "visible", timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
-  await expect(node).toHaveAttribute("style", persistedNodeTransform!);
+  await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
+  await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(persistedNodeTransform);
   await expect.poll(async () => (await storedLayout() as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
   await expect.poll(async () => (await edgePath.getAttribute("d")) ?? "").toContain(`${persistedBend.point.x},${persistedBend.point.y}`);
-  await expect(viewport).toHaveAttribute("style", persistedViewportTransform!);
+  await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
 
   await page.getByRole("button", { name: "Reset layout" }).click();
   await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
-  await expect(node).toHaveAttribute("style", initialNodeTransform!);
+  await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(initialNodeTransform);
   await expect(edgePath).toHaveAttribute("d", initialEdgePath!);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
   await expect.poll(storedLayout).toBeUndefined();

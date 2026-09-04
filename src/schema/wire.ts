@@ -45,16 +45,10 @@ export interface CanvasBend {
   snap: CanvasBendSnap;
 }
 
-export interface CanvasViewport extends CanvasPoint {
-  zoom: number;
-}
-
 /** Repository-local visual state for one workflow. Never stored in workflow JSON. */
 export interface WorkflowCanvasLayout {
   nodePositions: Record<string, CanvasPoint>;
   edgeBends: Record<string, CanvasBend>;
-  viewport?: CanvasViewport | undefined;
-  expandedStepIds: Record<string, true>;
 }
 
 /** `GET /api/source` response shape. It contains metadata only, never file contents. */

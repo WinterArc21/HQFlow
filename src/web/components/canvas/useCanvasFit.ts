@@ -28,7 +28,6 @@ export interface UseCanvasFitParams {
   workflowRevision: string;
   reactFlowInstance: Pick<ReactFlowInstance, "setViewport">;
   reducedMotion: boolean;
-  savedViewport?: Pick<Viewport, "x" | "y" | "zoom">;
 }
 
 export interface UseCanvasFitResult {
@@ -40,7 +39,7 @@ export interface UseCanvasFitResult {
 }
 
 export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
-  const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion, savedViewport } = params;
+  const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion } = params;
   const containerRef = useRef<HTMLDivElement>(null);
   // Whether the fitted graph still has more content below the visible stage — a large
   // workflow can be taller than even the minimum legible zoom allows. Drives the "more below"
@@ -95,12 +94,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
   // paints, or the very first frame flashes React Flow's own default viewport (top-left, zoom 1)
   // before snapping to the fitted one.
   useLayoutEffect(() => {
-    if (savedViewport !== undefined) {
-      void reactFlowInstance.setViewport(savedViewport, { duration: 0 });
-      updateOverflow(savedViewport);
-    } else {
-      fitToViewport(reducedMotion ? 0 : 400);
-    }
+    fitToViewport(reducedMotion ? 0 : 400);
     // Re-fit on a new workflow or a valid live workflow-content update (contract §11).
     // Expanding a single step, selecting a step, or a source-check-only update must never
     // re-frame the viewport.
@@ -122,12 +116,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry !== undefined && entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-        if (savedViewport !== undefined) {
-          void reactFlowInstance.setViewport(savedViewport, { duration: 0 });
-          updateOverflow(savedViewport);
-        } else {
-          fitToViewport(0);
-        }
+        fitToViewport(0);
         observer.disconnect();
       }
     });

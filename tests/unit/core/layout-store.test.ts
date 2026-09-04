@@ -14,8 +14,6 @@ let root: string;
 const layout: WorkflowCanvasLayout = {
   nodePositions: { receive: { x: 12, y: 34 } },
   edgeBends: { "receive->save#0": { point: { x: 56, y: 78 }, snap: "source-x" } },
-  viewport: { x: -90, y: 45, zoom: 1.25 },
-  expandedStepIds: { receive: true },
 };
 
 beforeEach(async () => {
@@ -42,11 +40,11 @@ describe("canvas layout store", () => {
   it("serializes concurrent writes for different workflows", async () => {
     await Promise.all([
       writeWorkflowCanvasLayout(root, "workflow-a", layout),
-      writeWorkflowCanvasLayout(root, "workflow-b", { ...layout, expandedStepIds: {} }),
+      writeWorkflowCanvasLayout(root, "workflow-b", { ...layout, edgeBends: {} }),
     ]);
 
     await expect(readWorkflowCanvasLayout(root, "workflow-a")).resolves.toEqual(layout);
-    await expect(readWorkflowCanvasLayout(root, "workflow-b")).resolves.toEqual({ ...layout, expandedStepIds: {} });
+    await expect(readWorkflowCanvasLayout(root, "workflow-b")).resolves.toEqual({ ...layout, edgeBends: {} });
   });
 
   it("deletes only the requested workflow layout", async () => {

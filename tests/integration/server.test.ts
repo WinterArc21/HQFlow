@@ -176,8 +176,6 @@ describe("createCodeHQServer — /api/workflows/:id/layout", () => {
   const layout = {
     nodePositions: { "step-1": { x: 12, y: 34 } },
     edgeBends: { "step-1->done#0": { point: { x: 56, y: 78 }, snap: null } },
-    viewport: { x: -90, y: 45, zoom: 1.25 },
-    expandedStepIds: { "step-1": true },
   };
 
   it("writes, reads, and deletes the complete layout", async () => {
@@ -204,7 +202,7 @@ describe("createCodeHQServer — /api/workflows/:id/layout", () => {
     await expect(afterDelete.json()).resolves.toEqual({ layout: null });
   });
 
-  it("rejects malformed layouts and unknown workflows", async () => {
+  it("rejects temporary view state and unknown workflows", async () => {
     const running = await startServer();
     const malformed = await fetch(`${running.url}/api/workflows/sample/layout`, {
       method: "PUT",

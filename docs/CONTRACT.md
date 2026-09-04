@@ -217,7 +217,7 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
-| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions, edge bends, viewport, and expanded cards. |
+| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions and edge bends. |
 | PUT | `/api/workflows/:id/layout` | Replace the workflow's complete canvas layout. Returns 204. |
 | DELETE | `/api/workflows/:id/layout` | Delete the workflow's saved layout. Returns 204. |
 | DELETE | `/api/workflows/:id` | Delete a valid workflow; returns the refreshed snapshot. |
@@ -371,8 +371,8 @@ src/web/
   App.tsx
   styles/{tokens.css,reset.css,base.css}
   api/{client.ts,events.ts}        # fetch wrappers + SSE hook
-  store/{useCodeHQStore.ts}   # zustand: selectedWorkflowId, selectedStepId, depth,
-                                   # expandedStepIds, searchQuery, diagnosticsOpen, theme
+  store/{useCodeHQStore.ts}        # zustand: selection, temporary expansion, canvas layouts,
+                                   # search, diagnostics, and theme
   components/
     shell/      AppShell, TopBar, StatusIndicator, ThemeToggle, LocalOnlyBadge
     navigator/  WorkflowNavigator, WorkflowListItem

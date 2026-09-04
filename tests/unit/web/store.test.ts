@@ -61,7 +61,7 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().stepPanRequest).toBeNull();
   });
 
-  it("restores expansion separately for each selected workflow", () => {
+  it("clears temporary expansion when the selected workflow changes", () => {
     useCodeHQStore.getState().selectStep("step-1");
     useCodeHQStore.getState().toggleStepExpanded("workflow-a", "step-1");
     expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
@@ -71,13 +71,7 @@ describe("useCodeHQStore", () => {
 
     expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
     expect(useCodeHQStore.getState().selectedStepId).toBeNull();
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
-
-    useCodeHQStore.getState().selectWorkflow("workflow-b");
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-
-    useCodeHQStore.getState().selectWorkflow("workflow-a");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
   });
 
   it("toggleStepExpanded toggles a single step id on and off", () => {
@@ -112,7 +106,6 @@ describe("useCodeHQStore", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
-    useCodeHQStore.getState().saveCanvasViewport("workflow-a", { x: -90, y: 45, zoom: 1.25 });
     useCodeHQStore.getState().toggleStepExpanded("workflow-a", "step-1");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -125,19 +118,18 @@ describe("useCodeHQStore", () => {
       "workflow-a": {
         nodePositions: { "step-1": { x: 12, y: 34 } },
         edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
-        viewport: { x: -90, y: 45, zoom: 1.25 },
-        expandedStepIds: { "step-1": true },
       },
     });
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
     expect(Object.keys(parsed.state)).toEqual(["theme"]);
   });
 
   it("hydrates repository-local canvas state for the selected workflow", () => {
     useCodeHQStore.getState().selectWorkflow("workflow-a");
+    useCodeHQStore.getState().toggleStepExpanded("workflow-a", "step-1");
     useCodeHQStore.getState().hydrateCanvasLayout("workflow-a", {
       nodePositions: { "step-1": { x: 12, y: 34 } },
       edgeBends: {},
-      expandedStepIds: { "step-1": true },
     });
 
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]?.nodePositions).toEqual({
@@ -162,8 +154,8 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toMatchObject({
       nodePositions: { known: { x: 1, y: 2 } },
       edgeBends: { "known-edge": { point: { x: 5, y: 6 }, snap: "source-x" } },
-      expandedStepIds: {},
     });
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {

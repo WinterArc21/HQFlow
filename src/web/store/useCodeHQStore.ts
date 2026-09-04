@@ -3,11 +3,10 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import type {
   CanvasBend,
   CanvasPoint,
-  CanvasViewport,
   WorkflowCanvasLayout,
 } from "@schema/wire";
 
-export type { CanvasBend, CanvasBendSnap, CanvasPoint, CanvasViewport, WorkflowCanvasLayout } from "@schema/wire";
+export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
 
 /**
  * UI state only (contract §11) — workflow/step/project data always comes from the server
@@ -49,7 +48,6 @@ interface CodeHQUiActions {
   collapseAllSteps: (workflowId: string) => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
-  saveCanvasViewport: (workflowId: string, viewport: CanvasViewport) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
   reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
   resetLayout: (workflowId?: string) => void;
@@ -124,12 +122,12 @@ export const useCodeHQStore = create<CodeHQStore>()(
       ...INITIAL_STATE,
 
       selectWorkflow: (workflowId) =>
-        set((state) => ({
+        set({
           selectedWorkflowId: workflowId,
           selectedStepId: null,
           stepPanRequest: null,
-          expandedStepIds: workflowId === null ? {} : state.canvasLayouts[workflowId]?.expandedStepIds ?? {},
-        })),
+          expandedStepIds: {},
+        }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes
@@ -149,31 +147,21 @@ export const useCodeHQStore = create<CodeHQStore>()(
           diagnosticsOpen: false,
         }),
 
-      toggleStepExpanded: (workflowId, stepId) =>
+      toggleStepExpanded: (_workflowId, stepId) =>
         set((state) => {
-          const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {}, expandedStepIds: {} };
-          const next = { ...layout.expandedStepIds };
+          const next = { ...state.expandedStepIds };
           if (next[stepId]) {
             delete next[stepId];
           } else {
             next[stepId] = true;
           }
-          return {
-            expandedStepIds: next,
-            canvasLayouts: { ...state.canvasLayouts, [workflowId]: { ...layout, expandedStepIds: next } },
-          };
+          return { expandedStepIds: next };
         }),
 
-      collapseAllSteps: (workflowId) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {}, expandedStepIds: {} };
-        return {
-          expandedStepIds: {},
-          canvasLayouts: { ...state.canvasLayouts, [workflowId]: { ...layout, expandedStepIds: {} } },
-        };
-      }),
+      collapseAllSteps: (_workflowId) => set({ expandedStepIds: {} }),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {}, expandedStepIds: {} };
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
         return {
           canvasLayouts: {
             ...state.canvasLayouts,
@@ -183,18 +171,13 @@ export const useCodeHQStore = create<CodeHQStore>()(
       }),
 
       saveEdgeBend: (workflowId, edgeId, bend) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {}, expandedStepIds: {} };
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
         return {
           canvasLayouts: {
             ...state.canvasLayouts,
             [workflowId]: { ...layout, edgeBends: { ...layout.edgeBends, [edgeId]: bend } },
           },
         };
-      }),
-
-      saveCanvasViewport: (workflowId, viewport) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {}, expandedStepIds: {} };
-        return { canvasLayouts: { ...state.canvasLayouts, [workflowId]: { ...layout, viewport } } };
       }),
 
       hydrateCanvasLayout: (workflowId, layout) => set((state) => {
@@ -204,24 +187,25 @@ export const useCodeHQStore = create<CodeHQStore>()(
         } else {
           canvasLayouts[workflowId] = layout;
         }
-        return {
-          canvasLayouts,
-          ...(state.selectedWorkflowId === workflowId ? { expandedStepIds: layout?.expandedStepIds ?? {} } : {}),
-        };
+        return { canvasLayouts };
       }),
 
       reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
+        const expandedStepIds = Object.fromEntries(
+          Object.entries(state.expandedStepIds).filter(([id]) => nodeIds.has(id)),
+        ) as Record<string, true>;
         const layout = state.canvasLayouts[workflowId];
         if (layout === undefined) {
-          return state;
+          return Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
+            ? state
+            : { expandedStepIds };
         }
         const nodePositions = Object.fromEntries(Object.entries(layout.nodePositions).filter(([id]) => nodeIds.has(id)));
         const edgeBends = Object.fromEntries(Object.entries(layout.edgeBends).filter(([id]) => edgeIds.has(id)));
-        const expandedStepIds = Object.fromEntries(Object.entries(layout.expandedStepIds).filter(([id]) => nodeIds.has(id))) as Record<string, true>;
         if (
           Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length
           && Object.keys(edgeBends).length === Object.keys(layout.edgeBends).length
-          && Object.keys(expandedStepIds).length === Object.keys(layout.expandedStepIds).length
+          && Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
         ) {
           return state;
         }
@@ -229,7 +213,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           expandedStepIds,
           canvasLayouts: {
             ...state.canvasLayouts,
-            [workflowId]: { ...layout, nodePositions, edgeBends, expandedStepIds },
+            [workflowId]: { nodePositions, edgeBends },
           },
         };
       }),
