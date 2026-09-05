@@ -9,15 +9,6 @@
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const NS = "http://www.w3.org/2000/svg";
 
-function initLayout() {
-  const canvas = document.getElementById("canvas");
-  const hero = document.querySelector(".hero");
-  if (!canvas || !hero) return;
-
-  document.body.classList.add("layout-a");
-  hero.after(canvas);
-}
-
 /* ==========================================================================
    2. THE SPINE
    One line down the page in the canvas notation. It forks where the argument
@@ -29,7 +20,6 @@ function initSpine() {
   const main = document.querySelector("main");
   const svg = document.getElementById("spine");
   if (!main || !svg) return;
-  const productFirst = document.body.classList.contains("layout-a");
 
   let M = null;
   const box = (name) => {
@@ -74,7 +64,6 @@ function initSpine() {
 
     const segs = [];
     const push = (sec, d, cls = "", draw = true, arrow = false) => segs.push({ sec, d, cls, draw, arrow });
-    const text = [];
     const dots = [];
 
     const why1 = box("why-1"), why2 = box("why-2"), why3 = box("why-3");
@@ -93,14 +82,11 @@ function initSpine() {
       return `M ${from.cx} ${from.bottom} C ${from.cx} ${c1y}, ${to.cx} ${c2y}, ${to.cx} ${to.y}`;
     };
 
-    /* Product-first variants enter the playable canvas before the argument. */
-    if (productFirst && frame && why3) {
+    /* The playable canvas follows the hero before the argument continues. */
+    if (frame && why3) {
       push("canvas", elbowRight(railX, origin.bottom + 6, frame.y + 46, frame.x - 4), "", true, true);
       push("canvas", elbowLeft(frame.x - 3, frame.bottom - 46, railX, frame.bottom + 34));
       push("why", `M ${railX} ${frame.bottom + 34} V ${why3.cy}`);
-    } else if (why3) {
-      /* Default layout enters the argument first. */
-      push("why", `M ${railX} ${origin.bottom + 6} V ${why3.cy}`);
     }
 
     /* two branches peel off and dead-end, the trunk continues.
@@ -142,7 +128,7 @@ function initSpine() {
       }
     }
 
-    /* leave through Observe, rejoin the rail, then enter the canvas */
+    /* leave through Observe and rejoin the rail */
     let joinY = null;
     if (hubbed && lOut) {
       joinY = lOut.cy + 36;
@@ -152,16 +138,9 @@ function initSpine() {
       joinY = l3.cy;
     }
 
-    /* the line enters the canvas frame and the workflow graph continues it,
-       then it picks back up on the way out */
-    if (!productFirst && l3 && frame && joinY != null) {
-      push("canvas", elbowRight(railX, joinY, frame.y + 46, frame.x - 4), "", true, true);
-      push("canvas", elbowLeft(frame.x - 3, frame.bottom - 46, railX, frame.bottom + 34));
-    }
-
     /* the bus, with a tap per principle */
     if (frame && p1 && p4 && joinY != null) {
-      const principlesStart = productFirst ? joinY : frame.bottom + 34;
+      const principlesStart = joinY;
       push("principles", `M ${railX} ${principlesStart} V ${p4.cy}`);
       for (const n of ["prin-1", "prin-2", "prin-3", "prin-4"]) {
         const t = box(n);
@@ -211,15 +190,6 @@ function initSpine() {
       el.setAttribute("class", "sp-dot");
       groupFor(c.sec).appendChild(el);
     }
-    for (const t of text) {
-      const el = document.createElementNS(NS, "text");
-      el.setAttribute("x", String(t.x));
-      el.setAttribute("y", String(t.y));
-      el.setAttribute("class", "sp-text");
-      el.textContent = t.s;
-      groupFor(t.sec).appendChild(el);
-    }
-
     return groups;
   };
 
@@ -471,7 +441,6 @@ function initUI() {
 }
 
 /* ---- boot ---- */
-initLayout();
 initWalkthrough();
 initUI();
 initSpine();

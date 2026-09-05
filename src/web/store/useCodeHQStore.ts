@@ -44,8 +44,8 @@ interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
-  toggleStepExpanded: (workflowId: string, stepId: string) => void;
-  collapseAllSteps: (workflowId: string) => void;
+  toggleStepExpanded: (stepId: string) => void;
+  collapseAllSteps: () => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
@@ -147,7 +147,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           diagnosticsOpen: false,
         }),
 
-      toggleStepExpanded: (_workflowId, stepId) =>
+      toggleStepExpanded: (stepId) =>
         set((state) => {
           const next = { ...state.expandedStepIds };
           if (next[stepId]) {
@@ -158,7 +158,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           return { expandedStepIds: next };
         }),
 
-      collapseAllSteps: (_workflowId) => set({ expandedStepIds: {} }),
+      collapseAllSteps: () => set({ expandedStepIds: {} }),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
         const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };

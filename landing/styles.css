@@ -149,8 +149,6 @@ main { position: relative; }
 .sp-path.is-fail { stroke: var(--red); stroke-width: 1.25; stroke-dasharray: 5 5; opacity: .85; }
 .sp-path.is-return { stroke: var(--wire); stroke-width: 1.25; stroke-dasharray: 3 4; opacity: .75; }
 .sp-dot { fill: var(--wire); }
-.sp-text { fill: var(--ink-3); stroke: var(--paper); stroke-width: 5px; paint-order: stroke; font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-
 .hero, .section { position: relative; z-index: 1; }
 .section { padding-block: var(--section-y); padding-left: var(--rail-gap); scroll-margin-top: calc(var(--head-h) + 24px); }
 
@@ -181,19 +179,16 @@ main { position: relative; }
 }
 /* the section below carries its own generous top padding, so the hero only
    needs enough tail for the wire to leave the frame */
-.hero-inner { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 3.5vw, 56px); align-items: start; padding-block: clamp(52px, 5.5vw, 80px) clamp(24px, 2.4vw, 36px); padding-left: var(--rail-gap); }
+.hero-inner { position: relative; display: grid; grid-template-columns: 1fr; gap: clamp(28px, 3.5vw, 56px); align-items: start; padding-block: clamp(52px, 5.5vw, 80px) clamp(24px, 2.4vw, 36px); padding-left: var(--rail-gap); }
 .hero-title { grid-column: 1 / -1; margin-bottom: clamp(20px, 2.5vw, 34px); font-size: clamp(40px, 3.8vw, 70px); font-weight: 750; line-height: 1.02; letter-spacing: -.045em; text-wrap: balance; }
 .hero-title > span { display: block; }
 .t-dim { color: var(--ink-3); }
-.hero-lede { position: relative; align-self: center; }
+.hero-lede { position: relative; max-width: 720px; align-self: center; }
 .hero-lede .sp-node { bottom: 30px; }
 .hero-sub { max-width: 44ch; color: var(--ink-2); font-size: 17.5px; line-height: 1.6; }
 .hero-cta { margin-top: 30px; }
 
-/* A: show the product directly after the hero, then explain it. */
-.layout-a .hero-inner { grid-template-columns: 1fr; }
-.layout-a .hero-lede { max-width: 720px; }
-.layout-a #canvas { padding-top: clamp(38px, 4vw, 58px); }
+#canvas { padding-top: clamp(38px, 4vw, 58px); }
 
 .cmd { position: relative; display: flex; width: min(100%, 430px); flex-direction: column; padding: 11px 54px 11px 18px; border: 1px solid var(--line-strong); border-radius: var(--r-3); color: var(--ink); background: white; box-shadow: var(--shadow-panel); }
 .cmd-line { display: flex; min-height: 33px; align-items: baseline; gap: 12px; padding-block: 6px; font: 13.5px var(--mono); white-space: nowrap; }
@@ -355,8 +350,8 @@ main { position: relative; }
      already carrying meaning) so they fade in just after. */
   .sp-path.is-draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.2s var(--ease); }
   .sp-group.in .sp-path.is-draw { stroke-dashoffset: 0; }
-  .sp-path.is-fade, .sp-text, .sp-dot { opacity: 0; transition: opacity .55s var(--ease) .4s; }
-  .sp-group.in .sp-path.is-fade, .sp-group.in .sp-text, .sp-group.in .sp-dot { opacity: 1; }
+  .sp-path.is-fade, .sp-dot { opacity: 0; transition: opacity .55s var(--ease) .4s; }
+  .sp-group.in .sp-path.is-fade, .sp-group.in .sp-dot { opacity: 1; }
   .sp-group.in .sp-path.is-fail { opacity: .85; }
   .sp-group.in .sp-path.is-return { opacity: .75; }
 }
@@ -380,7 +375,6 @@ main { position: relative; }
 }
 
 @media (max-width: 960px) {
-  .hero-inner { grid-template-columns: 1fr; }
   .cycle-row { grid-template-columns: 1fr; gap: 28px; }
   .sp-node.is-hub { left: var(--sp-x); transform: none; }
   .station .sp-node { left: var(--sp-x); top: 30px; transform: none; }

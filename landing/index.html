@@ -81,6 +81,76 @@
       </div>
     </section>
 
+    <!-- ============ canvas: the spine becomes the graph ============ -->
+    <section class="section" id="canvas">
+      <header class="section-head">
+        <h2 class="section-title reveal">See HQFlow explain itself.</h2>
+        <p class="section-lede reveal">This real canvas maps HQFlow's own workflow, from the first CLI command to a live architecture review and export.</p>
+      </header>
+
+      <div class="product-tour reveal" id="productTour" data-sp="canvas-frame">
+        <div class="tour-tabs" role="tablist" aria-label="HQFlow feature walkthrough">
+          <button class="tour-tab is-active" type="button" role="tab" aria-selected="true" data-tour-step="details">
+            <span class="tour-number">01</span>
+            <span><strong>Open the details</strong><small>Click any card</small></span>
+          </button>
+          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="trace">
+            <span class="tour-number">02</span>
+            <span><strong>Trace a path</strong><small>Hover any card</small></span>
+          </button>
+          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="arrange">
+            <span class="tour-number">03</span>
+            <span><strong>Shape the canvas</strong><small>Drag cards and edges</small></span>
+          </button>
+          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="export">
+            <span class="tour-number">04</span>
+            <span><strong>Take it with you</strong><small>PNG or interactive HTML</small></span>
+          </button>
+        </div>
+
+        <div class="tour-stage">
+          <div class="tour-instruction" id="tourInstruction" role="status">
+            <span>Try it</span>
+            <strong>Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.</strong>
+          </div>
+          <iframe
+            class="tour-frame"
+            src="demo.html"
+            title="Playable HQFlow workflow canvas"
+            loading="lazy"
+          ></iframe>
+
+          <div class="tour-export" id="tourExport" role="dialog" aria-modal="true" aria-labelledby="tourExportTitle" aria-hidden="true">
+            <div class="tour-export-head">
+              <span><small>Prepare export</small><strong id="tourExportTitle">Export How HQFlow Works</strong></span>
+              <button class="tour-export-close" type="button" data-export-close aria-label="Close export dialog">×</button>
+            </div>
+            <p>Take the complete workflow beyond the canvas.</p>
+            <label class="tour-export-option is-selected">
+              <input type="radio" name="tour-export-format" value="image" checked>
+              <span><strong>Image</strong><small>PNG ready for documents and reviews.</small></span>
+            </label>
+            <label class="tour-export-option">
+              <input type="radio" name="tour-export-format" value="html">
+              <span><strong>HTML (interactive)</strong><small>Pan, zoom, and inspect offline.</small></span>
+            </label>
+            <p class="tour-export-error" id="tourExportError" role="alert" hidden></p>
+            <div class="tour-export-actions">
+              <button type="button" data-export-close>Cancel</button>
+              <button class="tour-export-download" id="tourExportDownload" type="button">Download image</button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="tour-foot">
+          <span><span class="live-dot" aria-hidden="true"></span> Real production canvas</span>
+          <span>7 stages · 1 outcome · local data only</span>
+        </footer>
+      </div>
+
+      <p class="tour-caption reveal">Move around freely. Nothing in this example leaves your browser.</p>
+    </section>
+
     <!-- ============ why: the spine forks, two branches die ============ -->
     <section class="section" id="why">
       <header class="section-head">
@@ -163,76 +233,6 @@
           </article>
         </div>
       </div>
-    </section>
-
-    <!-- ============ canvas: the spine becomes the graph ============ -->
-    <section class="section" id="canvas">
-      <header class="section-head">
-        <h2 class="section-title reveal">See HQFlow explain itself.</h2>
-        <p class="section-lede reveal">This real canvas maps HQFlow's own workflow, from the first CLI command to a live architecture review and export.</p>
-      </header>
-
-      <div class="product-tour reveal" id="productTour" data-sp="canvas-frame">
-        <div class="tour-tabs" role="tablist" aria-label="HQFlow feature walkthrough">
-          <button class="tour-tab is-active" type="button" role="tab" aria-selected="true" data-tour-step="details">
-            <span class="tour-number">01</span>
-            <span><strong>Open the details</strong><small>Click any card</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="trace">
-            <span class="tour-number">02</span>
-            <span><strong>Trace a path</strong><small>Hover any card</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="arrange">
-            <span class="tour-number">03</span>
-            <span><strong>Shape the canvas</strong><small>Drag cards and edges</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="export">
-            <span class="tour-number">04</span>
-            <span><strong>Take it with you</strong><small>PNG or interactive HTML</small></span>
-          </button>
-        </div>
-
-        <div class="tour-stage">
-          <div class="tour-instruction" id="tourInstruction" role="status">
-            <span>Try it</span>
-            <strong>Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.</strong>
-          </div>
-          <iframe
-            class="tour-frame"
-            src="demo.html"
-            title="Playable HQFlow workflow canvas"
-            loading="lazy"
-          ></iframe>
-
-          <div class="tour-export" id="tourExport" role="dialog" aria-modal="true" aria-labelledby="tourExportTitle" aria-hidden="true">
-            <div class="tour-export-head">
-              <span><small>Prepare export</small><strong id="tourExportTitle">Export How HQFlow Works</strong></span>
-              <button class="tour-export-close" type="button" data-export-close aria-label="Close export dialog">×</button>
-            </div>
-            <p>Take the complete workflow beyond the canvas.</p>
-            <label class="tour-export-option is-selected">
-              <input type="radio" name="tour-export-format" value="image" checked>
-              <span><strong>Image</strong><small>PNG ready for documents and reviews.</small></span>
-            </label>
-            <label class="tour-export-option">
-              <input type="radio" name="tour-export-format" value="html">
-              <span><strong>HTML (interactive)</strong><small>Pan, zoom, and inspect offline.</small></span>
-            </label>
-            <p class="tour-export-error" id="tourExportError" role="alert" hidden></p>
-            <div class="tour-export-actions">
-              <button type="button" data-export-close>Cancel</button>
-              <button class="tour-export-download" id="tourExportDownload" type="button">Download image</button>
-            </div>
-          </div>
-        </div>
-
-        <footer class="tour-foot">
-          <span><span class="live-dot" aria-hidden="true"></span> Real production canvas</span>
-          <span>7 stages · 1 outcome · local data only</span>
-        </footer>
-      </div>
-
-      <p class="tour-caption reveal">Move around freely. Nothing in this example leaves your browser.</p>
     </section>
 
     <!-- ============ principles: the spine runs as a bus with four taps ============ -->

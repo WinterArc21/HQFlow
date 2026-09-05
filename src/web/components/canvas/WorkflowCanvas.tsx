@@ -153,7 +153,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         selectedStepId: visualSelectedStepId,
         traceStepIds: tracePath?.stepIds ?? null,
         getTabIndex,
-        onToggleExpand: (stepId) => toggleStepExpanded(workflow.id, stepId),
+        onToggleExpand: toggleStepExpanded,
         onNodeKeyDown: handleNodeKeyDown,
         onHoverStart,
         onHoverEnd,
@@ -356,7 +356,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
         onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
         onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
         onResetLayout={() => resetLayout(workflow.id)}
-        onCollapseAll={() => collapseAllSteps(workflow.id)}
+        onCollapseAll={collapseAllSteps}
         collapseDisabled={!hasExpandedSteps}
         {...(exportMode === null ? { onExport: handleExport } : {})}
         {...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
