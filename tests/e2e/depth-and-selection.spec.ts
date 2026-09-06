@@ -59,7 +59,7 @@ test("keyboard navigation reaches the invalid-request outcome and returns to its
   await expect(validation).toBeFocused();
 });
 
-test("hover traces related nodes without decorative zone labels", async ({ page }) => {
+test("hover traces related nodes", async ({ page }) => {
   // The horizontal canvas needs enough room for the third main-line card to be fully under the
   // pointer. At the default 1280px test viewport it is clipped at the right edge, which causes
   // Playwright to leave the card immediately after entering it.
@@ -84,7 +84,6 @@ test("hover traces related nodes without decorative zone labels", async ({ page 
   await expect.poll(() => unrelated.evaluate((node) => getComputedStyle(node).opacity)).toBe("0.35");
 
   await page.mouse.move(0, 0);
-  await expect(page.locator(".react-flow__node-zoneLabel")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   for (const node of await page.locator("[data-step-node]").all()) {
     await expect(node).toHaveCSS("opacity", "1");

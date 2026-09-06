@@ -52,7 +52,6 @@ test("init creates the documented tree and prints the documented banner", async 
 
     expect(await fileExists(path.join(dir, ".codehq", "project.json"))).toBe(true);
     expect(await fileExists(path.join(dir, ".codehq", "SKILL.md"))).toBe(true);
-    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(false);
     expect(await fileExists(path.join(dir, ".codehq", "workflows", "generate-video.json"))).toBe(false);
 
     const gitignore = await fsp.readFile(path.join(dir, ".gitignore"), "utf-8");

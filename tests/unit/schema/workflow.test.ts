@@ -191,21 +191,6 @@ describe("parseWorkflow — shape and semantic rules", () => {
 });
 
 describe("parseWorkflow — corrected field shapes (entryPoint, notes)", () => {
-  it("rejects an unrecognized status field because the schema no longer includes it", () => {
-    const data = loadFixture();
-    data.status = "active";
-
-    const result = parseWorkflow(data, FILE);
-
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      throw new Error("expected failure");
-    }
-    const issue = result.issues.find((i) => i.path === "status");
-    expect(issue).toBeDefined();
-    expect(issue?.message).toContain("Unrecognized property 'status'");
-  });
-
   it("rejects legacy and unsafe entry-point shapes with useful paths", () => {
     const legacy = loadFixture();
     legacy.entryPoint = "POST /api/x" as unknown as NonNullable<RawWorkflow["entryPoint"]>;

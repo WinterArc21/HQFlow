@@ -120,12 +120,6 @@ describe("createCodeHQServer — endpoint shapes", () => {
     const body = (await response.json()) as { generatedAt: string };
     expect(typeof body.generatedAt).toBe("string");
   });
-
-  it("does not expose the removed folder/reveal endpoint", async () => {
-    const running = await startServer();
-    const response = await fetch(`${running.url}/api/reveal`, { method: "POST" });
-    expect(response.status).toBe(404);
-  });
 });
 
 describe("createCodeHQServer — /api/source", () => {

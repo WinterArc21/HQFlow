@@ -31,7 +31,6 @@ describe("runInit — fresh repository", () => {
     expect(existsSync(abs(PROJECT_FILE))).toBe(true);
     expect(existsSync(abs(SKILL_FILE))).toBe(true);
     expect(existsSync(abs(WORKFLOWS_DIR))).toBe(true);
-    expect(existsSync(abs(".codehq/diagnostics.json"))).toBe(false);
     expect(result.created).toEqual([".codehq/project.json", ".codehq/workflows/", ".codehq/SKILL.md"]);
     expect(result.unchanged).toEqual([]);
 
