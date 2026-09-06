@@ -53,6 +53,48 @@
   min-height: 0;
 }
 
+.repositoryName {
+  margin: var(--space-2) var(--space-4) var(--space-3);
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: calc(100% - var(--space-4));
+  margin: 0 var(--space-2) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-tiny);
+  text-align: left;
+}
+
+.overview:hover { background: var(--bg-raised); color: var(--text-primary); }
+.selectedOverview { background: var(--bg-raised); color: var(--text-primary); font-weight: 600; }
+.overview:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+.plannedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.plannedItem strong, .plannedItem small { display: block; }
+.plannedItem strong { font-size: var(--fs-tiny); font-weight: 500; }
+.plannedItem small { margin-top: 2px; color: var(--text-tertiary); font-size: var(--fs-micro); }
+.dot { width: 8px; height: 8px; margin-top: 4px; border: 1px solid var(--text-tertiary); border-radius: 50%; }
+.mapAnother { display: flex; align-items: center; gap: var(--space-1); margin-top: auto; padding: var(--space-2); color: var(--accent-blue); }
+
 .list {
   flex: 1;
   overflow-y: auto;

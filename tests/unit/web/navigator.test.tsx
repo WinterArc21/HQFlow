@@ -108,4 +108,37 @@ describe("WorkflowNavigator", () => {
     await user.click(screen.getByRole("button", { name: "Expand workflows rail" }));
     expect(screen.getByRole("button", { name: /Alpha/ })).toHaveAttribute("aria-current", "true");
   });
+
+  it("shows the repository overview and planned workflows", async () => {
+    const onSelect = vi.fn();
+    render(
+      <WorkflowNavigator
+        repositoryName="ACME Store"
+        repositoryMap={{
+          file: ".codehq/repository-map.json",
+          modifiedAt: new Date().toISOString(),
+          state: "valid",
+          repositoryMap: {
+            schemaVersion: "0.1",
+            workflows: [
+              { id: "alpha", name: "Alpha", purpose: "Alpha purpose." },
+              { id: "billing", name: "Billing", purpose: "Bills customers." },
+            ],
+            connections: [],
+          },
+        }}
+        workflows={[records[0]!]}
+        selectedWorkflowId={null}
+        onSelect={onSelect}
+      />,
+    );
+
+    expect(screen.getByText("ACME Store")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Billing")).toBeInTheDocument();
+    expect(screen.getByText("Not mapped")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Overview" }));
+    expect(onSelect).toHaveBeenCalledWith(null);
+  });
 });

@@ -1,6 +1,7 @@
 /** Browser-safe server/client wire contracts. This module must stay free of Node imports. */
 import type { DiagnosticsReport } from "./diagnostics";
 import type { CodeHQProject } from "./project";
+import type { RepositoryMap } from "./repository-map";
 import type { Workflow } from "./workflow";
 
 export type SourceStatus = "found" | "missing";
@@ -18,6 +19,14 @@ export interface WorkflowRecord {
   sourceChecks: Record<string, SourceStatus>;
 }
 
+export interface RepositoryMapRecord {
+  file: string;
+  repositoryMap: RepositoryMap;
+  modifiedAt: string;
+  state: "valid" | "stale";
+  staleSince?: string;
+}
+
 export interface RepositoryInfo {
   name: string;
   root: string;
@@ -29,6 +38,7 @@ export interface CodeHQSnapshot {
   status: CodeHQStatus;
   repository: RepositoryInfo;
   project: CodeHQProject | null;
+  repositoryMap: RepositoryMapRecord | null;
   workflows: WorkflowRecord[];
   diagnostics: DiagnosticsReport;
 }

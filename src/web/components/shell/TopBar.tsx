@@ -9,16 +9,21 @@ import { ThemeToggle } from "./ThemeToggle";
 
 export interface TopBarProps {
   repositoryName: string;
+  currentView?: string;
+  onSelectRepository?: () => void;
   status: CodeHQStatus;
   errorCount?: number;
   onOpenSearch: () => void;
 }
 
-export function TopBar({ repositoryName, status, errorCount, onOpenSearch }: TopBarProps) {
+export function TopBar({ repositoryName, currentView, onSelectRepository, status, errorCount, onOpenSearch }: TopBarProps) {
   return (
     <div className={styles.bar}>
       <div className={styles.left}>
-        <span className={styles.repoName}>{repositoryName}</span>
+        {onSelectRepository !== undefined ? (
+          <button type="button" className={styles.repoButton} onClick={onSelectRepository}>{repositoryName}</button>
+        ) : <span className={styles.repoName}>{repositoryName}</span>}
+        {currentView !== undefined ? <><span className={styles.separator}>/</span><span className={styles.currentView}>{currentView}</span></> : null}
       </div>
 
       <div className={styles.center}>

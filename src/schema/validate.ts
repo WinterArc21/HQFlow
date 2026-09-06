@@ -1,6 +1,7 @@
 import type { ZodError } from "zod";
 import type { Issue } from "./diagnostics";
 import { codeHQProjectSchema, type CodeHQProject } from "./project";
+import { repositoryMapSchema, type RepositoryMap } from "./repository-map";
 import { formatIssuePath, validateWorkflowSemantics, VISUAL_KEYS, VISUAL_PROPERTY_MESSAGE } from "./semantics";
 import { workflowSchema, type Workflow } from "./workflow";
 
@@ -91,6 +92,54 @@ export function parseProject(data: unknown, file: string): ParseProjectResult {
     return { ok: false, issues: zodErrorToIssues(result.error, file) };
   }
   return { ok: true, value: result.data };
+}
+
+export type ParseRepositoryMapResult =
+  | { ok: true; value: RepositoryMap; warnings: Issue[] }
+  | { ok: false; issues: Issue[] };
+
+/** Parses the repository overview and verifies that all handoffs reference declared workflows. */
+export function parseRepositoryMap(data: unknown, file: string): ParseRepositoryMapResult {
+  const result = repositoryMapSchema.safeParse(data);
+  if (!result.success) {
+    return { ok: false, issues: zodErrorToIssues(result.error, file) };
+  }
+
+  const issues: Issue[] = [];
+  const firstIndexById = new Map<string, number>();
+  result.data.workflows.forEach((workflow, index) => {
+    const firstIndex = firstIndexById.get(workflow.id);
+    if (firstIndex !== undefined) {
+      issues.push({
+        severity: "error",
+        file,
+        path: `workflows[${index}].id`,
+        message: `Duplicate repository workflow id '${workflow.id}'.`,
+        hint: `Remove this duplicate of 'workflows[${firstIndex}]'.`,
+      });
+    } else {
+      firstIndexById.set(workflow.id, index);
+    }
+  });
+
+  const ids = new Set(result.data.workflows.map((workflow) => workflow.id));
+  result.data.connections.forEach((connection, index) => {
+    (["from", "to"] as const).forEach((key) => {
+      if (!ids.has(connection[key])) {
+        issues.push({
+          severity: "error",
+          file,
+          path: `connections[${index}].${key}`,
+          message: `Repository connection references missing workflow '${connection[key]}'.`,
+          hint: "Add that workflow to repository-map.json, or correct the connection.",
+        });
+      }
+    });
+  });
+
+  return issues.some((issue) => issue.severity === "error")
+    ? { ok: false, issues }
+    : { ok: true, value: result.data, warnings: issues };
 }
 
 export type ParseWorkflowResult =
