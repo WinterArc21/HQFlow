@@ -15,8 +15,15 @@ export default defineConfig({
       "@web": webAlias,
     },
   },
+  server: {
+    host: true,
+    allowedHosts: true,
+    fs: {
+      allow: [fileURLToPath(new URL(".", import.meta.url))],
+    },
+  },
   preview: {
-    allowedHosts: [".onamp.dev"],
+    allowedHosts: true,
   },
   build: {
     outDir: "../dist/landing",
