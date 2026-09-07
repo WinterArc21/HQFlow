@@ -50,7 +50,7 @@
   height: 100%;
   --xy-background-color: transparent;
   --xy-attribution-background-color: transparent;
-  --xy-edge-stroke: var(--accent-neutral);
+  --xy-edge-stroke: var(--accent-ice);
   --xy-edge-stroke-width: 1.5;
   --xy-minimap-background-color: var(--bg-surface);
   --xy-minimap-mask-background-color: color-mix(in srgb, var(--bg-canvas) 55%, transparent);

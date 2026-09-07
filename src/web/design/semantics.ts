@@ -51,17 +51,20 @@ export interface ToneVisual {
  *
  * `--accent-blue` is no longer a category colour at all: it is the focus ring and the selection
  * ring, and a card tinted the same blue as the ring that marks "you are here" fought with it.
+ * External uses `--accent-violet` so the canvas matches the drawer; orchid is unused.
+ * Logic uses `--accent-cyan`. Success edges use `--accent-ice` so the happy path is not a
+ * category colour and can run from the first node to the last.
  */
 const CATEGORY_VISUALS: Record<NonNullable<WorkflowStep["category"]>, CategoryVisual> = {
   entry: { varName: "--accent-output", label: "Entry" },
-  logic: { varName: "--accent-neutral", label: "Logic" },
+  logic: { varName: "--accent-cyan", label: "Logic" },
   decision: { varName: "--accent-rose", label: "Decision" },
   data: { varName: "--accent-orange", label: "Data" },
-  external: { varName: "--accent-orchid", label: "External" },
+  external: { varName: "--accent-violet", label: "External" },
   output: { varName: "--accent-output", label: "Output" },
 };
 
-const UNSPECIFIED_CATEGORY_VISUAL: CategoryVisual = { varName: "--accent-neutral", label: "Unspecified" };
+const UNSPECIFIED_CATEGORY_VISUAL: CategoryVisual = { varName: "--accent-cyan", label: "Unspecified" };
 
 /** Left-marker colour + label for a step's `category` (contract §10 table). */
 export function categoryToken(category?: WorkflowStep["category"]): CategoryVisual {
@@ -84,7 +87,7 @@ type ConnectionType = NonNullable<Parameters<typeof connectionStyle>[0]>;
  * information.
  */
 const CONNECTION_VISUALS: Record<ConnectionType, ConnectionVisual> = {
-  success: { varName: "--accent-neutral", dash: "none", showLabel: false, weight: "primary" },
+  success: { varName: "--accent-ice", dash: "none", showLabel: false, weight: "primary" },
   failure: { varName: "--accent-red", dash: "dashed", showLabel: true, weight: "branch" },
   conditional: { varName: "--accent-amber", dash: "dashed", showLabel: true, weight: "branch" },
   async: { varName: "--accent-blue", dash: "dotted", showLabel: true, weight: "branch" },
