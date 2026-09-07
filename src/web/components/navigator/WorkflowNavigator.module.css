@@ -116,6 +116,21 @@
   font-size: var(--fs-micro);
 }
 
+.overviewHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-micro);
+}
+
+.overviewHint svg {
+  flex-shrink: 0;
+  margin-top: 0;
+  color: currentColor;
+}
+
 .root:hover,
 .leaf:hover {
   background: var(--bg-raised);
@@ -124,7 +139,7 @@
 
 .selectedRoot {
   background: var(--bg-raised);
-  box-shadow: inset 2px 0 0 var(--accent-blue);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-blue) 55%, var(--border-subtle));
 }
 
 .selectedRoot .rootCopy strong,

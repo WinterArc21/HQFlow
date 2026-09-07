@@ -23,8 +23,8 @@ export interface WorkflowNavigatorProps {
  * ARIA `listbox`, since a partial listbox implementation is worse than a correct plain list
  * (contract §11).
  *
- * When a repository map exists, the rail is a file tree: the repository is the root, Overview
- * is the first child, and each workflow hangs off the same spine.
+ * When a repository map exists, the rail is a file tree: the repository folder is Overview,
+ * and each workflow hangs off the same spine.
  */
 export function WorkflowNavigator({
   workflows,
@@ -99,31 +99,20 @@ export function WorkflowNavigator({
                   type="button"
                   data-navigation-item
                   className={`${styles.root} ${overviewSelected ? styles.selectedRoot : ""}`}
-                  aria-label={`${repositoryName ?? "Repository"} repository`}
+                  aria-label={`${repositoryName ?? "Repository"} overview`}
+                  aria-current={overviewSelected ? "page" : undefined}
                   onClick={() => onSelect(null)}
                 >
                   <Folder size={16} weight="fill" aria-hidden="true" />
                   <span className={styles.rootCopy}>
                     <strong>{repositoryName ?? "Repository"}</strong>
-                    <small>Repository</small>
+                    <small className={styles.overviewHint}>
+                      <CirclesFour size={12} aria-hidden="true" />
+                      Overview · repo-wide map
+                    </small>
                   </span>
                 </button>
                 <ul className={styles.branch} aria-label={`${repositoryName ?? "Repository"} workflows`}>
-                  <li>
-                    <button
-                      type="button"
-                      data-navigation-item
-                      className={`${styles.leaf} ${overviewSelected ? styles.selectedLeaf : ""}`}
-                      aria-current={overviewSelected ? "page" : undefined}
-                      onClick={() => onSelect(null)}
-                    >
-                      <CirclesFour size={14} aria-hidden="true" />
-                      <span className={styles.leafCopy}>
-                        <strong>Overview</strong>
-                        <small>Repo-wide map</small>
-                      </span>
-                    </button>
-                  </li>
                   {definitions.map((definition) => {
                     const record = workflows.find((workflow) => workflow.id === definition.id);
                     return record === undefined ? (

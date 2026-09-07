@@ -57,7 +57,7 @@ describe("WorkflowNavigator", () => {
     expect(onSelect).toHaveBeenCalledWith("beta");
   });
 
-  it("moves keyboard focus from the repository root through Overview into workflows", async () => {
+  it("moves keyboard focus from the repository overview into workflows", async () => {
     const onSelect = vi.fn();
     render(
       <WorkflowNavigator
@@ -83,8 +83,7 @@ describe("WorkflowNavigator", () => {
 
     const user = userEvent.setup();
     await user.tab(); // collapse control
-    await user.tab(); // repository root
-    await user.keyboard("{ArrowDown}"); // Overview
+    await user.tab(); // repository overview
     await user.keyboard("{ArrowDown}"); // Alpha
     await user.keyboard("{ArrowDown}"); // Beta
     await user.keyboard("{Enter}");
@@ -168,16 +167,14 @@ describe("WorkflowNavigator", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "ACME Store repository" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
+    const overview = screen.getByRole("button", { name: "ACME Store overview" });
+    expect(overview).toHaveAttribute("aria-current", "page");
+    expect(overview).toHaveTextContent("Overview · repo-wide map");
     expect(screen.getByText("Billing")).toBeInTheDocument();
     expect(screen.getByText("Not mapped")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "ACME Store workflows" })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Overview/ }));
-    expect(onSelect).toHaveBeenCalledWith(null);
-
-    await userEvent.click(screen.getByRole("button", { name: "ACME Store repository" }));
+    await userEvent.click(overview);
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 
@@ -192,7 +189,7 @@ describe("WorkflowNavigator", () => {
     );
 
     expect(screen.getByText("ACME Store")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Overview/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ACME Store overview" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Beta/ })).toHaveAttribute("aria-current", "true");
   });
 });
