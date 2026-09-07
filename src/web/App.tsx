@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
 import { AppShell, TopBar, type CodeHQStatus } from "./components/shell";
-import { WorkflowNavigator } from "./components/navigator";
+import { NavigatorExpandControl, WorkflowNavigator } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
@@ -127,6 +127,9 @@ export function App() {
               await deleteWorkflow(selectedRecord.workflow.id);
               refetch();
             }}
+            {...(workflowNavigatorCollapsed
+              ? { stageOverlay: <NavigatorExpandControl onExpand={() => setWorkflowNavigatorCollapsed(false)} /> }
+              : {})}
           />
         ) : snapshot.repositoryMap !== null ? (
           <RepositoryOverview
@@ -135,9 +138,12 @@ export function App() {
             workflows={snapshot.workflows}
             invalidWorkflowIds={invalidWorkflowIds}
             onOpenWorkflow={selectWorkflow}
+            {...(workflowNavigatorCollapsed
+              ? { stageOverlay: <NavigatorExpandControl onExpand={() => setWorkflowNavigatorCollapsed(false)} /> }
+              : {})}
           />
         ) : (
-          <EmptyState onRecheck={handleRecheck} />
+          <EmptyState />
         )}
       </AppShell>
       {displayedWorkflow !== null && selectedStepId !== null ? (

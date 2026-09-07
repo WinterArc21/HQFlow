@@ -1,6 +1,5 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyState } from "@web/components/states/EmptyState";
 import { UninitializedState } from "@web/components/states/UninitializedState";
@@ -25,11 +24,11 @@ describe("EmptyState", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the copy and recheck actions", () => {
-    render(<EmptyState onRecheck={() => Promise.resolve()} />);
+  it("renders the copy action and no recheck control", () => {
+    render(<EmptyState />);
 
     expect(screen.getByRole("button", { name: "Map my repository" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Recheck files" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recheck files" })).not.toBeInTheDocument();
   });
 
   it("copies the context-neutral prompt string", async () => {
@@ -38,22 +37,13 @@ describe("EmptyState", () => {
     const clipboard = navigator.clipboard as unknown as { writeText: (text: string) => Promise<void> };
     expect(AGENT_PROMPT).toContain("Write .codehq/repository-map.json first");
     expect(AGENT_PROMPT).toContain("assign each workflow to a separate subagent");
-    render(<EmptyState onRecheck={() => Promise.resolve()} />);
+    render(<EmptyState />);
 
     fireEvent.click(screen.getByRole("button", { name: "Map my repository" }));
 
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith(AGENT_PROMPT));
   });
 
-  it("calls onRecheck when 'Recheck files' is activated", async () => {
-    const onRecheck = vi.fn().mockResolvedValue(undefined);
-    render(<EmptyState onRecheck={onRecheck} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Recheck files" }));
-
-    expect(onRecheck).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("UninitializedState", () => {

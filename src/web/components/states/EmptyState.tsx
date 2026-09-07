@@ -1,20 +1,14 @@
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
-import { useAsyncAction } from "../../lib/useAsyncAction";
-import { Button, CopyButton } from "../primitives";
+import { CopyButton } from "../primitives";
 import { StateLayout } from "./StateLayout";
 import styles from "./EmptyState.module.css";
 
-export interface EmptyStateProps {
-  onRecheck: () => Promise<void>;
-}
-
 /**
- * Initialized but no workflows exist yet. Three real, working actions — no embedded chat box
- * (contract §12: no fake buttons).
+ * Initialized but no workflows exist yet. One real action: copy the mapping prompt for the
+ * coding agent. The file watcher advances the canvas when `.codehq` files land — there is no
+ * manual recheck on this screen.
  */
-export function EmptyState({ onRecheck }: EmptyStateProps) {
-  const recheck = useAsyncAction(onRecheck);
-
+export function EmptyState() {
   return (
     <StateLayout title="Map your repository">
       <p>
@@ -22,15 +16,7 @@ export function EmptyState({ onRecheck }: EmptyStateProps) {
       </p>
       <div className={styles.actionRow}>
         <CopyButton value={AGENT_PROMPT} label="Map my repository" />
-        <Button variant="secondary" size="sm" onClick={recheck.run}>
-          Recheck files
-        </Button>
       </div>
-      {recheck.status === "error" && recheck.message !== null ? (
-        <p className={styles.actionError} role="alert">
-          {recheck.message}
-        </p>
-      ) : null}
     </StateLayout>
   );
 }
