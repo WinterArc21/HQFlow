@@ -12,6 +12,9 @@ import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
 const ARTIFACT_DIR = path.join(REPO_ROOT, ".amp", "in", "artifacts");
 const DEMO_SOURCE = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "canvas-grammar-demo.json");
+// React Flow can place an endpoint just outside the handle box because the card border and SVG
+// use separate coordinate spaces. Keep the allowance smaller than one unscaled handle radius.
+const EDGE_ENDPOINT_TOLERANCE_PX = 2;
 let root: string;
 let server: ManagedServer;
 
@@ -28,6 +31,10 @@ async function capture(page: Page, workflow: string, slug: string, theme: "dark"
   await waitForBoot(page);
   await setTheme(page, theme);
   await page.screenshot({ path: path.join(ARTIFACT_DIR, `${slug}-${theme}-1440x900.png`), animations: "disabled" });
+}
+
+async function resetCanvasLayout(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Reset layout" }).click();
 }
 
 async function edgeEndpointDistance(
@@ -50,7 +57,9 @@ async function edgeEndpointDistance(
     const point = path.getPointAtLength(endpoint === "source" ? 0 : path.getTotalLength());
     const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM() ?? new DOMMatrix());
     const rect = handle.getBoundingClientRect();
-    return Math.hypot(screenPoint.x - (rect.left + rect.width / 2), screenPoint.y - (rect.top + rect.height / 2));
+    const dx = Math.max(rect.left - screenPoint.x, 0, screenPoint.x - rect.right);
+    const dy = Math.max(rect.top - screenPoint.y, 0, screenPoint.y - rect.bottom);
+    return Math.hypot(dx, dy);
   }, { edgeId, nodeId, handleId, endpoint });
 }
 
@@ -105,9 +114,11 @@ test("keeps a connection attached while its card is freely dragged", async ({ pa
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Generate Video Prompt");
+  await resetCanvasLayout(page);
 
   const node = page.locator('[data-step-node="validate-request"]');
-  const edge = page.locator('.react-flow__edge[data-id^="receive-request->validate-request"] path.react-flow__edge-path');
+  const edgeId = "receive-request->validate-request#0";
+  const edge = page.locator(`.react-flow__edge[data-id="${edgeId}"] path.react-flow__edge-path`);
   const before = await edge.getAttribute("d");
   const box = await node.boundingBox();
   expect(box).not.toBeNull();
@@ -118,16 +129,14 @@ test("keeps a connection attached while its card is freely dragged", async ({ pa
   await page.mouse.up();
 
   await expect.poll(() => edge.getAttribute("d")).not.toBe(before);
-  const endpointDistance = await edge.evaluate((path) => {
-    const svgPath = path as SVGPathElement;
-    const endpoint = svgPath.getPointAtLength(svgPath.getTotalLength());
-    const screenEndpoint = new DOMPoint(endpoint.x, endpoint.y).matrixTransform(svgPath.getScreenCTM() ?? new DOMMatrix());
-    const handle = document.querySelector<HTMLElement>('[data-nodeid="validate-request"][data-handleid="in"]');
-    if (handle === null) return Number.POSITIVE_INFINITY;
-    const rect = handle.getBoundingClientRect();
-    return Math.hypot(screenEndpoint.x - (rect.left + rect.width / 2), screenEndpoint.y - (rect.top + rect.height / 2));
-  });
-  expect(endpointDistance).toBeLessThan(5);
+  const endpointDistance = await edgeEndpointDistance(
+    page,
+    edgeId,
+    "validate-request",
+    "in",
+    "target",
+  );
+  expect(endpointDistance).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
 });
 
 test("switches ordinary connections to the closest facing card sides while dragging", async ({ page }) => {
@@ -135,6 +144,7 @@ test("switches ordinary connections to the closest facing card sides while dragg
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Generate Video Prompt");
+  await resetCanvasLayout(page);
 
   const edgeId = "receive-request->validate-request#0";
   const sourceId = "receive-request";
@@ -158,8 +168,8 @@ test("switches ordinary connections to the closest facing card sides while dragg
     sourceBox!.y + sourceBox!.height / 2,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-left", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-right", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-left", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-right", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 
   // Moving B below A should choose the source bottom and target top instead of either horizontal
@@ -168,6 +178,7 @@ test("switches ordinary connections to the closest facing card sides while dragg
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Generate Video Prompt");
+  await resetCanvasLayout(page);
   const verticalSourceBox = await source.boundingBox();
   const verticalTargetBox = await target.boundingBox();
   expect(verticalSourceBox).not.toBeNull();
@@ -182,8 +193,8 @@ test("switches ordinary connections to the closest facing card sides while dragg
     verticalSourceBox!.y + verticalSourceBox!.height + verticalTargetBox!.height / 2 + 80,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-bottom", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-top", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, sourceId, "out-bottom", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, edgeId, targetId, "in-top", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 });
 
@@ -196,6 +207,7 @@ test("switches outcome connections to facing sides while dragging success and fa
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Canvas Grammar Demo");
+  await resetCanvasLayout(page);
 
   const sourceId = "review";
   const source = page.locator("[data-step-node=\"" + sourceId + "\"]");
@@ -214,8 +226,8 @@ test("switches outcome connections to facing sides while dragging success and fa
     sourceBox!.y + sourceBox!.height / 2,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, "review-created", sourceId, "out-left", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, "review-created", "outcome-created", "in-right", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, "review-created", sourceId, "out-left", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, "review-created", "outcome-created", "in-right", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 
   // A fresh board gives the failure outcome its original above-the-line position. Dragging it
@@ -223,6 +235,7 @@ test("switches outcome connections to facing sides while dragging success and fa
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Canvas Grammar Demo");
+  await resetCanvasLayout(page);
   const failureOutcome = page.locator("[data-step-node=\"outcome-rejected\"]");
   const verticalSourceBox = await source.boundingBox();
   const failureBox = await failureOutcome.boundingBox();
@@ -236,8 +249,8 @@ test("switches outcome connections to facing sides while dragging success and fa
     verticalSourceBox!.y + verticalSourceBox!.height + failureBox!.height / 2 + 80,
     { steps: 16 },
   );
-  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", sourceId, "out-bottom", "source")).toBeLessThan(5);
-  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", "outcome-rejected", "in-top", "target")).toBeLessThan(5);
+  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", sourceId, "out-bottom", "source")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
+  await expect.poll(() => edgeEndpointDistance(page, "review-rejected", "outcome-rejected", "in-top", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 });
 
