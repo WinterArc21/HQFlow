@@ -137,7 +137,7 @@ export function App() {
             onOpenWorkflow={selectWorkflow}
           />
         ) : (
-          <EmptyState onRecheck={handleRecheck} />
+          <EmptyState />
         )}
       </AppShell>
       {displayedWorkflow !== null && selectedStepId !== null ? (
