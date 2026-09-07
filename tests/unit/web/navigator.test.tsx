@@ -57,6 +57,41 @@ describe("WorkflowNavigator", () => {
     expect(onSelect).toHaveBeenCalledWith("beta");
   });
 
+  it("moves keyboard focus from the repository root through Overview into workflows", async () => {
+    const onSelect = vi.fn();
+    render(
+      <WorkflowNavigator
+        repositoryName="ACME Store"
+        repositoryMap={{
+          file: ".codehq/repository-map.json",
+          modifiedAt: new Date().toISOString(),
+          state: "valid",
+          repositoryMap: {
+            schemaVersion: "0.1",
+            workflows: [
+              { id: "alpha", name: "Alpha", purpose: "Alpha purpose." },
+              { id: "beta", name: "Beta", purpose: "Beta purpose." },
+            ],
+            connections: [],
+          },
+        }}
+        workflows={records.slice(0, 2)}
+        selectedWorkflowId={null}
+        onSelect={onSelect}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.tab(); // collapse control
+    await user.tab(); // repository root
+    await user.keyboard("{ArrowDown}"); // Overview
+    await user.keyboard("{ArrowDown}"); // Alpha
+    await user.keyboard("{ArrowDown}"); // Beta
+    await user.keyboard("{Enter}");
+
+    expect(onSelect).toHaveBeenCalledWith("beta");
+  });
+
   it("exposes the selected workflow to assistive tech via aria-current", () => {
     render(<WorkflowNavigator workflows={records} selectedWorkflowId="beta" onSelect={() => {}} />);
 
@@ -133,12 +168,31 @@ describe("WorkflowNavigator", () => {
       />,
     );
 
-    expect(screen.getByText("ACME Store")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "ACME Store repository" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Billing")).toBeInTheDocument();
     expect(screen.getByText("Not mapped")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "ACME Store workflows" })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Overview" }));
+    await userEvent.click(screen.getByRole("button", { name: /Overview/ }));
     expect(onSelect).toHaveBeenCalledWith(null);
+
+    await userEvent.click(screen.getByRole("button", { name: "ACME Store repository" }));
+    expect(onSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("keeps a flat workflow list when there is no repository map", () => {
+    render(
+      <WorkflowNavigator
+        repositoryName="ACME Store"
+        workflows={records}
+        selectedWorkflowId="beta"
+        onSelect={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("ACME Store")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Overview/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Beta/ })).toHaveAttribute("aria-current", "true");
   });
 });

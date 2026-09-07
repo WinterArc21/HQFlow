@@ -8,6 +8,7 @@
 }
 
 .top {
+  background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
@@ -21,6 +22,7 @@
 }
 
 .aside {
+  background-color: var(--bg-surface);
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
   min-width: 0;
