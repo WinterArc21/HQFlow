@@ -7,18 +7,19 @@ import styles from "./CanvasHeader.module.css";
 
 export interface CanvasHeaderProps extends CanvasToolbarProps {
   workflow: Workflow;
+  itemLabel?: string;
   modifiedAt?: WorkflowRecord["modifiedAt"];
   state?: WorkflowRecord["state"];
 }
 
 /** The canvas title strip and its remaining zoom/collapse actions. */
-export function CanvasHeader({ workflow, modifiedAt, state, ...toolbarProps }: CanvasHeaderProps) {
+export function CanvasHeader({ workflow, itemLabel = "steps", modifiedAt, state, ...toolbarProps }: CanvasHeaderProps) {
   return (
     <div className={styles.header}>
       <div className={styles.identity}>
         <div className={styles.titleRow}>
           <h1 className={styles.name}>{workflow.name}</h1>
-          <span className={styles.stepCount}>{workflow.steps.length} steps</span>
+          <span className={styles.stepCount}>{workflow.steps.length} {itemLabel}</span>
         </div>
         <div className={styles.detailsRow}>
           <p className={styles.purpose}>{workflow.purpose}</p>

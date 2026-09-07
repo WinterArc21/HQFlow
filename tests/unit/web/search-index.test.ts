@@ -20,6 +20,7 @@ function makeSnapshot(workflows: Workflow[]): CodeHQSnapshot {
     status: "ready",
     repository: { name: "demo", root: "/demo", codeHQDir: "/demo/.codehq" },
     project: null,
+    repositoryMap: null,
     workflows: workflows.map(makeRecord),
     diagnostics: { generatedAt: new Date().toISOString(), valid: true, issues: [] },
   };

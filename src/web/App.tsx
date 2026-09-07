@@ -6,6 +6,7 @@ import { WorkflowNavigator } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
+import { RepositoryOverview } from "./components/repository-map";
 import { StepDrawer } from "./components/drawer";
 import { CommandPalette } from "./components/search";
 import { useCodeHQStore } from "./store/useCodeHQStore";
@@ -46,8 +47,13 @@ export function App() {
     if (selectedWorkflowId !== null && knownIds.has(selectedWorkflowId)) {
       return;
     }
+    if (selectedWorkflowId === null && snapshot.repositoryMap !== null) {
+      return;
+    }
     const defaultId = snapshot.project?.settings?.defaultWorkflowId;
-    const nextId = defaultId !== undefined && knownIds.has(defaultId) ? defaultId : snapshot.workflows[0]?.id;
+    const nextId = snapshot.repositoryMap !== null
+      ? null
+      : defaultId !== undefined && knownIds.has(defaultId) ? defaultId : snapshot.workflows[0]?.id;
     selectWorkflow(nextId ?? null);
   }, [snapshot, selectedWorkflowId, selectWorkflow]);
 
@@ -67,6 +73,13 @@ export function App() {
   const errorCount = snapshot.diagnostics.issues.filter((issue) => issue.severity === "error").length;
 
   const selectedRecord = snapshot.workflows.find((record) => record.id === selectedWorkflowId) ?? null;
+  const invalidWorkflowIds = new Set(
+    snapshot.repositoryMap?.repositoryMap.workflows
+      .filter((workflow) => snapshot.diagnostics.issues.some((issue) =>
+        issue.severity === "error" && issue.file.endsWith(`/workflows/${workflow.id}.json`),
+      ))
+      .map((workflow) => workflow.id) ?? [],
+  );
   const displayedWorkflow = selectedRecord?.workflow ?? null;
   const displayedSourceChecks = selectedRecord?.sourceChecks ?? {};
 
@@ -82,6 +95,10 @@ export function App() {
         topBar={
           <TopBar
             repositoryName={snapshot.repository.name}
+            {...(selectedRecord !== null
+              ? { currentView: selectedRecord.workflow.name }
+              : snapshot.repositoryMap !== null ? { currentView: "Overview" } : {})}
+            {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
             status={connectionStatus}
             {...(connectionStatus === "invalid" ? { errorCount } : {})}
             onOpenSearch={openSearch}
@@ -90,6 +107,8 @@ export function App() {
         aside={
           <WorkflowNavigator
             workflows={snapshot.workflows}
+            repositoryName={snapshot.repository.name}
+            repositoryMap={snapshot.repositoryMap}
             selectedWorkflowId={selectedWorkflowId}
             onSelect={selectWorkflow}
             collapsed={workflowNavigatorCollapsed}
@@ -108,6 +127,14 @@ export function App() {
               await deleteWorkflow(selectedRecord.workflow.id);
               refetch();
             }}
+          />
+        ) : snapshot.repositoryMap !== null ? (
+          <RepositoryOverview
+            repositoryName={snapshot.repository.name}
+            mapRecord={snapshot.repositoryMap}
+            workflows={snapshot.workflows}
+            invalidWorkflowIds={invalidWorkflowIds}
+            onOpenWorkflow={selectWorkflow}
           />
         ) : (
           <EmptyState onRecheck={handleRecheck} />

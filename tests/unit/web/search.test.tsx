@@ -41,6 +41,7 @@ const SNAPSHOT: CodeHQSnapshot = {
   status: "ready",
   repository: { name: "demo", root: "/demo", codeHQDir: "/demo/.codehq" },
   project: null,
+  repositoryMap: null,
   workflows: [makeRecord(WORKFLOW_A), makeRecord(WORKFLOW_B)],
   diagnostics: { generatedAt: new Date().toISOString(), valid: true, issues: [] },
 };

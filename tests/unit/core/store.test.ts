@@ -178,3 +178,31 @@ describe("CodeHQStore — status", () => {
     expect(snapshot.status).toBe("empty");
   });
 });
+
+describe("CodeHQStore — repository map", () => {
+  const validRepositoryMap = JSON.stringify({
+    schemaVersion: "0.1",
+    workflows: [{ id: "wf", name: "Workflow", purpose: "Does the main thing." }],
+    connections: [],
+  });
+
+  it("loads an overview before any workflow detail file exists", async () => {
+    writeFileSync(path.join(root, ".codehq", "repository-map.json"), validRepositoryMap);
+    const snapshot = await createCodeHQStore(root).reload();
+    expect(snapshot.status).toBe("ready");
+    expect(snapshot.repositoryMap?.repositoryMap.workflows[0]?.id).toBe("wf");
+    expect(snapshot.workflows).toHaveLength(0);
+  });
+
+  it("keeps the last valid overview while an agent writes an invalid version", async () => {
+    const mapFile = path.join(root, ".codehq", "repository-map.json");
+    writeFileSync(mapFile, validRepositoryMap);
+    const store = createCodeHQStore(root);
+    await store.reload();
+    writeFileSync(mapFile, "{ still writing");
+    const snapshot = await store.reload();
+    expect(snapshot.repositoryMap?.state).toBe("stale");
+    expect(snapshot.repositoryMap?.repositoryMap.workflows[0]?.name).toBe("Workflow");
+    expect(snapshot.diagnostics.valid).toBe(false);
+  });
+});

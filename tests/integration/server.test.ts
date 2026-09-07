@@ -42,6 +42,14 @@ beforeAll(() => {
       connections: [],
     }),
   );
+  writeFileSync(
+    path.join(root, ".codehq", "repository-map.json"),
+    JSON.stringify({
+      schemaVersion: "0.1",
+      workflows: [{ id: "sample", name: "Sample", purpose: "A sample workflow." }],
+      connections: [],
+    }),
+  );
 });
 
 afterAll(() => {
@@ -200,6 +208,19 @@ describe("createCodeHQServer — /api/workflows/:id/layout", () => {
     expect(deleted.status).toBe(204);
     const afterDelete = await fetch(endpoint);
     await expect(afterDelete.json()).resolves.toEqual({ layout: null });
+  });
+
+  it("persists the repository overview layout through the shared canvas endpoint", async () => {
+    const running = await startServer();
+    const endpoint = `${running.url}/api/workflows/__repository-map__/layout`;
+    const saved = await fetch(endpoint, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(layout),
+    });
+    expect(saved.status).toBe(204);
+    const loaded = await fetch(endpoint);
+    await expect(loaded.json()).resolves.toEqual({ layout });
   });
 
   it("rejects temporary view state and unknown workflows", async () => {

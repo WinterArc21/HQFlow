@@ -25,6 +25,15 @@ export interface RouteContext {
   store: CodeHQStore;
 }
 
+const REPOSITORY_MAP_CANVAS_ID = "__repository-map__";
+
+function hasCanvas(store: CodeHQStore, canvasId: string): boolean {
+  if (canvasId === REPOSITORY_MAP_CANVAS_ID) {
+    return store.getSnapshot().repositoryMap !== null;
+  }
+  return store.getSnapshot().workflows.some((workflow) => workflow.id === canvasId);
+}
+
 const sourceQuerySchema = z
   .object({
     file: z.string().min(1, { message: "Query parameter 'file' is required." }),
@@ -201,18 +210,16 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
   });
 
   app.get<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
-    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
-    if (record === undefined) {
-      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
       return;
     }
     await reply.send({ layout: await readWorkflowCanvasLayout(root, request.params.id) });
   });
 
   app.put<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
-    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
-    if (record === undefined) {
-      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
       return;
     }
     const parsed = workflowCanvasLayoutSchema.safeParse(request.body);
@@ -225,9 +232,8 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
   });
 
   app.delete<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
-    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
-    if (record === undefined) {
-      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
       return;
     }
     await deleteWorkflowCanvasLayout(root, request.params.id);

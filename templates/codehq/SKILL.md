@@ -6,8 +6,9 @@ only renders the structured JSON files you write here, in `.codehq/`, as an inte
 workflow canvas that a human can explore in their browser. Your job is to read the real
 source code and describe real workflows accurately, honestly, and at the right altitude.
 
-Everything you write goes into `.codehq/workflows/<id>.json`. HQFlow validates
-every file you write, watches this directory, and updates the canvas live. If validation
+The repository overview goes into `.codehq/repository-map.json`, and each detailed workflow
+goes into `.codehq/workflows/<id>.json`. HQFlow validates every file you write, watches
+`.codehq/`, and updates the canvas live. If validation
 fails, HQFlow writes the errors to `.codehq/diagnostics.json`. Read that file and fix the
 errors before handoff.
 
@@ -36,11 +37,27 @@ workflows actually work — where they start, what they touch, what can go wrong
 prove it with tests. A workflow file that is short, accurate, and verifiable is worth far more
 than one that is exhaustive and speculative.
 
-## User prompt
+## Map a repository
 
-> "Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
-> `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
-> email, and write the result to `.codehq/workflows/checkout.json`."
+When the user asks you to map the repository:
+
+1. Inspect the repository at a high level and identify 5–9 primary user-facing or system
+   workflows. Do not treat modules, utility layers, or individual functions as workflows.
+2. Write a complete, valid `.codehq/repository-map.json` immediately. Include each identified
+   workflow and only the cross-workflow handoffs that have direct source evidence.
+3. If your environment supports subagents, assign every independent workflow to a separate
+   subagent and run them concurrently. Each subagent must own exactly one
+   `.codehq/workflows/<id>.json` file. Subagents must not edit `repository-map.json`, another
+   workflow's file, or source code. If subagents are unavailable, map the same files sequentially.
+4. Tell each subagent to save complete, valid checkpoints as it traces the workflow. HQFlow will
+   show each workflow as soon as its first valid file is saved.
+5. After all workflow tasks finish, check their results against `repository-map.json`, run
+   `hqflow validate`, read `.codehq/diagnostics.json`, and fix all errors before handoff.
+
+Example user prompt:
+
+> "Read `.codehq/SKILL.md` and map this repository. Write the repository overview first,
+> then use separate subagents to map the primary workflows concurrently."
 
 ## Workflow authoring loop
 
@@ -62,7 +79,7 @@ than one that is exhaustive and speculative.
 
 ## Incremental authoring — the map grows as you read
 
-HQFlow renders the canvas the moment a workflow file is complete and valid, and it
+HQFlow renders the repository overview or workflow canvas the moment its file is complete and valid, and it
 watches the directory for changes — so you can build the map incrementally as you trace the
 code, not only at the end. Each saved version is a real checkpoint a human could open and
 explore.
@@ -93,6 +110,23 @@ anywhere in these files. HQFlow computes all of that automatically from the
 All file paths (`SourceReference.file`, `TestReference.file`) **must be repository-relative**:
 no leading `/`, no drive letters (`C:\`), no UNC paths (`\\server\...`), and no `..` segments.
 Use forward slashes or backslashes, e.g. `"src/server/routes/checkout.ts"`.
+
+### `RepositoryMap` (`.codehq/repository-map.json`)
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `schemaVersion` | `"0.1"` | yes | Must be exactly `"0.1"`. |
+| `workflows` | `RepositoryWorkflow[]` | yes | The 5–9 primary workflows shown as overview cards. |
+| `connections` | `RepositoryConnection[]` | yes | Evidence-backed handoffs between declared workflow IDs. May be empty. |
+
+Each `RepositoryWorkflow` has required `id`, `name`, and `purpose` fields, plus an optional
+`entryPoint` `SourceReference`. The ID uses the same lowercase-and-hyphens format as a workflow
+file and must match the detailed workflow ID.
+
+Each `RepositoryConnection` has required `from`, `to`, and `sources` fields. `sources` must contain
+at least one `SourceReference` that proves the handoff. It can also have a short `label` and a
+`type` of `"success"`, `"failure"`, `"conditional"`, or `"async"`. Never infer a repository
+connection only because two workflows mention the same file.
 
 ### `Workflow` (one file per workflow, `.codehq/workflows/<id>.json`)
 

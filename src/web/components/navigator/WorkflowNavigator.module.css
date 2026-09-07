@@ -53,10 +53,194 @@
   min-height: 0;
 }
 
+.repositoryName {
+  margin: var(--space-2) var(--space-4) var(--space-3);
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .list {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  padding: 0 var(--space-2) var(--space-3);
+}
+
+.rootItem {
+  min-width: 0;
+}
+
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.root svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--accent-blue);
+}
+
+.rootCopy {
+  min-width: 0;
+}
+
+.rootCopy strong,
+.leafCopy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rootCopy small,
+.leafCopy small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+}
+
+.overviewHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-micro);
+}
+
+.overviewHint svg {
+  flex-shrink: 0;
+  margin-top: 0;
+  color: currentColor;
+}
+
+.root:hover,
+.leaf:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.selectedRoot {
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-blue) 55%, var(--border-subtle));
+}
+
+.selectedRoot .rootCopy strong,
+.selectedLeaf .leafCopy strong {
+  font-weight: 700;
+}
+
+.root:focus-visible,
+.leaf:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.branch {
+  margin: 0 0 0 14px;
+  padding: 2px 0 0 12px;
+  border-left: 1px solid var(--border-strong);
+}
+
+.branch > li {
+  position: relative;
+}
+
+.branch > li::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: -12px;
+  width: 10px;
+  height: 1px;
+  background: var(--border-strong);
+}
+
+.leaf,
+.plannedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.leaf svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.leafCopy {
+  min-width: 0;
+}
+
+.leafCopy strong {
+  font-family: var(--font-ui);
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+}
+
+.selectedLeaf {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.plannedItem {
+  color: var(--text-secondary);
+}
+
+.plannedItem strong,
+.plannedItem small {
+  display: block;
+}
+
+.plannedItem strong {
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+}
+
+.plannedItem small {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border: 1px solid var(--text-tertiary);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mapAnother {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding: var(--space-2);
+  color: var(--accent-blue);
 }
 
 .empty {
