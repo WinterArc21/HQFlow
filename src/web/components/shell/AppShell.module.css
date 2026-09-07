@@ -30,6 +30,7 @@
 }
 
 .main {
+  position: relative;
   overflow: auto;
   min-width: 0;
   min-height: 0;
@@ -42,7 +43,12 @@
 }
 
 .bodyCollapsed {
-  grid-template-columns: 52px 1fr;
+  grid-template-columns: 1px 1fr;
+}
+
+.bodyCollapsed .aside {
+  overflow: hidden;
+  background-color: var(--border-subtle);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { NavigatorExpandControl } from "@web/components/navigator/NavigatorExpandControl";
 import { WorkflowNavigator } from "@web/components/navigator/WorkflowNavigator";
 import type { WorkflowRecord } from "@web/api/types";
 
@@ -109,14 +110,10 @@ describe("WorkflowNavigator", () => {
     collapseButton.focus();
     await user.keyboard("{Enter}");
 
-    const expandButton = screen.getByRole("button", { name: "Expand workflows rail" });
-    expect(expandButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Collapse workflows rail" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Beta/ })).not.toBeInTheDocument();
-
-    await user.keyboard("{Enter}");
-
-    expect(screen.getByRole("button", { name: "Collapse workflows rail" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /Beta/ })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByRole("navigation", { name: "Repository navigation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Expand workflows rail" })).not.toBeInTheDocument();
   });
 
   it("supports the controlled state used by App", async () => {
@@ -137,10 +134,7 @@ describe("WorkflowNavigator", () => {
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Collapse workflows rail" }));
-    expect(screen.getByRole("button", { name: "Expand workflows rail" })).toHaveAttribute("aria-expanded", "false");
-
-    await user.click(screen.getByRole("button", { name: "Expand workflows rail" }));
-    expect(screen.getByRole("button", { name: /Alpha/ })).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByRole("navigation", { name: "Repository navigation" })).not.toBeInTheDocument();
   });
 
   it("shows the repository overview and planned workflows", async () => {
@@ -176,6 +170,15 @@ describe("WorkflowNavigator", () => {
 
     await userEvent.click(overview);
     expect(onSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("renders an overlay expand control for the collapsed hairline rail", async () => {
+    const onExpand = vi.fn();
+    render(<NavigatorExpandControl onExpand={onExpand} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Expand workflows rail" }));
+    expect(onExpand).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a flat workflow list when there is no repository map", () => {
