@@ -94,9 +94,7 @@ function edgePaths(container: HTMLElement): { semantic: SVGPathElement; halo: SV
   expect(group).not.toBeNull();
   const paths = Array.from(group!.querySelectorAll("path"));
   const semantic = paths.find((p) => p.classList.contains("react-flow__edge-path"));
-  const halo = paths.find(
-    (p) => !p.classList.contains("react-flow__edge-path") && !p.classList.contains("react-flow__edge-interaction"),
-  );
+  const halo = paths.find((p) => p.hasAttribute("data-edge-halo"));
   expect(semantic, "semantic edge-path not rendered").toBeDefined();
   expect(halo, "halo underlay path not rendered").toBeDefined();
   return { semantic: semantic!, halo: halo! };
@@ -360,6 +358,40 @@ describe("WorkflowEdge visual grammar", () => {
       expect(halo.style.pointerEvents).toBe("none");
       expect(semantic.getAttribute("marker-end")).toBe("url(#codehq-arrow-failure)");
       expect(halo.getAttribute("marker-end")).toBeNull();
+    });
+  });
+
+  describe("traveling orb", () => {
+    it("adds a hue-matched bead on success, async, conditional, and retry edges", () => {
+      const animated = [
+        makeData({ connection: makeConnection({ type: "success" }) }),
+        makeData({ connection: makeConnection({ type: "async" }) }),
+        makeData({ connection: makeConnection({ type: "conditional" }) }),
+        makeData({ connection: makeConnection({ type: "success" }), retry: true }),
+      ];
+      for (const data of animated) {
+        const container = renderEdge(data);
+        const group = container.querySelector("[data-workflow-edge=\"e1\"]");
+        expect(group).toHaveAttribute("data-traveling-orb", "true");
+        expect(group?.querySelector("circle")).not.toBeNull();
+      }
+    });
+
+    it("does not animate failure or terminal-outcome edges", () => {
+      const skipped = [
+        makeData({ connection: makeConnection({ type: "failure" }) }),
+        makeData({ connection: makeConnection({ type: "success" }), outcomeBand: "success" }),
+        makeData({ connection: makeConnection({ type: "success" }), outcomeBand: "failure" }),
+      ];
+      for (const data of skipped) {
+        const container = renderEdge(data);
+        expect(container.querySelector("[data-traveling-orb]")).toBeNull();
+      }
+    });
+
+    it("hides the bead when the edge is dimmed by path tracing", () => {
+      const container = renderEdge(makeData({ connection: makeConnection({ type: "success" }), dimmed: true }));
+      expect(container.querySelector("[data-traveling-orb]")).toBeNull();
     });
   });
 });

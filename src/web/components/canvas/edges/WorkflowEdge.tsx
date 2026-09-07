@@ -120,6 +120,11 @@ const TRACED_STROKE_BOOST = 1;
 /** Opacity applied to a dimmed edge during path tracing (contract §11) — a dimmed edge fades to a
  * quiet background tone while traced edges strengthen, so the followed path reads as the figure. */
 const DIMMED_OPACITY_FACTOR = 0.25;
+/** Success, async, conditional, and retry edges carry a hue-matched traveling bead.
+ * Failure and terminal-outcome edges stay still so a hard stop does not look like flow. */
+function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
+  return variant === "success" || variant === "async" || variant === "conditional" || variant === "retry" || variant === undefined;
+}
 
 /**
  * A directional connector styled from the connection type or terminal outcome band: neutral solid
@@ -249,6 +254,9 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const labelText = isRetryLoop ? (connectionLabelText(connection) ?? "retry") : connectionLabelText(connection);
   const showLabel = labelText !== undefined;
   const handlePoint = bendPoint ?? { x: labelX, y: labelY };
+  const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
+  const orbDuration = markerVariant === "async" ? "1.8s" : "2.4s";
+  const orbPathId = `codehq-orb-path-${id}`;
 
   const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
     if (!dragging) {
@@ -276,9 +284,28 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
 
   return (
     <>
-      <g data-workflow-edge={id} data-edge-source={source} data-edge-target={target}>
-        <path d={path} fill="none" style={haloStyle} />
+      <g
+        data-workflow-edge={id}
+        data-edge-source={source}
+        data-edge-target={target}
+        data-traveling-orb={showTravelingOrb ? "true" : undefined}
+        data-orb-active={showTravelingOrb && traced ? "true" : undefined}
+        className={showTravelingOrb ? styles.orbHost : undefined}
+      >
+        <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
         <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+        {showTravelingOrb ? (
+          <>
+            <path id={orbPathId} d={path} fill="none" className={styles.orbTrack} />
+            <g className={styles.orb} style={{ color: `var(${visual.varName})` }} aria-hidden="true">
+              <circle r="6" className={styles.orbHalo} />
+              <circle r="3.2" className={styles.orbBead} />
+              <animateMotion dur={orbDuration} repeatCount="indefinite" rotate="auto">
+                <mpath href={`#${orbPathId}`} />
+              </animateMotion>
+            </g>
+          </>
+        ) : null}
       </g>
       {showLabel ? (
         <EdgeLabelRenderer>
