@@ -72,7 +72,11 @@ export function WorkflowNavigator({
   };
 
   return (
-    <nav className={`${styles.navigator} ${isCollapsed ? styles.collapsed : ""}`} aria-label="Repository navigation">
+    <nav
+      className={`${styles.navigator} ${isCollapsed ? styles.collapsed : ""}`}
+      aria-label="Repository navigation"
+      hidden={isCollapsed}
+    >
       <div className={styles.header}>
         {isCollapsed ? null : <SectionLabel as="h2">Navigator</SectionLabel>}
         <button

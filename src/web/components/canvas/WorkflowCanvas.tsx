@@ -2,6 +2,7 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
 import { toPng } from "html-to-image";
+import type { ReactNode } from "react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
@@ -49,6 +50,8 @@ export interface WorkflowCanvasProps {
   itemLabel?: string;
   exportEnabled?: boolean;
   onNodeActivate?: (nodeId: string) => void;
+  /** Rendered on the dotted stage, not the title strip. */
+  stageOverlay?: ReactNode;
   modifiedAt?: WorkflowRecord["modifiedAt"];
   state?: WorkflowRecord["state"];
   onDeleteWorkflow?: () => Promise<void>;
@@ -76,6 +79,7 @@ function WorkflowCanvasInner({
   itemLabel,
   exportEnabled = true,
   onNodeActivate,
+  stageOverlay,
   modifiedAt,
   state,
   onDeleteWorkflow,
@@ -386,6 +390,7 @@ function WorkflowCanvasInner({
           : {})}
       />
       <div className={styles.stage} ref={containerRef}>
+        {stageOverlay}
         <EdgeMarkers />
         <ReactFlow
           className={styles.flow}
