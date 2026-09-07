@@ -15,11 +15,13 @@
  *   --accent-red     #A23B30  ~6.55:1
  *   --accent-violet  #6A4FB0  ~6.25:1
  *   --accent-neutral #5B6168  ~6.25:1
+ *   --accent-cyan    #0F7F7A  ~4.8:1  (logic cards)
+ *   --accent-ice     #1A5C58  ~7.2:1  (success / happy-path edges)
  *   --accent-output  #1F7A4C  ~5.33:1 (kept visibly more saturated/emerald than --accent-green
  *                                      so "output" still reads as a distinct, brighter green)
  * --focus-ring reuses the themed blue so focus always matches the primary interactive colour.
  *
- * ---- category accents (--accent-rose / --accent-orange / --accent-orchid) ----
+ * ---- category accents (--accent-rose / --accent-orange / --accent-violet) ----
  * Added when the step-card categories moved off amber and grey. These are *card* colours, so the
  * bar they clear is not "readable as text on the page background" but "readable on the card as it
  * actually renders" — the 15% accent leading edge of the gradient, the category label (accent
@@ -30,10 +32,10 @@
  *   --accent-orange   h24/26   the only slot between failure red (h6) and conditional/retry amber
  *                              (h36); see the note in semantics.ts about that corridor
  *   --accent-rose     h329     37deg clear of failure red, the widest gap available on that side
- *   --accent-orchid   h289/292 40deg clear of rose. Deliberately not the h305 orchid first drafted
- *                              as a decision colour: against rose that left only 24deg on dark and
- *                              14deg on paper, and two large fills that close together stop being
- *                              two categories.
+ *   --accent-violet   h262     cooler purple for External, matching the drawer. Orchid was dropped
+ *                              as a second pink-purple so Decision (rose) and External stay apart.
+ *   --accent-cyan     h178     logic cards only — not the happy-path stroke.
+ *   --accent-ice      pale on dark / deep teal-ice on paper — success edges from first node to last.
  */
 
 :root {
@@ -53,12 +55,14 @@
   --accent-green: #4fa97a; /* found-file badges — not a category */
   --accent-amber: #d19a45; /* conditional + retry connections — not a category */
   --accent-red: #c4665c; /* failure */
-  --accent-violet: #8b7bc7; /* connection/badge violet — no longer a category colour */
-  --accent-neutral: #7e858d; /* logic, normal connections */
+  --accent-violet: #8b7bc7; /* external cards, drawer services, violet badges */
+  --accent-neutral: #7e858d; /* leftover chrome; not logic, not the happy path */
+  --accent-cyan: #5ec4c0; /* logic cards */
+  --accent-ice: #d4eef0; /* success / happy-path edges */
   --accent-output: #7fbf9a; /* entry + output: the two ends of a workflow share one colour */
   --accent-rose: #d98cb4; /* decision */
   --accent-orange: #e08d55; /* data */
-  --accent-orchid: #bf88cc; /* external */
+  --accent-orchid: #bf88cc; /* unused; kept so old mixes do not go missing */
   --focus-ring: #5b8def;
 
   /* ---- technical canvas texture (very low opacity, theme-tuned) ---- */
@@ -125,6 +129,8 @@
   --accent-red: #a23b30;
   --accent-violet: #6a4fb0;
   --accent-neutral: #5b6168;
+  --accent-cyan: #0f7f7a;
+  --accent-ice: #1a5c58;
   --accent-output: #1f7a4c;
   --accent-rose: #a83a72;
   --accent-orange: #a85718;

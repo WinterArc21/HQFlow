@@ -120,7 +120,7 @@ describe("WorkflowEdge visual grammar", () => {
 
     it("matches the bend dot color to the edge type", () => {
       const cases = [
-        ["success", "--accent-neutral"],
+        ["success", "--accent-ice"],
         ["failure", "--accent-red"],
         ["conditional", "--accent-amber"],
         ["async", "--accent-blue"],
@@ -308,7 +308,7 @@ describe("WorkflowEdge visual grammar", () => {
 
       expect(ordinary.data?.outcomeBand).toBeUndefined();
       expect(success.data?.outcomeBand).toBe("success");
-      expect(ordinaryPaths.semantic.style.stroke).toBe("var(--accent-neutral)");
+      expect(ordinaryPaths.semantic.style.stroke).toBe("var(--accent-ice)");
       expect(ordinaryPaths.semantic.style.strokeDasharray).toBe("");
       expect(successPaths.semantic.style.stroke).toBe("var(--accent-output)");
       expect(successPaths.semantic.style.strokeDasharray).toBe("8 6");
