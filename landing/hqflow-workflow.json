@@ -43,7 +43,7 @@
     {
       "id": "open-local-canvas",
       "name": "Open Local Canvas",
-      "purpose": "Starts HQFlow's local server and opens the browser without uploading repository data.",
+      "purpose": "Starts the local server and opens the browser. Nothing is uploaded.",
       "category": "logic",
       "sources": [
         {

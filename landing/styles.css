@@ -104,8 +104,8 @@ h1, h2, h3 { font-family: var(--display); }
   text-transform: uppercase;
 }
 
-.brand-mark { display: inline-grid; flex: none; width: 27px; height: 27px; place-items: center; border-radius: var(--r-1); color: white; background: var(--ink); font: 700 12px var(--mono); }
-.brand-mark.sm { width: 20px; height: 20px; font-size: 10px; }
+.brand-mark { display: inline-grid; flex: none; width: 32px; height: 27px; place-items: center; border-radius: var(--r-1); color: white; background: var(--ink); font: 700 11px var(--mono); letter-spacing: .02em; }
+.brand-mark.sm { width: 24px; height: 20px; font-size: 9px; }
 .brand { display: inline-flex; align-items: center; gap: 12px; }
 .brand-word { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-word strong { font-size: 14px; letter-spacing: .02em; }
