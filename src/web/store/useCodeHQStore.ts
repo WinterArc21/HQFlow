@@ -1,5 +1,12 @@
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import type {
+  CanvasBend,
+  CanvasPoint,
+  WorkflowCanvasLayout,
+} from "@schema/wire";
+
+export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
 
 /**
  * UI state only (contract §11) — workflow/step/project data always comes from the server
@@ -14,7 +21,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 2;
+const PERSIST_VERSION = 4;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -23,6 +30,8 @@ interface CodeHQUiState {
   stepPanRequest: StepPanRequest | null;
   /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
   expandedStepIds: Record<string, true>;
+  /** In-memory visual state loaded from the active repository's local server. */
+  canvasLayouts: Record<string, WorkflowCanvasLayout>;
   /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
   layoutResetRevision: number;
   searchQuery: string;
@@ -37,7 +46,11 @@ interface CodeHQUiActions {
   selectStepAndPan: (workflowId: string, stepId: string) => void;
   toggleStepExpanded: (stepId: string) => void;
   collapseAllSteps: () => void;
-  resetLayout: () => void;
+  saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
+  saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
+  hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
+  reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
+  resetLayout: (workflowId?: string) => void;
   setSearchQuery: (query: string) => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -63,9 +76,8 @@ function getInitialTheme(): Theme {
 }
 
 /**
- * Wraps `window.localStorage` so a failure (quota exceeded, private browsing, storage
- * disabled by policy) can never crash the app — persistence is a convenience, not a
- * requirement, so every failure is swallowed after being reduced to a no-op.
+ * Wraps `window.localStorage` so a theme-preference write failure (quota exceeded, private
+ * browsing, storage disabled by policy) can never crash the app.
  */
 const safeStorage: StateStorage = {
   getItem: (name) => {
@@ -96,6 +108,7 @@ const INITIAL_STATE: CodeHQUiState = {
   selectedStepId: null,
   stepPanRequest: null,
   expandedStepIds: {},
+  canvasLayouts: {},
   layoutResetRevision: 0,
   searchQuery: "",
   searchOpen: false,
@@ -109,7 +122,12 @@ export const useCodeHQStore = create<CodeHQStore>()(
       ...INITIAL_STATE,
 
       selectWorkflow: (workflowId) =>
-        set({ selectedWorkflowId: workflowId, selectedStepId: null, stepPanRequest: null, expandedStepIds: {} }),
+        set({
+          selectedWorkflowId: workflowId,
+          selectedStepId: null,
+          stepPanRequest: null,
+          expandedStepIds: {},
+        }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes
@@ -142,7 +160,73 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       collapseAllSteps: () => set({ expandedStepIds: {} }),
 
-      resetLayout: () => set((state) => ({ layoutResetRevision: state.layoutResetRevision + 1 })),
+      saveNodePosition: (workflowId, nodeId, position) => set((state) => {
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        return {
+          canvasLayouts: {
+            ...state.canvasLayouts,
+            [workflowId]: { ...layout, nodePositions: { ...layout.nodePositions, [nodeId]: position } },
+          },
+        };
+      }),
+
+      saveEdgeBend: (workflowId, edgeId, bend) => set((state) => {
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        return {
+          canvasLayouts: {
+            ...state.canvasLayouts,
+            [workflowId]: { ...layout, edgeBends: { ...layout.edgeBends, [edgeId]: bend } },
+          },
+        };
+      }),
+
+      hydrateCanvasLayout: (workflowId, layout) => set((state) => {
+        const canvasLayouts = { ...state.canvasLayouts };
+        if (layout === null) {
+          delete canvasLayouts[workflowId];
+        } else {
+          canvasLayouts[workflowId] = layout;
+        }
+        return { canvasLayouts };
+      }),
+
+      reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
+        const expandedStepIds = Object.fromEntries(
+          Object.entries(state.expandedStepIds).filter(([id]) => nodeIds.has(id)),
+        ) as Record<string, true>;
+        const layout = state.canvasLayouts[workflowId];
+        if (layout === undefined) {
+          return Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
+            ? state
+            : { expandedStepIds };
+        }
+        const nodePositions = Object.fromEntries(Object.entries(layout.nodePositions).filter(([id]) => nodeIds.has(id)));
+        const edgeBends = Object.fromEntries(Object.entries(layout.edgeBends).filter(([id]) => edgeIds.has(id)));
+        if (
+          Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length
+          && Object.keys(edgeBends).length === Object.keys(layout.edgeBends).length
+          && Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
+        ) {
+          return state;
+        }
+        return {
+          expandedStepIds,
+          canvasLayouts: {
+            ...state.canvasLayouts,
+            [workflowId]: { nodePositions, edgeBends },
+          },
+        };
+      }),
+
+      resetLayout: (requestedWorkflowId) => set((state) => {
+        const workflowId = requestedWorkflowId ?? state.selectedWorkflowId;
+        if (workflowId === null) {
+          return state;
+        }
+        const canvasLayouts = { ...state.canvasLayouts };
+        delete canvasLayouts[workflowId];
+        return { canvasLayouts, expandedStepIds: {}, layoutResetRevision: state.layoutResetRevision + 1 };
+      }),
 
       setSearchQuery: (searchQuery) => set({ searchQuery }),
 
@@ -174,6 +258,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
         }
         const state = { ...(persisted as Record<string, unknown>) };
         delete state.depth;
+        delete state.canvasLayouts;
         return state as unknown as CodeHQUiState;
       },
     },

@@ -1,5 +1,5 @@
 import "@xyflow/react/dist/style.css";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
 import { toPng } from "html-to-image";
 import type { Workflow } from "@schema/workflow";
@@ -21,6 +21,7 @@ import { useExportMode } from "../../export-viewer/ExportModeContext";
 import { fetchWorkflowExport } from "../../api/client";
 import { DeleteWorkflowDialog } from "./DeleteWorkflowDialog";
 import { ExportDialog } from "./ExportDialog";
+import { useCanvasLayoutPersistence } from "./useCanvasLayoutPersistence";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
 import styles from "./WorkflowCanvas.module.css";
@@ -43,6 +44,11 @@ const EDGE_TYPES = { workflow: WorkflowEdge };
 export interface WorkflowCanvasProps {
   workflow: Workflow;
   sourceChecks: Record<string, SourceStatus>;
+  /** A separate key lets another view reuse the complete canvas without impersonating a workflow API resource. */
+  canvasId?: string;
+  itemLabel?: string;
+  exportEnabled?: boolean;
+  onNodeActivate?: (nodeId: string) => void;
   modifiedAt?: WorkflowRecord["modifiedAt"];
   state?: WorkflowRecord["state"];
   onDeleteWorkflow?: () => Promise<void>;
@@ -50,6 +56,12 @@ export interface WorkflowCanvasProps {
 
 /** Public entry point: owns the `ReactFlowProvider` so `useReactFlow` is available below it. */
 export function WorkflowCanvas(props: WorkflowCanvasProps) {
+  const exportMode = useExportMode();
+  const canvasId = props.canvasId ?? props.workflow.id;
+  const layoutReady = useCanvasLayoutPersistence(canvasId, exportMode === null);
+  if (!layoutReady) {
+    return <div className={styles.wrapper} aria-busy="true" aria-label="Loading saved canvas layout" />;
+  }
   return (
     <ReactFlowProvider>
       <WorkflowCanvasInner {...props} />
@@ -57,7 +69,18 @@ export function WorkflowCanvas(props: WorkflowCanvasProps) {
   );
 }
 
-function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDeleteWorkflow }: WorkflowCanvasProps) {
+function WorkflowCanvasInner({
+  workflow,
+  sourceChecks,
+  canvasId: requestedCanvasId,
+  itemLabel,
+  exportEnabled = true,
+  onNodeActivate,
+  modifiedAt,
+  state,
+  onDeleteWorkflow,
+}: WorkflowCanvasProps) {
+  const canvasId = requestedCanvasId ?? workflow.id;
   const reactFlowInstance = useReactFlow<CanvasFlowNode, WorkflowFlowEdge>();
   const reducedMotion = usePrefersReducedMotion();
   const exportMode = useExportMode();
@@ -67,10 +90,14 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
+  const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
+  const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
+  const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
+  const reconcileCanvasLayout = useCodeHQStore((state) => state.reconcileCanvasLayout);
   const layoutResetRevision = useCodeHQStore((state) => state.layoutResetRevision);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const stepPanRequest = useCodeHQStore((state) => state.stepPanRequest);
@@ -104,10 +131,14 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   const onFocusStep = useCallback((stepId: string) => setFocusedStepId(stepId), []);
   const onBlurStep = useCallback(() => setFocusedStepId(null), []);
   const handleClearSelection = useCallback(() => selectStep(null), [selectStep]);
+  const handleSelectNode = useCallback((nodeId: string) => {
+    selectStep(nodeId);
+    onNodeActivate?.(nodeId);
+  }, [onNodeActivate, selectStep]);
 
-  const { containerRef, overflowsRight, overflowsBottom, updateOverflow } = useCanvasFit({
+  const { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow } = useCanvasFit({
     layoutBounds: layout.bounds,
-    workflowId: workflow.id,
+    workflowId: canvasId,
     workflowRevision,
     reactFlowInstance,
     reducedMotion,
@@ -119,7 +150,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     containerRef,
     reactFlowInstance,
     selectedStepId,
-    onSelect: selectStep,
+    onSelect: handleSelectNode,
     onClear: handleClearSelection,
     reducedMotion,
   });
@@ -168,28 +199,52 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
       onBlurStep,
     ],
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(generatedNodes);
-  const previousWorkflowId = useRef(workflow.id);
+  const initialNodes = useMemo(
+    () => generatedNodes.map((node) => ({
+      ...node,
+      position: canvasLayout?.nodePositions[node.id] ?? node.position,
+    })),
+    [canvasLayout?.nodePositions, generatedNodes],
+  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(initialNodes);
+  const previousWorkflowId = useRef(canvasId);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
-    const reset = previousWorkflowId.current !== workflow.id;
-    previousWorkflowId.current = workflow.id;
+    const reset = previousWorkflowId.current !== canvasId;
+    previousWorkflowId.current = canvasId;
     setNodes((current) => {
       const positions = new Map(current.map((node) => [node.id, node.position]));
-      return generatedNodes.map((node) => reset ? node : { ...node, position: positions.get(node.id) ?? node.position });
+      return generatedNodes.map((node) => ({
+        ...node,
+        position: reset
+          ? canvasLayout?.nodePositions[node.id] ?? node.position
+          : positions.get(node.id) ?? canvasLayout?.nodePositions[node.id] ?? node.position,
+      }));
     });
-  }, [generatedNodes, setNodes, workflow.id]);
+  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, setNodes]);
   useLayoutEffect(() => {
     if (handledLayoutResetRevision.current === layoutResetRevision) {
       return;
     }
     handledLayoutResetRevision.current = layoutResetRevision;
     setNodes((current) => restoreGeneratedNodePositions(current, generatedNodes));
-  }, [generatedNodes, layoutResetRevision, setNodes]);
-  const baseEdges = useMemo(
-    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey),
-    [layout, backEdgeIds, tracePath, bendResetKey],
+    fitToViewport(reducedMotion ? 0 : 400);
+  }, [fitToViewport, generatedNodes, layoutResetRevision, reducedMotion, setNodes]);
+  const handleBendChange = useCallback(
+    (edgeId: string, bend: Parameters<typeof saveEdgeBend>[2]) => saveEdgeBend(canvasId, edgeId, bend),
+    [canvasId, saveEdgeBend],
   );
+  const baseEdges = useMemo(
+    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey, canvasLayout?.edgeBends, handleBendChange),
+    [layout, backEdgeIds, tracePath, bendResetKey, canvasLayout?.edgeBends, handleBendChange],
+  );
+  useEffect(() => {
+    reconcileCanvasLayout(
+      canvasId,
+      new Set(layout.nodes.map((node) => node.id)),
+      new Set(layout.edges.map((edge) => edge.id)),
+    );
+  }, [canvasId, layout.edges, layout.nodes, reconcileCanvasLayout]);
   const edges = useMemo(() => {
     const nodeBounds = new Map<string, { x: number; y: number; width: number; height: number }>();
     const initialPositions = new Map(
@@ -228,7 +283,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
   }, [baseEdges, layout, nodes]);
 
   const handleNodeClick: NodeMouseHandler<CanvasFlowNode> = (_event, node) => {
-    selectStep(node.id);
+    handleSelectNode(node.id);
     setRovingId(node.id);
   };
 
@@ -317,14 +372,15 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
     <div className={styles.wrapper} data-image-exporting={imageExporting ? "true" : undefined}>
       <CanvasHeader
         workflow={workflow}
+        {...(itemLabel !== undefined ? { itemLabel } : {})}
         {...(modifiedAt !== undefined ? { modifiedAt } : {})}
         {...(state !== undefined ? { state } : {})}
         onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
         onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
-        onResetLayout={resetLayout}
+        onResetLayout={() => resetLayout(canvasId)}
         onCollapseAll={collapseAllSteps}
         collapseDisabled={!hasExpandedSteps}
-        {...(exportMode === null ? { onExport: handleExport } : {})}
+        {...(exportMode === null && exportEnabled ? { onExport: handleExport } : {})}
         {...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
           ? { onDelete: () => setDeleteDialogOpen(true) }
           : {})}
@@ -346,6 +402,7 @@ function WorkflowCanvasInner({ workflow, sourceChecks, modifiedAt, state, onDele
           minZoom={0.2}
           maxZoom={2}
           onMove={(_event, viewport) => updateOverflow(viewport)}
+          onNodeDragStop={(_event, node) => saveNodePosition(canvasId, node.id, node.position)}
           onNodeClick={handleNodeClick}
           onNodesChange={onNodesChange}
           onPaneClick={handleClearSelection}

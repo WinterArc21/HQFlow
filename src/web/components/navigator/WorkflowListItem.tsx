@@ -21,6 +21,7 @@ export function WorkflowListItem({ record, selected, onSelect }: WorkflowListIte
       <button
         type="button"
         data-workflow-item
+        data-navigation-item
         className={`${styles.item} ${selected ? styles.selected : ""}`}
         aria-current={selected ? "true" : undefined}
         onClick={onSelect}

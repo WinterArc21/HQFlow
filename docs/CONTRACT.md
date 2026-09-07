@@ -99,6 +99,7 @@ tests/
 ├── workflows/
 │   └── <id>.json
 └── .runtime/               # gitignored, runtime scratch only
+    └── layout.json          # automatic, repository-local canvas visual state
 ```
 
 `init` appends `.codehq/.runtime/` to the repo `.gitignore` (creating it if absent, never
@@ -216,6 +217,9 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
+| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions and edge bends. |
+| PUT | `/api/workflows/:id/layout` | Replace the workflow's complete canvas layout. Returns 204. |
+| DELETE | `/api/workflows/:id/layout` | Delete the workflow's saved layout. Returns 204. |
 | DELETE | `/api/workflows/:id` | Delete a valid workflow; returns the refreshed snapshot. |
 | GET | `/api/diagnostics` | `DiagnosticsReport` |
 | GET | `/api/source?file=<rel>&line=<n>` | Metadata only: `{ file, absolutePath, exists, editorUrl, line? }`. **Never returns file contents.** |
@@ -367,8 +371,8 @@ src/web/
   App.tsx
   styles/{tokens.css,reset.css,base.css}
   api/{client.ts,events.ts}        # fetch wrappers + SSE hook
-  store/{useCodeHQStore.ts}   # zustand: selectedWorkflowId, selectedStepId, depth,
-                                   # expandedStepIds, searchQuery, diagnosticsOpen, theme
+  store/{useCodeHQStore.ts}        # zustand: selection, temporary expansion, canvas layouts,
+                                   # search, diagnostics, and theme
   components/
     shell/      AppShell, TopBar, StatusIndicator, ThemeToggle, LocalOnlyBadge
     navigator/  WorkflowNavigator, WorkflowListItem

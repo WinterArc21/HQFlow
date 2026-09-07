@@ -50,7 +50,7 @@ describe("writeDiagnostics", () => {
     expect(existsSync(path.join(root, ".codehq"))).toBe(false);
   });
 
-  it("writes atomically formatted JSON and cleanly overwrites it", async () => {
+  it("writes failed reports atomically and removes the file after validation succeeds", async () => {
     mkdirSync(path.join(root, ".codehq"));
     const report = buildDiagnostics([{ severity: "error", file: "x.json", message: "bad" }]);
 
@@ -67,9 +67,14 @@ describe("writeDiagnostics", () => {
     const leftovers = readdirSync(path.join(root, ".codehq")).filter((name) => name.endsWith(".tmp"));
     expect(leftovers).toEqual([]);
     await writeDiagnostics(root, buildDiagnostics([]));
+    expect(existsSync(filePath)).toBe(false);
+  });
 
-    const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as { valid: boolean; issues: unknown[] };
-    expect(parsed.valid).toBe(true);
-    expect(parsed.issues).toEqual([]);
+  it("does not write a file for warnings", async () => {
+    mkdirSync(path.join(root, ".codehq"));
+
+    await writeDiagnostics(root, buildDiagnostics([{ severity: "warning", file: "x.json", message: "check this" }]));
+
+    expect(existsSync(path.join(root, ".codehq", "diagnostics.json"))).toBe(false);
   });
 });

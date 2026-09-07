@@ -6,11 +6,12 @@
 
 import type { Issue } from "@schema/diagnostics";
 import type { Workflow } from "@schema/workflow";
+import type { RepositoryMap } from "@schema/repository-map";
 import { buildDiagnostics, writeDiagnostics } from "./diagnostics";
 import { loadHQ, type WorkflowFileOutcome } from "./load";
 import { codeHQPaths, repositoryName, type CodeHQPaths } from "./repository";
 import { toRepoRelativePosix } from "./fs-utils";
-import type { CodeHQSnapshot, WorkflowRecord } from "./types";
+import type { CodeHQSnapshot, RepositoryMapRecord, WorkflowRecord } from "./types";
 import type { SourceStatus } from "./source-check";
 import { watchHQ, type CodeHQWatcher } from "./watcher";
 
@@ -20,6 +21,13 @@ interface CachedWorkflow {
   workflow: Workflow;
   modifiedAt: string;
   sourceChecks: Record<string, SourceStatus>;
+  staleSince?: string;
+}
+
+interface CachedRepositoryMap {
+  file: string;
+  repositoryMap: RepositoryMap;
+  modifiedAt: string;
   staleSince?: string;
 }
 
@@ -37,6 +45,7 @@ function buildEmptySnapshot(root: string, paths: CodeHQPaths): CodeHQSnapshot {
     status: "uninitialized",
     repository: { name: repositoryName(root), root, codeHQDir: paths.dir },
     project: null,
+    repositoryMap: null,
     workflows: [],
     diagnostics: { generatedAt: new Date().toISOString(), valid: true, issues: [] },
   };
@@ -82,6 +91,7 @@ export function createCodeHQStore(root: string): CodeHQStore {
   const paths = codeHQPaths(root);
   const cacheByFile = new Map<string, CachedWorkflow>();
   const listeners = new Set<(snapshot: CodeHQSnapshot) => void>();
+  let cachedRepositoryMap: CachedRepositoryMap | null = null;
 
   let snapshot: CodeHQSnapshot = buildEmptySnapshot(root, paths);
   let watcher: CodeHQWatcher | null = null;
@@ -119,6 +129,22 @@ export function createCodeHQStore(root: string): CodeHQStore {
   async function performReload(): Promise<CodeHQSnapshot> {
     const result = await loadHQ(root);
 
+    let repositoryMap: RepositoryMapRecord | null = null;
+    if (result.repositoryMap?.status === "valid") {
+      cachedRepositoryMap = {
+        file: result.repositoryMap.file,
+        repositoryMap: result.repositoryMap.repositoryMap,
+        modifiedAt: result.repositoryMap.modifiedAt,
+      };
+      repositoryMap = { ...cachedRepositoryMap, state: "valid" };
+    } else if (result.repositoryMap?.status === "invalid" && cachedRepositoryMap !== null) {
+      const staleSince = cachedRepositoryMap.staleSince ?? new Date().toISOString();
+      cachedRepositoryMap = { ...cachedRepositoryMap, staleSince };
+      repositoryMap = { ...cachedRepositoryMap, state: "stale", staleSince };
+    } else if (result.repositoryMap === null) {
+      cachedRepositoryMap = null;
+    }
+
     const presentFiles = new Set(result.files.map((outcome) => outcome.file));
     for (const cachedFile of [...cacheByFile.keys()]) {
       if (!presentFiles.has(cachedFile)) {
@@ -146,6 +172,7 @@ export function createCodeHQStore(root: string): CodeHQStore {
       status: result.status,
       repository: { name: repositoryName(root, result.project), root, codeHQDir: paths.dir },
       project: result.project,
+      repositoryMap,
       workflows: records,
       diagnostics,
     };

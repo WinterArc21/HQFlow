@@ -1,8 +1,9 @@
-import { useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
+import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
 import { edgeMarkerId } from "./EdgeMarkers";
 import styles from "./WorkflowEdge.module.css";
 
@@ -13,7 +14,7 @@ const RETURN_EDGE_LIFT = 84;
 const BEND_SNAP_DISTANCE_PX = 30;
 const BEND_ENDPOINT_LEAD = 18;
 
-type BendSnap = "source-x" | "target-x" | null;
+type BendSnap = CanvasBendSnap;
 interface BendState {
   point: { x: number; y: number };
   snap: BendSnap;
@@ -119,6 +120,11 @@ const TRACED_STROKE_BOOST = 1;
 /** Opacity applied to a dimmed edge during path tracing (contract §11) — a dimmed edge fades to a
  * quiet background tone while traced edges strengthen, so the followed path reads as the figure. */
 const DIMMED_OPACITY_FACTOR = 0.25;
+/** Success, async, conditional, and retry edges carry a hue-matched traveling bead.
+ * Failure and terminal-outcome edges stay still so a hard stop does not look like flow. */
+function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
+  return variant === "success" || variant === "async" || variant === "conditional" || variant === "retry" || variant === undefined;
+}
 
 /**
  * A directional connector styled from the connection type or terminal outcome band: neutral solid
@@ -132,13 +138,18 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const { screenToFlowPosition, getZoom } = useReactFlow();
   const [bend, setBend] = useState<BendState | null>(null);
   const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
+  const pendingBend = useRef<BendState | null>(null);
 
   if (data === undefined) {
     return null;
   }
 
   const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced } = data;
-  const activeBend = bend?.resetKey === data.bendResetKey ? bend : null;
+  const activeBend = bend !== null && bend.resetKey === data.bendResetKey
+    ? bend
+    : data.savedBend === undefined
+      ? null
+      : { ...data.savedBend, resetKey: data.bendResetKey };
   const dragging = draggingForKey === data.bendResetKey;
   const bendable = !retry && !returnEdge && !branch;
   const isRetryLoop = retry;
@@ -243,6 +254,9 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const labelText = isRetryLoop ? (connectionLabelText(connection) ?? "retry") : connectionLabelText(connection);
   const showLabel = labelText !== undefined;
   const handlePoint = bendPoint ?? { x: labelX, y: labelY };
+  const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
+  const orbDuration = markerVariant === "async" ? "1.8s" : "2.4s";
+  const orbPathId = `codehq-orb-path-${id}`;
 
   const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
     if (!dragging) {
@@ -261,16 +275,37 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     const nearest = candidates
       .map((candidate) => ({ ...candidate, distance: Math.hypot(point.x - candidate.point.x, point.y - candidate.point.y) }))
       .sort((a, b) => a.distance - b.distance)[0];
-    setBend(nearest !== undefined && nearest.distance <= snapDistance
+    const next: BendState = nearest !== undefined && nearest.distance <= snapDistance
       ? { point: nearest.point, snap: nearest.snap, resetKey: data.bendResetKey }
-      : { point, snap: null, resetKey: data.bendResetKey });
+      : { point, snap: null, resetKey: data.bendResetKey };
+    setBend(next);
+    pendingBend.current = next;
   };
 
   return (
     <>
-      <g data-workflow-edge={id} data-edge-source={source} data-edge-target={target}>
-        <path d={path} fill="none" style={haloStyle} />
+      <g
+        data-workflow-edge={id}
+        data-edge-source={source}
+        data-edge-target={target}
+        data-traveling-orb={showTravelingOrb ? "true" : undefined}
+        data-orb-active={showTravelingOrb && traced ? "true" : undefined}
+        className={showTravelingOrb ? styles.orbHost : undefined}
+      >
+        <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
         <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+        {showTravelingOrb ? (
+          <>
+            <path id={orbPathId} d={path} fill="none" className={styles.orbTrack} />
+            <g className={styles.orb} style={{ color: `var(${visual.varName})` }} aria-hidden="true">
+              <circle r="6" className={styles.orbHalo} />
+              <circle r="3.2" className={styles.orbBead} />
+              <animateMotion dur={orbDuration} repeatCount="indefinite" rotate="auto">
+                <mpath href={`#${orbPathId}`} />
+              </animateMotion>
+            </g>
+          </>
+        ) : null}
       </g>
       {showLabel ? (
         <EdgeLabelRenderer>
@@ -311,6 +346,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               event.preventDefault();
               event.stopPropagation();
               event.currentTarget.setPointerCapture?.(event.pointerId);
+              pendingBend.current = null;
               setDraggingForKey(data.bendResetKey);
             }}
             onPointerMove={handleBendMove}
@@ -318,8 +354,16 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               event.stopPropagation();
               event.currentTarget.releasePointerCapture?.(event.pointerId);
               setDraggingForKey(null);
+              const completedBend = pendingBend.current;
+              pendingBend.current = null;
+              if (completedBend !== null) {
+                data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
+              }
             }}
-            onPointerCancel={() => setDraggingForKey(null)}
+            onPointerCancel={() => {
+              pendingBend.current = null;
+              setDraggingForKey(null);
+            }}
           />
         </foreignObject>
       ) : null}

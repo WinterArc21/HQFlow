@@ -16,12 +16,12 @@ export function EmptyState({ onRecheck }: EmptyStateProps) {
   const recheck = useAsyncAction(onRecheck);
 
   return (
-    <StateLayout title="No workflows mapped yet">
+    <StateLayout title="Map your repository">
       <p>
-        Ask your coding agent to read <code>.codehq/SKILL.md</code> and map a product workflow.
+        Ask your coding agent to identify the important workflows and build an explorable repository map.
       </p>
       <div className={styles.actionRow}>
-        <CopyButton value={AGENT_PROMPT} label="Copy prompt" />
+        <CopyButton value={AGENT_PROMPT} label="Map my repository" />
         <Button variant="secondary" size="sm" onClick={recheck.run}>
           Recheck files
         </Button>

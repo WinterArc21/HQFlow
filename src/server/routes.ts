@@ -9,6 +9,12 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SourceLookup } from "@schema/wire";
 import { pathExists } from "@core/fs-utils";
+import {
+  deleteWorkflowCanvasLayout,
+  readWorkflowCanvasLayout,
+  workflowCanvasLayoutSchema,
+  writeWorkflowCanvasLayout,
+} from "@core/layout-store";
 import { codeHQPaths } from "@core/repository";
 import { resolveInsideRepository } from "@core/safe-path";
 import type { CodeHQStore } from "@core/store";
@@ -17,6 +23,15 @@ import { buildExportHtml, buildContentDisposition, sanitizeExportPayload } from 
 export interface RouteContext {
   root: string;
   store: CodeHQStore;
+}
+
+const REPOSITORY_MAP_CANVAS_ID = "__repository-map__";
+
+function hasCanvas(store: CodeHQStore, canvasId: string): boolean {
+  if (canvasId === REPOSITORY_MAP_CANVAS_ID) {
+    return store.getSnapshot().repositoryMap !== null;
+  }
+  return store.getSnapshot().workflows.some((workflow) => workflow.id === canvasId);
 }
 
 const sourceQuerySchema = z
@@ -38,7 +53,13 @@ const exportQuerySchema = z
 function buildEditorUrl(absolutePath: string, line: number | undefined): string {
   const forwardSlashPath = absolutePath.split(path.sep).join("/");
   const encodedPath = encodeURI(forwardSlashPath);
-  return line !== undefined ? `vscode://file/${encodedPath}:${line}` : `vscode://file/${encodedPath}`;
+  const suffix = line !== undefined ? `:${line}` : "";
+  const wslDistro = process.env.WSL_DISTRO_NAME;
+  if (wslDistro) {
+    return `vscode://vscode-remote/wsl+${encodeURIComponent(wslDistro)}${encodedPath}${suffix}`;
+  }
+
+  return `vscode://file/${encodedPath}${suffix}`;
 }
 
 function registerSourceRoute(app: FastifyInstance, root: string): void {
@@ -186,6 +207,37 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
       return;
     }
     await reply.send(record);
+  });
+
+  app.get<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
+      return;
+    }
+    await reply.send({ layout: await readWorkflowCanvasLayout(root, request.params.id) });
+  });
+
+  app.put<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
+      return;
+    }
+    const parsed = workflowCanvasLayoutSchema.safeParse(request.body);
+    if (!parsed.success) {
+      await reply.code(400).send({ error: "Invalid canvas layout.", details: parsed.error.issues });
+      return;
+    }
+    await writeWorkflowCanvasLayout(root, request.params.id, parsed.data);
+    await reply.code(204).send();
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/workflows/:id/layout", async (request, reply) => {
+    if (!hasCanvas(store, request.params.id)) {
+      await reply.code(404).send({ error: `No canvas with id '${request.params.id}'.` });
+      return;
+    }
+    await deleteWorkflowCanvasLayout(root, request.params.id);
+    await reply.code(204).send();
   });
 
   app.delete<{ Params: { id: string } }>("/api/workflows/:id", async (request, reply) => {

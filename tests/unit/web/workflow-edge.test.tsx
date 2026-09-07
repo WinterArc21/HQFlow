@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, type RenderResult } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getBezierPath, Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
 import type { WorkflowConnection } from "@schema/workflow";
 import { buildFlowEdges } from "@web/components/canvas/buildFlowElements";
@@ -94,9 +94,7 @@ function edgePaths(container: HTMLElement): { semantic: SVGPathElement; halo: SV
   expect(group).not.toBeNull();
   const paths = Array.from(group!.querySelectorAll("path"));
   const semantic = paths.find((p) => p.classList.contains("react-flow__edge-path"));
-  const halo = paths.find(
-    (p) => !p.classList.contains("react-flow__edge-path") && !p.classList.contains("react-flow__edge-interaction"),
-  );
+  const halo = paths.find((p) => p.hasAttribute("data-edge-halo"));
   expect(semantic, "semantic edge-path not rendered").toBeDefined();
   expect(halo, "halo underlay path not rendered").toBeDefined();
   return { semantic: semantic!, halo: halo! };
@@ -122,7 +120,7 @@ describe("WorkflowEdge visual grammar", () => {
 
     it("matches the bend dot color to the edge type", () => {
       const cases = [
-        ["success", "--accent-neutral"],
+        ["success", "--accent-ice"],
         ["failure", "--accent-red"],
         ["conditional", "--accent-amber"],
         ["async", "--accent-blue"],
@@ -149,6 +147,24 @@ describe("WorkflowEdge visual grammar", () => {
       expect(path).toMatch(/^M0,0 L18,0 /);
       expect(path).toMatch(/ 63\.25,100 82,100 L100,100$/);
       expect(handle).toHaveAttribute("data-snapped", "false");
+    });
+
+    it("restores a saved bend and reports later bend changes", () => {
+      const onBendChange = vi.fn();
+      const result = renderInteractiveEdge(makeData({
+        savedBend: { point: { x: 40, y: 55 }, snap: null },
+        onBendChange,
+      }));
+      const handle = result.getByRole("button", { name: "Bend edge e1" });
+
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toContain(" 40,55 C");
+
+      fireEvent.pointerDown(handle, { pointerId: 1 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 45, clientY: 60 });
+      expect(onBendChange).not.toHaveBeenCalled();
+      fireEvent.pointerUp(handle, { pointerId: 1 });
+
+      expect(onBendChange).toHaveBeenLastCalledWith({ point: { x: 45, y: 60 }, snap: null });
     });
 
     it("snaps to an orthogonal route that follows both endpoint directions", () => {
@@ -292,7 +308,7 @@ describe("WorkflowEdge visual grammar", () => {
 
       expect(ordinary.data?.outcomeBand).toBeUndefined();
       expect(success.data?.outcomeBand).toBe("success");
-      expect(ordinaryPaths.semantic.style.stroke).toBe("var(--accent-neutral)");
+      expect(ordinaryPaths.semantic.style.stroke).toBe("var(--accent-ice)");
       expect(ordinaryPaths.semantic.style.strokeDasharray).toBe("");
       expect(successPaths.semantic.style.stroke).toBe("var(--accent-output)");
       expect(successPaths.semantic.style.strokeDasharray).toBe("8 6");
@@ -342,6 +358,40 @@ describe("WorkflowEdge visual grammar", () => {
       expect(halo.style.pointerEvents).toBe("none");
       expect(semantic.getAttribute("marker-end")).toBe("url(#codehq-arrow-failure)");
       expect(halo.getAttribute("marker-end")).toBeNull();
+    });
+  });
+
+  describe("traveling orb", () => {
+    it("adds a hue-matched bead on success, async, conditional, and retry edges", () => {
+      const animated = [
+        makeData({ connection: makeConnection({ type: "success" }) }),
+        makeData({ connection: makeConnection({ type: "async" }) }),
+        makeData({ connection: makeConnection({ type: "conditional" }) }),
+        makeData({ connection: makeConnection({ type: "success" }), retry: true }),
+      ];
+      for (const data of animated) {
+        const container = renderEdge(data);
+        const group = container.querySelector("[data-workflow-edge=\"e1\"]");
+        expect(group).toHaveAttribute("data-traveling-orb", "true");
+        expect(group?.querySelector("circle")).not.toBeNull();
+      }
+    });
+
+    it("does not animate failure or terminal-outcome edges", () => {
+      const skipped = [
+        makeData({ connection: makeConnection({ type: "failure" }) }),
+        makeData({ connection: makeConnection({ type: "success" }), outcomeBand: "success" }),
+        makeData({ connection: makeConnection({ type: "success" }), outcomeBand: "failure" }),
+      ];
+      for (const data of skipped) {
+        const container = renderEdge(data);
+        expect(container.querySelector("[data-traveling-orb]")).toBeNull();
+      }
+    });
+
+    it("hides the bead when the edge is dimmed by path tracing", () => {
+      const container = renderEdge(makeData({ connection: makeConnection({ type: "success" }), dimmed: true }));
+      expect(container.querySelector("[data-traveling-orb]")).toBeNull();
     });
   });
 });

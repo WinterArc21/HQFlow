@@ -48,6 +48,15 @@ async function tabToFirstStepNode(user: ReturnType<typeof userEvent.setup>): Pro
 }
 
 describe("WorkflowCanvas keyboard navigation", () => {
+  it("updates a card when its persisted expansion state changes", async () => {
+    render(<WorkflowCanvas workflow={WORKFLOW} sourceChecks={{}} />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Expand Receive Request to show code details" }));
+
+    expect(await screen.findByRole("button", { name: "Collapse Receive Request" })).toBeInTheDocument();
+  });
+
   it("centers a requested node in the canvas area left visible by the drawer", () => {
     const setCenter = vi.fn();
     const { result } = renderHook(() => useCanvasKeyboardNav({

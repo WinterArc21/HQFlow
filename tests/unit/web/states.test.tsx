@@ -28,7 +28,7 @@ describe("EmptyState", () => {
   it("renders the copy and recheck actions", () => {
     render(<EmptyState onRecheck={() => Promise.resolve()} />);
 
-    expect(screen.getByRole("button", { name: "Copy prompt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Map my repository" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recheck files" })).toBeInTheDocument();
   });
 
@@ -36,12 +36,11 @@ describe("EmptyState", () => {
     // fireEvent (not userEvent) here: userEvent.setup() installs its own Clipboard polyfill
     // whenever navigator.clipboard isn't already its own stub, which would shadow this mock.
     const clipboard = navigator.clipboard as unknown as { writeText: (text: string) => Promise<void> };
-    expect(AGENT_PROMPT).toBe(
-      "Read .codehq/SKILL.md and map the main product workflow.",
-    );
+    expect(AGENT_PROMPT).toContain("Write .codehq/repository-map.json first");
+    expect(AGENT_PROMPT).toContain("assign each workflow to a separate subagent");
     render(<EmptyState onRecheck={() => Promise.resolve()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy prompt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Map my repository" }));
 
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith(AGENT_PROMPT));
   });

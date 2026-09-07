@@ -1,3 +1,40 @@
+.orbTrack {
+  fill: none;
+  stroke: none;
+  pointer-events: none;
+}
+
+.orb {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.orbHalo {
+  fill: currentColor;
+  fill-opacity: 0.22;
+}
+
+.orbBead {
+  fill: currentColor;
+}
+
+.orbHost:hover .orb,
+:global(.react-flow__edge:hover) .orb,
+.orbHost[data-orb-active="true"] .orb {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb {
+    opacity: 0;
+  }
+
+  .orb animateMotion {
+    display: none;
+  }
+}
+
 .label {
   position: absolute;
   padding: 2px var(--space-2);

@@ -98,6 +98,7 @@ function repositoryFallbackName(root: string): string {
 export interface CodeHQPaths {
   dir: string;
   projectFile: string;
+  repositoryMapFile: string;
   workflowsDir: string;
   diagnosticsFile: string;
   skillFile: string;
@@ -110,6 +111,7 @@ export function codeHQPaths(root: string): CodeHQPaths {
   return {
     dir,
     projectFile: path.join(dir, "project.json"),
+    repositoryMapFile: path.join(dir, "repository-map.json"),
     workflowsDir: path.join(dir, "workflows"),
     diagnosticsFile: path.join(dir, "diagnostics.json"),
     skillFile: path.join(dir, "SKILL.md"),

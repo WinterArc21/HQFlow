@@ -6,7 +6,7 @@
 
 .markerSuccess {
   fill: none;
-  stroke: var(--accent-neutral);
+  stroke: var(--accent-ice);
 }
 
 .markerSuccessOutcome {

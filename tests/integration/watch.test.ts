@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -84,6 +84,8 @@ describe("watcher + store integration", () => {
     expect(afterBreak.workflows[0]?.staleSince).toBeTypeOf("string");
     expect(afterBreak.diagnostics.valid).toBe(false);
     expect(afterBreak.diagnostics.issues.length).toBeGreaterThan(0);
+    const diagnosticsFile = path.join(root, ".codehq", "diagnostics.json");
+    expect(existsSync(diagnosticsFile)).toBe(true);
 
     // 3. Repairing the file must bring it back to "valid" and clear the stale marker.
     writeFileSync(workflowFile, validWorkflowJson("Repaired Name"));
@@ -95,5 +97,6 @@ describe("watcher + store integration", () => {
     });
     expect(afterRepair.workflows[0]?.staleSince).toBeUndefined();
     expect(afterRepair.diagnostics.valid).toBe(true);
+    expect(existsSync(diagnosticsFile)).toBe(false);
   }, 15000);
 });

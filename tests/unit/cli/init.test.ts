@@ -18,7 +18,6 @@ afterEach(() => {
 const PROJECT_FILE = ".codehq/project.json";
 const SKILL_FILE = ".codehq/SKILL.md";
 const WORKFLOWS_DIR = ".codehq/workflows";
-const DIAGNOSTICS_FILE = ".codehq/diagnostics.json";
 
 function abs(relative: string): string {
   return path.join(root, ...relative.split("/"));
@@ -32,17 +31,13 @@ describe("runInit — fresh repository", () => {
     expect(existsSync(abs(PROJECT_FILE))).toBe(true);
     expect(existsSync(abs(SKILL_FILE))).toBe(true);
     expect(existsSync(abs(WORKFLOWS_DIR))).toBe(true);
-    expect(existsSync(abs(DIAGNOSTICS_FILE))).toBe(true);
+    expect(existsSync(abs(".codehq/diagnostics.json"))).toBe(false);
     expect(result.created).toEqual([".codehq/project.json", ".codehq/workflows/", ".codehq/SKILL.md"]);
     expect(result.unchanged).toEqual([]);
 
     const projectJson = JSON.parse(readFileSync(abs(PROJECT_FILE), "utf-8")) as unknown;
     const projectResult = parseProject(projectJson, PROJECT_FILE);
     expect(projectResult.ok).toBe(true);
-
-    const diagnostics = JSON.parse(readFileSync(abs(DIAGNOSTICS_FILE), "utf-8")) as { valid: boolean; issues: unknown[] };
-    expect(diagnostics.valid).toBe(true);
-    expect(diagnostics.issues).toEqual([]);
   });
 
   it("appends .codehq/.runtime/ to .gitignore exactly once, and never duplicates it on rerun", async () => {

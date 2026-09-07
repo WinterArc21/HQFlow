@@ -8,7 +8,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Issue } from "@schema/diagnostics";
 import type { CodeHQProject } from "@schema/project";
-import { parseProject, parseWorkflow } from "@schema/validate";
+import type { RepositoryMap } from "@schema/repository-map";
+import { parseProject, parseRepositoryMap, parseWorkflow } from "@schema/validate";
 import type { Workflow } from "@schema/workflow";
 import { computeWorkflowSourceChecks, type SourceStatus } from "./source-check";
 import { parseJsonText, pathExists, toRepoRelativePosix } from "./fs-utils";
@@ -27,11 +28,53 @@ export type WorkflowFileOutcome =
   | { file: string; status: "valid"; loaded: LoadedWorkflow }
   | { file: string; status: "invalid" };
 
+export type RepositoryMapFileOutcome =
+  | { file: string; status: "valid"; repositoryMap: RepositoryMap; modifiedAt: string }
+  | { file: string; status: "invalid" };
+
 export interface LoadResult {
   status: CodeHQStatus;
   project: CodeHQProject | null;
+  repositoryMap: RepositoryMapFileOutcome | null;
   files: WorkflowFileOutcome[];
   issues: Issue[];
+}
+
+async function loadRepositoryMap(paths: CodeHQPaths, root: string, issues: Issue[]): Promise<RepositoryMapFileOutcome | null> {
+  if (!(await pathExists(paths.repositoryMapFile))) {
+    return null;
+  }
+  const relativeFile = toRepoRelativePosix(root, paths.repositoryMapFile);
+  try {
+    const [text, stats] = await Promise.all([
+      fs.readFile(paths.repositoryMapFile, "utf-8"),
+      fs.stat(paths.repositoryMapFile),
+    ]);
+    const parsedJson = parseJsonText(text);
+    if (!parsedJson.ok) {
+      issues.push({
+        severity: "error",
+        file: relativeFile,
+        message: `Failed to parse JSON: ${parsedJson.message}`,
+        hint: "The file may have been saved while an agent was still writing it.",
+      });
+      return { file: relativeFile, status: "invalid" };
+    }
+    const result = parseRepositoryMap(parsedJson.data, relativeFile);
+    if (!result.ok) {
+      issues.push(...result.issues);
+      return { file: relativeFile, status: "invalid" };
+    }
+    issues.push(...result.warnings);
+    return { file: relativeFile, status: "valid", repositoryMap: result.value, modifiedAt: stats.mtime.toISOString() };
+  } catch (error) {
+    issues.push({
+      severity: "error",
+      file: relativeFile,
+      message: `Could not read repository-map.json: ${error instanceof Error ? error.message : String(error)}`,
+    });
+    return { file: relativeFile, status: "invalid" };
+  }
 }
 
 async function loadProject(paths: CodeHQPaths, root: string, issues: Issue[]): Promise<CodeHQProject | null> {
@@ -177,14 +220,15 @@ export async function loadHQ(root: string): Promise<LoadResult> {
   const issues: Issue[] = [];
 
   if (!(await pathExists(paths.dir))) {
-    return { status: "uninitialized", project: null, files: [], issues };
+    return { status: "uninitialized", project: null, repositoryMap: null, files: [], issues };
   }
 
   const project = await loadProject(paths, root, issues);
+  const repositoryMap = await loadRepositoryMap(paths, root, issues);
   const workflowFiles = await listWorkflowJsonFiles(paths.workflowsDir);
 
-  if (workflowFiles.length === 0) {
-    return { status: "empty", project, files: [], issues };
+  if (workflowFiles.length === 0 && repositoryMap === null) {
+    return { status: "empty", project, repositoryMap, files: [], issues };
   }
 
   const outcomes: WorkflowFileOutcome[] = [];
@@ -212,5 +256,5 @@ export async function loadHQ(root: string): Promise<LoadResult> {
     });
   }
 
-  return { status: "ready", project, files: outcomes, issues };
+  return { status: "ready", project, repositoryMap, files: outcomes, issues };
 }

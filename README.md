@@ -4,8 +4,8 @@ HQFlow is a local-first web app that renders your coding agent's understanding o
 your codebase as an interactive workflow canvas. You run it inside your own repository; your
 existing agent (Cursor, Claude Code, Codex, or similar) reads `.codehq/SKILL.md`,
 inspects your real source code, and writes structured workflow JSON into `.codehq/`.
-HQFlow validates those files, watches them, and renders them in your browser as you
-work. **It contains no LLM of its own and never uploads your code anywhere** — everything runs
+HQFlow watches those files and renders them in your browser as you work. **It contains no LLM
+of its own and never uploads your code anywhere** — everything runs
 on `localhost`.
 
 ## See HQFlow in action
@@ -44,15 +44,8 @@ you run `hqflow open`
   agent writes .codehq/workflows/checkout.json
         |
         v
-  HQFlow validates it, writes diagnostics.json
-        |
-        v
   the board updates live, in your browser, no refresh
 ```
-
-If the agent writes something invalid, `.codehq/diagnostics.json` explains exactly what
-is wrong and how to fix it, and the board keeps showing the last valid version of the workflow
-in the meantime — it never blanks out.
 
 ## Quickstart
 
@@ -65,16 +58,15 @@ Then paste this into your coding agent:
 
 > Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
 > `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
-> email, and write the result to `.codehq/workflows/checkout.json`. Then run
-> `hqflow validate` and fix anything it flags.
+> email, and write the result to `.codehq/workflows/checkout.json`.
 
 ## Commands
 
 ### `hqflow init [--force]`
 
-Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, an empty
-`workflows/`, and an initial `diagnostics.json`. Also appends `.codehq/.runtime/` to your
-`.gitignore` (creating it if needed, never duplicating the line).
+Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, and an empty
+`workflows/`. It also appends `.codehq/.runtime/` to your `.gitignore` (creating it if needed,
+never duplicating the line).
 
 `workflows/` starts empty. The canvas then shows its guided empty state, where you can copy a
 prompt for your coding agent or recheck the files after the agent creates a workflow.
@@ -94,14 +86,16 @@ Starts the local server and opens the workflow canvas in your browser.
 
 Stop it with `Ctrl+C`.
 
-### `hqflow validate [--root <path>] [--json]`
+### Canvas layouts
 
-Validates everything under `.codehq/`, writes the result to
-`.codehq/diagnostics.json`, and prints it. Exits non-zero if there are any errors.
+HQFlow automatically saves node positions after you move a card and edge bends after you adjust
+a connection. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
+after you close the browser, stop HQFlow, or restart your computer. The file stays local to the
+repository and is ignored by Git.
 
-- `--root <path>` — repository root, same resolution rules as `open`.
-- `--json` — print only the `DiagnosticsReport` as JSON, so an agent (or a script) can parse
-  the result without scraping human-readable text.
+Pan, zoom, and expanded cards describe the current view, so they reset when you reopen HQFlow.
+Use **Reset layout** to delete the saved node positions and edge bends and restore the generated
+layout.
 
 Also available: `--help`, `--version`, `--debug` (or `HQFLOW_DEBUG=1`) for full stack
 traces on error.
@@ -112,10 +106,11 @@ traces on error.
 .codehq/
 ├── project.json          # project id/name and a few display settings
 ├── SKILL.md               # instructions for the agent authoring workflows
-├── diagnostics.json        # written by HQFlow, read by agents
+├── diagnostics.json        # appears only when validation errors need repair
 ├── workflows/
 │   └── <id>.json           # one workflow per file
-└── .runtime/                # gitignored scratch space, ignored by validation
+└── .runtime/                # local, gitignored runtime state
+    └── layout.json           # automatically saved node positions and edge bends
 ```
 
 A workflow is a directed graph of steps an agent has read against the real code — no

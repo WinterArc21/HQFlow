@@ -13,10 +13,10 @@ import type { WorkflowStep } from "@schema/workflow";
 describe("categoryToken", () => {
   const cases: Array<[WorkflowStep["category"], string]> = [
     ["entry", "--accent-output"],
-    ["logic", "--accent-neutral"],
+    ["logic", "--accent-cyan"],
     ["decision", "--accent-rose"],
     ["data", "--accent-orange"],
-    ["external", "--accent-orchid"],
+    ["external", "--accent-violet"],
     ["output", "--accent-output"],
   ];
 
@@ -33,7 +33,7 @@ describe("categoryToken", () => {
 
   it("falls back to a neutral marker when category is unspecified", () => {
     const result = categoryToken(undefined);
-    expect(result.varName).toBe("--accent-neutral");
+    expect(result.varName).toBe("--accent-cyan");
     expect(result.label).toBeTruthy();
   });
 });
@@ -47,7 +47,7 @@ describe("connectionStyle", () => {
     expect(connectionStyle("conditional")).toEqual(expect.objectContaining({ varName: "--accent-amber", dash: "dashed", showLabel: true }));
     expect(connectionStyle("async")).toEqual(expect.objectContaining({ varName: "--accent-blue", dash: "dotted", showLabel: true }));
     const success = connectionStyle("success");
-    expect(success.varName).toBe("--accent-neutral");
+    expect(success.varName).toBe("--accent-ice");
     expect(success.dash).toBe("none");
     expect(success.showLabel).toBe(false);
     expect(connectionStyle(undefined)).toEqual(success);

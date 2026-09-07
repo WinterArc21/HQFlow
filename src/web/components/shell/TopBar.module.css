@@ -24,6 +24,12 @@
   text-overflow: ellipsis;
 }
 
+.repoButton { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.repoButton:hover { color: var(--accent-blue); }
+.repoButton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.separator { color: var(--text-tertiary); }
+.currentView { max-width: 220px; overflow: hidden; color: var(--text-secondary); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+
 .center {
   flex: 1;
   min-width: 0;

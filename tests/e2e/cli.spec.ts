@@ -52,7 +52,7 @@ test("init creates the documented tree and prints the documented banner", async 
 
     expect(await fileExists(path.join(dir, ".codehq", "project.json"))).toBe(true);
     expect(await fileExists(path.join(dir, ".codehq", "SKILL.md"))).toBe(true);
-    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(true);
+    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(false);
     expect(await fileExists(path.join(dir, ".codehq", "workflows", "generate-video.json"))).toBe(false);
 
     const gitignore = await fsp.readFile(path.join(dir, ".gitignore"), "utf-8");
@@ -78,6 +78,7 @@ test("validate exits 0 on a fresh project, then exits 1 naming the step a broken
     // exit-code-vs-severity distinction (errors fail validate, warnings do not) rather than a
     // trivial, warning-free happy path.
     expect(freshValidate.stdout).toContain("0 errors");
+    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(false);
 
     const workflow = JSON.parse(await fsp.readFile(workflowFile, "utf-8")) as MinimalWorkflowFile;
     const target = workflow.connections.find((connection) => connection.to === "generate-story");
@@ -90,6 +91,7 @@ test("validate exits 0 on a fresh project, then exits 1 naming the step a broken
     const brokenValidate = await runCli(["validate", "--root", dir]);
     expect(brokenValidate.exitCode).toBe(1);
     expect(brokenValidate.stdout).toContain("Connection references missing step 'generate-story-missing'.");
+    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(true);
 
     const jsonValidate = await runCli(["validate", "--root", dir, "--json"]);
     expect(jsonValidate.exitCode).toBe(1);
@@ -105,6 +107,12 @@ test("validate exits 0 on a fresh project, then exits 1 naming the step a broken
           (issue as { message: unknown }).message === "Connection references missing step 'generate-story-missing'.",
       ),
     ).toBe(true);
+
+    target.to = "generate-story";
+    await fsp.writeFile(workflowFile, `${JSON.stringify(workflow, null, 2)}\n`, "utf-8");
+    const repairedValidate = await runCli(["validate", "--root", dir]);
+    expect(repairedValidate.exitCode).toBe(0);
+    expect(await fileExists(path.join(dir, ".codehq", "diagnostics.json"))).toBe(false);
   } finally {
     await removeTempDir(dir);
   }
