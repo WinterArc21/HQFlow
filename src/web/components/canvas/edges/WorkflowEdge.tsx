@@ -13,6 +13,11 @@ const RETRY_LOOP_OUTSET = 80;
 const RETURN_EDGE_LIFT = 84;
 const BEND_SNAP_DISTANCE_PX = 30;
 const BEND_ENDPOINT_LEAD = 18;
+/** The last stretch of a default curve is a straight run along the target port, longer than the
+ * 10px arrowhead. The marker is oriented by the path's final tangent, which a bezier always makes
+ * port-aligned; but when source and target nearly line up across the port axis, the curve only
+ * turns in its last few pixels and the visible line cuts through one of the arrowhead's arms. */
+const ARROW_LEAD = 14;
 
 type BendSnap = CanvasBendSnap;
 interface BendState {
@@ -50,6 +55,26 @@ function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Excl
     point,
     path: `M${source.point.x},${source.point.y} L${sourceLead.x},${sourceLead.y} L${point.x},${point.y} L${targetLead.x},${targetLead.y} L${target.point.x},${target.point.y}`,
   };
+}
+
+/** React Flow's bezier, ending on a straight `ARROW_LEAD` run so the arrowhead always sits on its own line. */
+export function arrowSafeBezierPath(
+  source: { x: number; y: number },
+  sourcePosition: Position,
+  target: { x: number; y: number },
+  targetPosition: Position,
+): [path: string, labelX: number, labelY: number] {
+  const lead = portControlPoint(target, targetPosition, ARROW_LEAD);
+  const [path, labelX, labelY] = getBezierPath({
+    sourceX: source.x,
+    sourceY: source.y,
+    sourcePosition,
+    targetX: lead.x,
+    targetY: lead.y,
+    targetPosition,
+    curvature: 0.35,
+  });
+  return [`${path} L${target.x},${target.y}`, labelX, labelY];
 }
 
 function smoothBendPath(
@@ -191,7 +216,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
           borderRadius: EDGE_BORDER_RADIUS,
           offset: 28,
         })
-      : getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.35 });
+      : arrowSafeBezierPath({ x: sourceX, y: sourceY }, sourcePosition, { x: targetX, y: targetY }, targetPosition);
     [path, labelX, labelY] = geometry;
   }
 

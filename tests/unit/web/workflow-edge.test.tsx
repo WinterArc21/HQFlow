@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, type RenderResult } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { getBezierPath, Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
+import { Position, ReactFlowProvider, type EdgeProps } from "@xyflow/react";
 import type { WorkflowConnection } from "@schema/workflow";
 import { buildFlowEdges } from "@web/components/canvas/buildFlowElements";
-import { WorkflowEdge } from "@web/components/canvas/edges/WorkflowEdge";
+import { arrowSafeBezierPath, WorkflowEdge } from "@web/components/canvas/edges/WorkflowEdge";
 import type { WorkflowEdgeData, WorkflowFlowEdge } from "@web/components/canvas/types";
 import type { LayoutResult } from "@web/components/canvas/layout";
 
@@ -104,18 +104,17 @@ describe("WorkflowEdge visual grammar", () => {
   describe("manual bends", () => {
     it("keeps the ordinary default path unchanged before interaction", () => {
       const result = renderInteractiveEdge(makeData());
-      const expected = getBezierPath({
-        sourceX: 0,
-        sourceY: 0,
-        targetX: 100,
-        targetY: 100,
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        curvature: 0.35,
-      })[0];
+      const expected = arrowSafeBezierPath({ x: 0, y: 0 }, Position.Right, { x: 100, y: 100 }, Position.Left)[0];
 
       expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(expected);
       expect(result.getByRole("button", { name: "Bend edge e1" })).toBeInTheDocument();
+    });
+
+    it("ends a steep default curve on a straight run longer than the arrowhead", () => {
+      // Source and target nearly aligned across the port axis: the bare bezier would only turn
+      // horizontal in its last few pixels, so the line would cut through an arrowhead arm.
+      const [path] = arrowSafeBezierPath({ x: 0, y: 240 }, Position.Right, { x: 20, y: 0 }, Position.Left);
+      expect(path).toMatch(/ 6,0 L20,0$/);
     });
 
     it("matches the bend dot color to the edge type", () => {
@@ -218,10 +217,9 @@ describe("WorkflowEdge visual grammar", () => {
         </ReactFlowProvider>,
       );
 
-      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(getBezierPath({
-        sourceX: 0, sourceY: 0, targetX: 100, targetY: 100,
-        sourcePosition: Position.Right, targetPosition: Position.Left, curvature: 0.35,
-      })[0]);
+      expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(
+        arrowSafeBezierPath({ x: 0, y: 0 }, Position.Right, { x: 100, y: 100 }, Position.Left)[0],
+      );
     });
 
     it("keeps a manual bend while live node movement updates its endpoint", () => {
