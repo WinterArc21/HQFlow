@@ -30,14 +30,15 @@ export interface IslandShellProps {
 
 const DOCK_WIDTH = 26;
 const DOCK_HEIGHT = 4;
-const TREE_WIDTH = 12;
 const DRAWER_WIDTH = 15;
+/** Dots kept clear above the grown dock, so the workflow tree never reaches the title island. */
+const TREE_TOP_CLEARANCE = 5;
 
 /**
  * The app frame: the canvas fills the window and every piece of chrome floats over it as an
  * island on the canvas's own dot grid. Top left names the repository and the open workflow; top
- * right carries status, the agent prompt and theme; the bottom dock carries search, the
- * workflow tree (which rises above the dock) and the canvas controls.
+ * right carries status, the agent prompt and theme; the bottom dock carries search, the canvas
+ * controls, and the workflow tree, which opens by growing the dock upward.
  */
 export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, navigator, notice, overlays, children }: IslandShellProps) {
   const grid = useDotGrid();
@@ -54,6 +55,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const dockWidth = Math.min(DOCK_WIDTH, lastColumn);
   const dockLeft = Math.max(0, Math.floor((lastColumn - dockWidth) / 2));
   const drawerMeetsDock = dockLeft + dockWidth > lastColumn - DRAWER_WIDTH;
+  const treeMaxHeight = Math.max(2, lastRow - DOCK_HEIGHT - TREE_TOP_CLEARANCE) * DOT_STEP;
 
   useEffect(() => {
     if (!treeOpen) {
@@ -127,19 +129,12 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
         </div>
       </Island>
 
-      {treeOpen ? (
-        <Island
-          ref={treeRef}
-          id={treeId}
-          placement={{ l: dockLeft, b: DOCK_HEIGHT + 1, w: Math.min(TREE_WIDTH, lastColumn), h: "auto" }}
-          maxHeight={Math.max(4, lastRow - DOCK_HEIGHT - 5)}
-          className={styles.tree}
-        >
-          {navigator(() => setTreeOpen(false))}
-        </Island>
-      ) : null}
-
-      <Island placement={{ l: dockLeft, b: 0, w: dockWidth, h: DOCK_HEIGHT }} className={styles.dock} role="region" aria-label="Search and canvas controls">
+      <Island placement={{ l: dockLeft, b: 0, w: dockWidth, h: "auto" }} className={styles.dock} role="region" aria-label="Search and canvas controls">
+        {treeOpen ? (
+          <div ref={treeRef} id={treeId} className={styles.tree} style={{ maxHeight: treeMaxHeight }}>
+            {navigator(() => setTreeOpen(false))}
+          </div>
+        ) : null}
         <div className={styles.dockBody}>
           <button type="button" className={styles.search} onClick={openSearch}>
             <MagnifyingGlass size={16} aria-hidden="true" />

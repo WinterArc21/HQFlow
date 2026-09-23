@@ -50,11 +50,14 @@ export const Island = forwardRef<HTMLDivElement, IslandProps>(function Island(
   const box = useGridBox(contentRef, placement);
   const capped = box !== null && maxHeight !== undefined && box.height > maxHeight * DOT_STEP;
   const height = capped ? maxHeight! * DOT_STEP : box?.height;
+  // A bottom-anchored island keeps its bottom edge when capped; only its top moves down.
+  const bottomAnchored = placement.t === undefined && !placement.cy;
+  const top = box !== null && capped && bottomAnchored ? box.top + box.height - height! : box?.top;
   return (
     <div
       ref={ref}
       className={`${styles.island} ${shape === "pill" ? styles.pill : ""} ${placement.w === "auto" ? styles.autoWidth : ""} ${capped ? styles.scroll : ""} ${className ?? ""}`}
-      style={{ ...box, height, ...style }}
+      style={{ ...box, top, height, ...style }}
       data-island=""
       {...rest}
     >

@@ -173,9 +173,10 @@
   margin-left: auto;
 }
 
-/* ---- workflow tree (rises above the dock) ---- */
+/* ---- workflow tree: the dock grows upward to hold it, one surface with the search bar ---- */
 .tree {
-  border-color: var(--border-strong);
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* ---- the step drawer, inset onto the grid like every other island ---- */
