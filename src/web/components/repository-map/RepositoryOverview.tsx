@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { Workflow } from "@schema/workflow";
 import type { RepositoryMapRecord, WorkflowRecord } from "../../api/types";
-import { WorkflowCanvas } from "../canvas";
+import { WorkflowCanvas, type CanvasChrome } from "../canvas";
 
 export interface RepositoryOverviewProps {
   repositoryName: string;
@@ -10,11 +10,12 @@ export interface RepositoryOverviewProps {
   invalidWorkflowIds: ReadonlySet<string>;
   onOpenWorkflow: (workflowId: string) => void;
   stageOverlay?: ReactNode;
+  chrome?: CanvasChrome;
 }
 
 const REPOSITORY_MAP_CANVAS_ID = "__repository-map__";
 
-export function RepositoryOverview({ repositoryName, mapRecord, workflows, invalidWorkflowIds, onOpenWorkflow, stageOverlay }: RepositoryOverviewProps) {
+export function RepositoryOverview({ repositoryName, mapRecord, workflows, invalidWorkflowIds, onOpenWorkflow, stageOverlay, chrome }: RepositoryOverviewProps) {
   const recordsById = useMemo(() => new Map(workflows.map((record) => [record.id, record])), [workflows]);
   const mappedCount = mapRecord.repositoryMap.workflows.filter((workflow) => recordsById.has(workflow.id)).length;
   const incomingIds = useMemo(
@@ -58,6 +59,7 @@ export function RepositoryOverview({ repositoryName, mapRecord, workflows, inval
         if (recordsById.has(workflowId)) onOpenWorkflow(workflowId);
       }}
       {...(stageOverlay !== undefined ? { stageOverlay } : {})}
+      {...(chrome !== undefined ? { chrome } : {})}
     />
   );
 }

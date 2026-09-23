@@ -3,9 +3,8 @@
   left: var(--space-2);
   bottom: var(--space-2);
   z-index: 4;
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  display: flex;
+  align-items: center;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
@@ -14,6 +13,23 @@
   font-size: var(--fs-micro);
   pointer-events: none;
   transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+/* Island shell: the key becomes one more island, its box rounded to whole dot steps. */
+.onGrid {
+  z-index: 10;
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+
+.onGrid .rows {
+  padding: var(--space-2) var(--space-3);
 }
 
 .dimmed {

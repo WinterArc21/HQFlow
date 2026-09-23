@@ -63,6 +63,11 @@ async function edgeEndpointDistance(
   }, { edgeId, nodeId, handleId, endpoint });
 }
 
+// One server on one fixed port serves this whole file, so its tests must share one worker: under
+// `fullyParallel`, a second worker would start its own server on the same port, and whichever
+// finished first would stop the server out from under the other.
+test.describe.configure({ mode: "default" });
+
 test.beforeAll(async () => {
   root = await createTempFixtureCopy("canvas-grammar");
   await fsp.copyFile(DEMO_SOURCE, path.join(root, ".codehq", "workflows", "canvas-grammar-demo.json"));
@@ -266,6 +271,9 @@ test("keeps repeated drag updates error-free and deterministic", async ({ page }
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Canvas Grammar Demo");
+  // Each run must start from the generated layout: a drag persists the card's position, so a
+  // replay without a reset would begin wherever the first run left it.
+  await resetCanvasLayout(page);
 
   const source = page.locator('[data-step-node="review"]');
   const target = page.locator('[data-step-node="outcome-created"]');
@@ -275,7 +283,10 @@ test("keeps repeated drag updates error-free and deterministic", async ({ page }
   const moveTarget = async (): Promise<string> => {
     const targetBox = await target.boundingBox();
     expect(targetBox).not.toBeNull();
-    await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
+    // Grab near the card's top-left corner: the fitted board can place this outcome at the
+    // window's bottom-right, where a centre grab lands inside React Flow's auto-pan margin and
+    // would pan the viewport on the first run only.
+    await page.mouse.move(targetBox!.x + 16, targetBox!.y + 10);
     await page.mouse.down();
     await page.mouse.move(
       sourceBox!.x - targetBox!.width / 2 - 40,
@@ -295,6 +306,7 @@ test("keeps repeated drag updates error-free and deterministic", async ({ page }
   await page.goto(server.url);
   await waitForBoot(page);
   await selectWorkflowByName(page, "Canvas Grammar Demo");
+  await resetCanvasLayout(page);
   const replayPath = await moveTarget();
   expect(replayPath).toBe(firstPath);
   expect(runtimeErrors).toEqual([]);

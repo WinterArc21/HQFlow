@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
-import { computeFitViewport, computeViewportOverflow, type Viewport } from "./fitViewport";
+import { computeFitViewport, computeViewportOverflow, type FitInsets, type Viewport } from "./fitViewport";
 import type { LayoutBounds } from "./layout";
 
 /** Small margin around the fitted graph — kept tight deliberately: a generous margin here is
@@ -28,6 +28,8 @@ export interface UseCanvasFitParams {
   workflowRevision: string;
   reactFlowInstance: Pick<ReactFlowInstance, "setViewport">;
   reducedMotion: boolean;
+  /** Screen edges covered by floating chrome, kept clear when fitting. */
+  insets?: FitInsets;
 }
 
 export interface UseCanvasFitResult {
@@ -39,7 +41,7 @@ export interface UseCanvasFitResult {
 }
 
 export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
-  const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion } = params;
+  const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion, insets } = params;
   const containerRef = useRef<HTMLDivElement>(null);
   // Whether the fitted graph still has more content below the visible stage — a large
   // workflow can be taller than even the minimum legible zoom allows. Drives the "more below"
@@ -80,6 +82,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
         minZoom: FIT_VIEW_MIN_ZOOM,
         maxZoom: FIT_VIEW_MAX_ZOOM,
         paddingRatio: FIT_VIEW_PADDING,
+        ...(insets !== undefined ? { insets } : {}),
       });
       if (viewport !== null) {
         void reactFlowInstance.setViewport(viewport, { duration });
@@ -87,7 +90,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
         setOverflowsBottom(viewport.overflowsBottom);
       }
     },
-    [layoutBounds, reactFlowInstance],
+    [insets, layoutBounds, reactFlowInstance],
   );
 
   // `useLayoutEffect`, not `useEffect`: the fit must be computed and applied before the browser

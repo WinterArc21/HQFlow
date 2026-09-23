@@ -21,12 +21,18 @@ test("loads the test project, auto-selects the default workflow, and renders its
   await page.goto("/");
   await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
 
-  // Repository name (from .codehq/project.json's project.name) appears in the top bar.
+  // Repository name (from .codehq/project.json's project.name) appears in the identity island.
   await expect(page.getByRole("banner").getByText("MotionA", { exact: true })).toBeVisible();
 
-  // The default workflow (settings.defaultWorkflowId === "generate-video") is auto-selected.
+  // The default workflow (settings.defaultWorkflowId === "generate-video") is auto-selected: the
+  // dock names it, and the workflow tree that rises from the dock marks it current.
+  const workflowsButton = page.getByRole("button", { name: "Workflows: Generate Video Prompt" });
+  await expect(workflowsButton).toBeVisible();
+  await workflowsButton.click();
   const defaultWorkflowItem = page.locator('button[data-workflow-item][aria-current="true"]');
   await expect(defaultWorkflowItem).toContainText("Generate Video Prompt");
+  await page.keyboard.press("Escape");
+  await expect(defaultWorkflowItem).toBeHidden();
 
   // Its 11 step nodes render — 7 work steps plus 4 terminal outcome pills (400/429/502/201),
   // split out of the single "Save Result" catch-all so each real failure mode (invalid request,

@@ -1,5 +1,5 @@
 /*
- * Fixed to the viewport rather than laid out inside AppShell's grid: the drawer must overlay
+ * Fixed to the viewport rather than laid out in the page flow: the drawer must overlay
  * the canvas without reflowing it (contract §11 — "must not cover the canvas so completely
  * that the user loses context"), so it is a fixed-width panel pinned to the right edge, leaving
  * the rest of the canvas visible and interactive underneath the (click-through-free) backdrop.
@@ -17,7 +17,7 @@
 .drawer {
   pointer-events: auto;
   width: min(420px, 100vw);
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-surface);

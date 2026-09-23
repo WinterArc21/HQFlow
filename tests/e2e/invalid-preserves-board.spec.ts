@@ -67,6 +67,7 @@ test("a truncated write keeps the board on screen and surfaces diagnostics, then
   await expect(page.locator("[data-step-node]")).toHaveCount(11);
 
   // The stale state is surfaced on the affected workflow's navigator entry too.
+  await page.getByRole("button", { name: /^Workflows: / }).click();
   const navigatorItem = page.locator("button[data-workflow-item]").filter({ hasText: "Generate Video Prompt" });
   await expect(navigatorItem).toContainText("Stale");
 

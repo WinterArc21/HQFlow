@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { NavigatorExpandControl } from "@web/components/navigator/NavigatorExpandControl";
 import { WorkflowNavigator } from "@web/components/navigator/WorkflowNavigator";
 import type { WorkflowRecord } from "@web/api/types";
 
@@ -170,15 +169,6 @@ describe("WorkflowNavigator", () => {
 
     await userEvent.click(overview);
     expect(onSelect).toHaveBeenCalledWith(null);
-  });
-
-  it("renders an overlay expand control for the collapsed hairline rail", async () => {
-    const onExpand = vi.fn();
-    render(<NavigatorExpandControl onExpand={onExpand} />);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Expand workflows rail" }));
-    expect(onExpand).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a flat workflow list when there is no repository map", () => {

@@ -1,1 +1,1 @@
-export { WorkflowCanvas, type WorkflowCanvasProps } from "./WorkflowCanvas";
+export { WorkflowCanvas, type CanvasChrome, type WorkflowCanvasProps } from "./WorkflowCanvas";

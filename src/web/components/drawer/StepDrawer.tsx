@@ -46,7 +46,7 @@ export function StepDrawer({ workflow, stepId, sourceChecks, onClose, onSelectSt
   const outgoing = workflow.connections.filter((connection) => connection.from === step.id);
 
   return (
-    <div className={styles.backdrop}>
+    <div className={styles.backdrop} data-step-drawer-backdrop>
       <div
         ref={containerRef}
         className={styles.drawer}

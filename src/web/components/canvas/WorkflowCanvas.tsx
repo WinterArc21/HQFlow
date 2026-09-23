@@ -1,5 +1,6 @@
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type NodeMouseHandler } from "@xyflow/react";
 import { toPng } from "html-to-image";
 import type { ReactNode } from "react";
@@ -9,7 +10,8 @@ import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
 import { CanvasLegend } from "./CanvasLegend";
-import { CanvasHeader } from "./CanvasHeader";
+import { CanvasDockControls } from "./CanvasDockControls";
+import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
@@ -25,6 +27,8 @@ import { ExportDialog } from "./ExportDialog";
 import { useCanvasLayoutPersistence } from "./useCanvasLayoutPersistence";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
+import type { FitInsets } from "./fitViewport";
+import type { GridPlacement } from "../shell/dotGrid";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -42,6 +46,19 @@ const MAX_IMAGE_SIZE = 4096;
 const NODE_TYPES = { step: StepNode, outcome: OutcomeNode };
 const EDGE_TYPES = { workflow: WorkflowEdge };
 
+/**
+ * Hands the canvas's title and controls to an outer shell instead of the built-in title strip:
+ * the title renders into `titleTarget`, the controls into `controlsTarget` (both through portals,
+ * so they keep this canvas's React Flow context), the legend snaps to `legendPlacement`, and
+ * fitting keeps `fitInsets` clear.
+ */
+export interface CanvasChrome {
+  titleTarget: HTMLElement | null;
+  controlsTarget: HTMLElement | null;
+  legendPlacement: GridPlacement;
+  fitInsets: FitInsets;
+}
+
 export interface WorkflowCanvasProps {
   workflow: Workflow;
   sourceChecks: Record<string, SourceStatus>;
@@ -52,6 +69,7 @@ export interface WorkflowCanvasProps {
   onNodeActivate?: (nodeId: string) => void;
   /** Rendered on the dotted stage, not the title strip. */
   stageOverlay?: ReactNode;
+  chrome?: CanvasChrome;
   modifiedAt?: WorkflowRecord["modifiedAt"];
   state?: WorkflowRecord["state"];
   onDeleteWorkflow?: () => Promise<void>;
@@ -80,6 +98,7 @@ function WorkflowCanvasInner({
   exportEnabled = true,
   onNodeActivate,
   stageOverlay,
+  chrome,
   modifiedAt,
   state,
   onDeleteWorkflow,
@@ -146,6 +165,7 @@ function WorkflowCanvasInner({
     workflowRevision,
     reactFlowInstance,
     reducedMotion,
+    ...(chrome !== undefined ? { insets: chrome.fitInsets } : {}),
   });
 
   const { getTabIndex, handleNodeKeyDown, setRovingId, panToNode } = useCanvasKeyboardNav({
@@ -371,24 +391,34 @@ function WorkflowCanvasInner({
   const hasExpandedSteps = Object.keys(expandedStepIds).length > 0;
   const stepNodeCount = nodes.filter((node) => node.type === "step").length;
   const showMinimap = stepNodeCount > MINIMAP_NODE_THRESHOLD;
+  const titleProps = {
+    workflow,
+    ...(itemLabel !== undefined ? { itemLabel } : {}),
+    ...(modifiedAt !== undefined ? { modifiedAt } : {}),
+    ...(state !== undefined ? { state } : {}),
+  };
+  const toolbarProps = {
+    onZoomIn: () => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 }),
+    onZoomOut: () => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 }),
+    onResetLayout: () => resetLayout(canvasId),
+    onCollapseAll: collapseAllSteps,
+    collapseDisabled: !hasExpandedSteps,
+    ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
+    ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
+      ? { onDelete: () => setDeleteDialogOpen(true) }
+      : {}),
+  };
 
   return (
     <div className={styles.wrapper} data-image-exporting={imageExporting ? "true" : undefined}>
-      <CanvasHeader
-        workflow={workflow}
-        {...(itemLabel !== undefined ? { itemLabel } : {})}
-        {...(modifiedAt !== undefined ? { modifiedAt } : {})}
-        {...(state !== undefined ? { state } : {})}
-        onZoomIn={() => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 })}
-        onZoomOut={() => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 })}
-        onResetLayout={() => resetLayout(canvasId)}
-        onCollapseAll={collapseAllSteps}
-        collapseDisabled={!hasExpandedSteps}
-        {...(exportMode === null && exportEnabled ? { onExport: handleExport } : {})}
-        {...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
-          ? { onDelete: () => setDeleteDialogOpen(true) }
-          : {})}
-      />
+      {chrome === undefined ? (
+        <CanvasHeader {...titleProps} {...toolbarProps} />
+      ) : (
+        <>
+          {chrome.titleTarget !== null ? createPortal(<CanvasTitle {...titleProps} />, chrome.titleTarget) : null}
+          {chrome.controlsTarget !== null ? createPortal(<CanvasDockControls {...toolbarProps} />, chrome.controlsTarget) : null}
+        </>
+      )}
       <div className={styles.stage} ref={containerRef}>
         {stageOverlay}
         <EdgeMarkers />
@@ -415,7 +445,7 @@ function WorkflowCanvasInner({
         >
           {showMinimap ? <MiniMap pannable zoomable={false} ariaLabel={`${workflow.name} overview map`} /> : null}
         </ReactFlow>
-        <CanvasLegend workflow={workflow} dimmed={tracePath !== null} />
+        <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}
         {overflowsBottom ? <CanvasOverflowIndicator direction="bottom" /> : null}
       </div>

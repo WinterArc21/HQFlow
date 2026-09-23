@@ -37,7 +37,7 @@ test("Ctrl+K opens the palette, typing filters results, and Enter opens the matc
   await expect(dialog).toBeHidden();
 
   // The correct workflow is now showing (not the default "Generate Video Prompt")...
-  await expect(page.locator('button[data-workflow-item][aria-current="true"]')).toContainText("Upload Reference Asset");
+  await expect(page.getByRole("button", { name: "Workflows: Upload Reference Asset" })).toBeVisible();
 
   // ...the step drawer opened for the matched step (StepDrawer's accessible name comes from
   // aria-labelledby, which wins over its redundant aria-label, so it's just the step name)...

@@ -44,6 +44,18 @@ describe("computeFitViewport", () => {
     expect(negative.y + -200 * negative.zoom).toBeCloseTo(BASE.containerHeight / 2, 1);
   });
 
+  it("fits and centres the graph in the area left clear by floating chrome", () => {
+    const bounds = { minX: 0, minY: 0, maxX: 200, maxY: 200 };
+    const insets = { top: 126, right: 14, bottom: 154, left: 14 };
+    const plain = computeFitViewport({ ...BASE, bounds })!;
+    const inset = computeFitViewport({ ...BASE, bounds, insets })!;
+    const innerWidth = BASE.containerWidth - insets.left - insets.right;
+    const innerHeight = BASE.containerHeight - insets.top - insets.bottom;
+    expect(inset.zoom).toBeLessThanOrEqual(plain.zoom);
+    expect(inset.x + 100 * inset.zoom).toBeCloseTo(insets.left + innerWidth / 2, 1);
+    expect(inset.y + 100 * inset.zoom).toBeCloseTo(insets.top + innerHeight / 2, 1);
+  });
+
   it("clears directional overflow after the user pans to the graph end", () => {
     const bounds = { minX: 0, minY: 0, maxX: 4000, maxY: 1200 };
     expect(computeViewportOverflow({

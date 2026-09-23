@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
-import { AppShell, TopBar, type CodeHQStatus } from "./components/shell";
-import { NavigatorExpandControl, WorkflowNavigator } from "./components/navigator";
+import { IslandShell, type CodeHQStatus } from "./components/shell";
+import { WorkflowNavigator } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
@@ -27,14 +27,12 @@ function computeConnectionStatus(
 
 export function App() {
   const { snapshot, status, error, refetch } = useCodeHQSnapshot();
-  const [workflowNavigatorCollapsed, setWorkflowNavigatorCollapsed] = useState(false);
 
   const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const selectStep = useCodeHQStore((state) => state.selectStep);
   const selectStepAndPan = useCodeHQStore((state) => state.selectStepAndPan);
-  const openSearch = useCodeHQStore((state) => state.openSearch);
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
   const closeDiagnostics = useCodeHQStore((state) => state.closeDiagnostics);
@@ -88,77 +86,72 @@ export function App() {
     refetch();
   };
 
+  if (selectedRecord === null && snapshot.repositoryMap === null) {
+    return <EmptyState />;
+  }
+
   return (
-    <>
-      <AppShell
-        asideCollapsed={workflowNavigatorCollapsed}
-        topBar={
-          <TopBar
-            repositoryName={snapshot.repository.name}
-            {...(selectedRecord !== null
-              ? { currentView: selectedRecord.workflow.name }
-              : snapshot.repositoryMap !== null ? { currentView: "Overview" } : {})}
-            {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
-            status={connectionStatus}
-            {...(connectionStatus === "invalid" ? { errorCount } : {})}
-            onOpenSearch={openSearch}
-          />
-        }
-        aside={
-          <WorkflowNavigator
-            workflows={snapshot.workflows}
-            repositoryName={snapshot.repository.name}
-            repositoryMap={snapshot.repositoryMap}
-            selectedWorkflowId={selectedWorkflowId}
-            onSelect={selectWorkflow}
-            collapsed={workflowNavigatorCollapsed}
-            onToggleCollapsed={() => setWorkflowNavigatorCollapsed((collapsed) => !collapsed)}
-          />
-        }
-      >
-        <DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />
-        {selectedRecord !== null ? (
-          <WorkflowCanvas
-            workflow={selectedRecord.workflow}
-            sourceChecks={selectedRecord.sourceChecks}
-            modifiedAt={selectedRecord.modifiedAt}
-            state={selectedRecord.state}
-            onDeleteWorkflow={async () => {
-              await deleteWorkflow(selectedRecord.workflow.id);
-              refetch();
-            }}
-            {...(workflowNavigatorCollapsed
-              ? { stageOverlay: <NavigatorExpandControl onExpand={() => setWorkflowNavigatorCollapsed(false)} /> }
-              : {})}
-          />
-        ) : snapshot.repositoryMap !== null ? (
-          <RepositoryOverview
-            repositoryName={snapshot.repository.name}
-            mapRecord={snapshot.repositoryMap}
-            workflows={snapshot.workflows}
-            invalidWorkflowIds={invalidWorkflowIds}
-            onOpenWorkflow={selectWorkflow}
-            {...(workflowNavigatorCollapsed
-              ? { stageOverlay: <NavigatorExpandControl onExpand={() => setWorkflowNavigatorCollapsed(false)} /> }
-              : {})}
-          />
-        ) : (
-          <EmptyState />
-        )}
-      </AppShell>
-      {displayedWorkflow !== null && selectedStepId !== null ? (
-        <StepDrawer
-          workflow={displayedWorkflow}
-          stepId={selectedStepId}
-          sourceChecks={displayedSourceChecks}
-          onClose={() => selectStep(null)}
-          onSelectStep={(stepId) => selectStepAndPan(displayedWorkflow.id, stepId)}
+    <IslandShell
+      repositoryName={snapshot.repository.name}
+      {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
+      locationLabel={selectedRecord?.workflow.name ?? "Overview"}
+      status={connectionStatus}
+      {...(connectionStatus === "invalid" ? { errorCount } : {})}
+      navigator={(close) => (
+        <WorkflowNavigator
+          workflows={snapshot.workflows}
+          repositoryName={snapshot.repository.name}
+          repositoryMap={snapshot.repositoryMap}
+          selectedWorkflowId={selectedWorkflowId}
+          onSelect={(workflowId) => {
+            selectWorkflow(workflowId);
+            close();
+          }}
+          collapsed={false}
+          onToggleCollapsed={close}
+        />
+      )}
+      notice={<DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />}
+      overlays={
+        <>
+          {displayedWorkflow !== null && selectedStepId !== null ? (
+            <StepDrawer
+              workflow={displayedWorkflow}
+              stepId={selectedStepId}
+              sourceChecks={displayedSourceChecks}
+              onClose={() => selectStep(null)}
+              onSelectStep={(stepId) => selectStepAndPan(displayedWorkflow.id, stepId)}
+            />
+          ) : null}
+          {diagnosticsOpen ? (
+            <DiagnosticsPanel diagnostics={snapshot.diagnostics} onClose={closeDiagnostics} onRecheck={handleRecheck} />
+          ) : null}
+          <CommandPalette snapshot={snapshot} onRecheck={handleRecheck} />
+        </>
+      }
+    >
+      {(chrome) => selectedRecord !== null ? (
+        <WorkflowCanvas
+          workflow={selectedRecord.workflow}
+          sourceChecks={selectedRecord.sourceChecks}
+          modifiedAt={selectedRecord.modifiedAt}
+          state={selectedRecord.state}
+          chrome={chrome}
+          onDeleteWorkflow={async () => {
+            await deleteWorkflow(selectedRecord.workflow.id);
+            refetch();
+          }}
+        />
+      ) : snapshot.repositoryMap !== null ? (
+        <RepositoryOverview
+          repositoryName={snapshot.repository.name}
+          mapRecord={snapshot.repositoryMap}
+          workflows={snapshot.workflows}
+          invalidWorkflowIds={invalidWorkflowIds}
+          onOpenWorkflow={selectWorkflow}
+          chrome={chrome}
         />
       ) : null}
-      {diagnosticsOpen ? (
-        <DiagnosticsPanel diagnostics={snapshot.diagnostics} onClose={closeDiagnostics} onRecheck={handleRecheck} />
-      ) : null}
-      <CommandPalette snapshot={snapshot} onRecheck={handleRecheck} />
-    </>
+    </IslandShell>
   );
 }

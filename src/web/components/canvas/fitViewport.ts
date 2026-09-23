@@ -21,7 +21,18 @@ export interface FitViewportInput {
   /** Fraction of the container reserved as margin on each side, same meaning as React Flow's
    * `fitView({ padding })`. */
   paddingRatio: number;
+  /** Pixels along each edge covered by floating chrome; the graph is fitted into what remains. */
+  insets?: FitInsets;
 }
+
+export interface FitInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const NO_INSETS: FitInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 export interface Viewport {
   x: number;
@@ -50,16 +61,19 @@ export function computeViewportOverflow(input: Pick<FitViewportInput, "container
 
 export function computeFitViewport(input: FitViewportInput): Viewport | null {
   const { containerWidth, containerHeight, bounds, minZoom, maxZoom, paddingRatio } = input;
+  const insets = input.insets ?? NO_INSETS;
   const boundsWidth = bounds.maxX - bounds.minX;
   const boundsHeight = bounds.maxY - bounds.minY;
   if (containerWidth <= 0 || containerHeight <= 0 || boundsWidth <= 0 || boundsHeight <= 0) {
     return null;
   }
 
-  const paddingX = containerWidth * paddingRatio;
-  const paddingY = containerHeight * paddingRatio;
-  const availableWidth = Math.max(containerWidth - paddingX * 2, 1);
-  const availableHeight = Math.max(containerHeight - paddingY * 2, 1);
+  const innerWidth = Math.max(containerWidth - insets.left - insets.right, 1);
+  const innerHeight = Math.max(containerHeight - insets.top - insets.bottom, 1);
+  const paddingX = innerWidth * paddingRatio;
+  const paddingY = innerHeight * paddingRatio;
+  const availableWidth = Math.max(innerWidth - paddingX * 2, 1);
+  const availableHeight = Math.max(innerHeight - paddingY * 2, 1);
 
   const rawZoom = Math.min(availableWidth / boundsWidth, availableHeight / boundsHeight);
   const zoom = Math.min(Math.max(rawZoom, minZoom), maxZoom);
@@ -67,11 +81,8 @@ export function computeFitViewport(input: FitViewportInput): Viewport | null {
   const contentWidth = boundsWidth * zoom;
   const contentHeight = boundsHeight * zoom;
 
-  const x = contentWidth <= availableWidth ? (containerWidth - contentWidth) / 2 - bounds.minX * zoom : paddingX - bounds.minX * zoom;
-  const y =
-    contentHeight <= availableHeight
-      ? (containerHeight - contentHeight) / 2 - bounds.minY * zoom
-      : paddingY - bounds.minY * zoom;
+  const x = insets.left + (contentWidth <= availableWidth ? (innerWidth - contentWidth) / 2 : paddingX) - bounds.minX * zoom;
+  const y = insets.top + (contentHeight <= availableHeight ? (innerHeight - contentHeight) / 2 : paddingY) - bounds.minY * zoom;
 
   const overflow = computeViewportOverflow({
     containerWidth,
