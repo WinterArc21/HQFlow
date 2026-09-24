@@ -1,6 +1,5 @@
 /**
- * Small, page-level helpers reused across specs. These stable selectors are exercised by the
- * committed Playwright interaction and screenshot coverage.
+ * Small, page-level helpers reused across specs.
  */
 import type { Locator, Page } from "@playwright/test";
 
@@ -20,8 +19,4 @@ export async function selectWorkflowByName(page: Page, workflowName: string): Pr
     await page.getByRole("button", { name: /^Workflows: / }).click();
   }
   await item.click();
-}
-
-export function stepNode(page: Page, stepId: string): Locator {
-  return page.locator(`[data-step-node="${stepId}"]`);
 }

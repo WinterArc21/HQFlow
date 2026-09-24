@@ -77,7 +77,7 @@ export function categoryToken(category?: WorkflowStep["category"]): CategoryVisu
 type ConnectionType = NonNullable<Parameters<typeof connectionStyle>[0]>;
 
 /**
- * The approved edge grammar (see `prototypes/edge-grammar`, canvas-layout-discussion.md): stroke
+ * The approved edge grammar: stroke
  * *pattern* always distinguishes a connection type too, never colour alone. Normal sync flow is
  * solid and the visually dominant line; conditional/failure both dash but split amber/red;
  * async dots in blue. Failure and async now carry short labels ("invalid", "queued") — collapsing

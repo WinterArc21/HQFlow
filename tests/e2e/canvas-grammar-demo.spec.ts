@@ -10,28 +10,12 @@ import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS, REPO_ROOT } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
-const ARTIFACT_DIR = path.join(REPO_ROOT, ".amp", "in", "artifacts");
 const DEMO_SOURCE = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "canvas-grammar-demo.json");
 // React Flow can place an endpoint just outside the handle box because the card border and SVG
 // use separate coordinate spaces. Keep the allowance smaller than one unscaled handle radius.
 const EDGE_ENDPOINT_TOLERANCE_PX = 2;
 let root: string;
 let server: ManagedServer;
-
-async function setTheme(page: Page, theme: "dark" | "light"): Promise<void> {
-  const current = await page.locator("html").getAttribute("data-theme");
-  if (current !== theme) {
-    await page.getByRole("button", { name: `Switch to ${theme} theme` }).click();
-  }
-  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-}
-
-async function capture(page: Page, workflow: string, slug: string, theme: "dark" | "light"): Promise<void> {
-  await selectWorkflowByName(page, workflow);
-  await waitForBoot(page);
-  await setTheme(page, theme);
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, `${slug}-${theme}-1440x900.png`), animations: "disabled" });
-}
 
 async function resetCanvasLayout(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Reset layout" }).click();
@@ -71,7 +55,6 @@ test.describe.configure({ mode: "default" });
 test.beforeAll(async () => {
   root = await createTempFixtureCopy("canvas-grammar");
   await fsp.copyFile(DEMO_SOURCE, path.join(root, ".codehq", "workflows", "canvas-grammar-demo.json"));
-  await fsp.mkdir(ARTIFACT_DIR, { recursive: true });
   server = await startCodeHQServer(root, PORTS.canvasGrammar);
 });
 
@@ -310,17 +293,4 @@ test("keeps repeated drag updates error-free and deterministic", async ({ page }
   const replayPath = await moveTarget();
   expect(replayPath).toBe(firstPath);
   expect(runtimeErrors).toEqual([]);
-});
-
-test("captures deterministic dark and light review screenshots", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  await waitForBoot(page);
-
-  for (const theme of ["dark", "light"] as const) {
-    await capture(page, "Generate Video Prompt", "generate-video", theme);
-    await capture(page, "Upload Reference Asset", "upload-assets", theme);
-    await capture(page, "Canvas Grammar Demo", "canvas-grammar-demo", theme);
-  }
 });
