@@ -1,0 +1,181 @@
+/* The step card sits in React Flow's viewport (flow coordinates), drawn over the board: a fixed
+   box whose content scrolls, so opening it never moves a node or an arrow. */
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: all;
+  cursor: default;
+  background-color: var(--bg-surface);
+  border: 2px solid color-mix(in srgb, var(--step-accent) 70%, var(--border-strong));
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--step-accent) 14%, transparent),
+    0 18px 44px color-mix(in srgb, var(--bg-canvas) 55%, transparent);
+  animation: grow var(--dur-base) var(--ease-standard);
+}
+
+:global(:root[data-theme="light"]) .card {
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--step-accent) 14%, transparent),
+    0 18px 44px color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+@keyframes grow {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  background-image: linear-gradient(100deg, color-mix(in srgb, var(--step-accent) 16%, var(--bg-surface)), var(--bg-surface) 80%);
+}
+
+.chip {
+  padding: 3px 4px;
+  border-radius: var(--radius-sm);
+  background-color: var(--step-accent);
+  color: var(--bg-canvas);
+  font: 600 10px/1 var(--font-mono);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  margin-bottom: -1px;
+  padding: 0 var(--space-2);
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-tiny);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab[aria-selected="true"] {
+  border-bottom-color: var(--step-accent);
+  color: var(--text-primary);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.count {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background-color: var(--bg-raised);
+  color: var(--text-secondary);
+  font: var(--fs-micro) var(--font-mono);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.purpose {
+  margin: 0 0 var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Section lists (and the source list nested inside an edge case) sit flush with the card body. */
+.body ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--fs-tiny);
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+}
+
+.kicker {
+  color: var(--step-accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: var(--fs-micro) var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

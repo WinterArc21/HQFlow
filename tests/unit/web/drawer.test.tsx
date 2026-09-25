@@ -55,7 +55,7 @@ const SOURCE_CHECKS: Record<string, SourceStatus> = {
 
 function DrawerHarness() {
   const [open, setOpen] = useState(false);
-  const [stepId, setStepId] = useState("main");
+  const stepId = "main";
   return (
     <div>
       <button onClick={() => setOpen(true)}>Open drawer</button>
@@ -65,7 +65,6 @@ function DrawerHarness() {
           stepId={stepId}
           sourceChecks={SOURCE_CHECKS}
           onClose={() => setOpen(false)}
-          onSelectStep={setStepId}
         />
       ) : null}
     </div>
@@ -87,7 +86,7 @@ describe("StepDrawer", () => {
   });
 
   it("renders every section that has data, for a richly-populated step", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
+    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} />);
 
     for (const heading of [
       "Inputs",
@@ -107,7 +106,7 @@ describe("StepDrawer", () => {
   });
 
   it("counts each list section on its heading — the card no longer carries those counts", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
+    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} />);
 
     for (const [heading, count] of [
       ["Source references", "2"],
@@ -122,7 +121,7 @@ describe("StepDrawer", () => {
   });
 
   it("omits every section that has no data, for a sparse step", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="sparse" sourceChecks={{}} onClose={() => {}} onSelectStep={() => {}} />);
+    render(<StepDrawer workflow={WORKFLOW} stepId="sparse" sourceChecks={{}} onClose={() => {}} />);
 
     for (const heading of [
       "Inputs",
@@ -141,7 +140,7 @@ describe("StepDrawer", () => {
   });
 
   it("renders an honest, distinct label for each source check state", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
+    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} />);
 
     expect(screen.getByText("File found")).toBeInTheDocument();
     expect(screen.getByText("File not found")).toBeInTheDocument();
@@ -149,7 +148,7 @@ describe("StepDrawer", () => {
 
   it("copies the exact repository-relative path when 'Copy path' is used", async () => {
     const clipboard = navigator.clipboard as unknown as { writeText: (text: string) => Promise<void> };
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} onSelectStep={() => {}} />);
+    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} />);
 
     const copyButtons = screen.getAllByRole("button", { name: "Copy path" });
     fireEvent.click(copyButtons[0] as HTMLButtonElement);
@@ -157,15 +156,12 @@ describe("StepDrawer", () => {
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith("src/payments/capture.ts"));
   });
 
-  it("selects the connected step when a connection row is clicked", async () => {
-    const onSelectStep = vi.fn();
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={{}} onClose={() => {}} onSelectStep={onSelectStep} />);
+  it("keeps connections for screen readers only: the canvas arrows already show them", () => {
+    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={{}} onClose={() => {}} />);
 
-    const connections = screen.getByLabelText("Connections");
-    const user = userEvent.setup();
-    await user.click(within(connections).getByRole("button", { name: /Sparse Step/ }));
-
-    expect(onSelectStep).toHaveBeenCalledWith("sparse");
+    const connections = screen.getByRole("region", { name: "Connections" });
+    expect(connections).toHaveTextContent("To Sparse Step");
+    expect(within(connections).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("closes on Escape and restores focus to the element that opened it", async () => {

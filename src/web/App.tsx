@@ -32,7 +32,7 @@ export function App() {
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const selectStep = useCodeHQStore((state) => state.selectStep);
-  const selectStepAndPan = useCodeHQStore((state) => state.selectStepAndPan);
+  const stepDetailFull = useCodeHQStore((state) => state.stepDetailFull);
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
   const closeDiagnostics = useCodeHQStore((state) => state.closeDiagnostics);
@@ -114,13 +114,13 @@ export function App() {
       notice={<DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />}
       overlays={
         <>
-          {displayedWorkflow !== null && selectedStepId !== null ? (
+          {/* A selected step opens as a card on the canvas; the side panel is its "full details". */}
+          {displayedWorkflow !== null && selectedStepId !== null && stepDetailFull ? (
             <StepDrawer
               workflow={displayedWorkflow}
               stepId={selectedStepId}
               sourceChecks={displayedSourceChecks}
               onClose={() => selectStep(null)}
-              onSelectStep={(stepId) => selectStepAndPan(displayedWorkflow.id, stepId)}
             />
           ) : null}
           {diagnosticsOpen ? (

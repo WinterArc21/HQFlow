@@ -36,7 +36,6 @@ function LandingDemo() {
             stepId={selectedStepId}
             sourceChecks={{}}
             onClose={() => selectStep(null)}
-            onSelectStep={selectStep}
           />
         </ExportModeProvider>
       ) : null}

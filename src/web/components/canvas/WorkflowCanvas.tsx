@@ -13,6 +13,7 @@ import { CanvasLegend } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
+import { StepCardLayer } from "./StepCardLayer";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
 import { computeBackEdgeIds, computeTracePath } from "./graph";
@@ -180,12 +181,13 @@ function WorkflowCanvasInner({
   });
 
   useLayoutEffect(() => {
-    if (stepPanRequest?.workflowId !== workflow.id) {
+    // In the island shell the step card pans itself into view when it opens.
+    if (chrome !== undefined || stepPanRequest?.workflowId !== workflow.id) {
       return;
     }
     const drawerWidth = document.querySelector<HTMLElement>("[data-step-drawer]")?.getBoundingClientRect().width ?? 0;
     panToNode(stepPanRequest.stepId, drawerWidth);
-  }, [panToNode, stepPanRequest, workflow.id]);
+  }, [chrome, panToNode, stepPanRequest, workflow.id]);
 
   const generatedNodes = useMemo(
     () => [
@@ -444,6 +446,17 @@ function WorkflowCanvasInner({
           aria-label={`${workflow.name} workflow canvas`}
         >
           {showMinimap ? <MiniMap pannable zoomable={false} ariaLabel={`${workflow.name} overview map`} /> : null}
+          {chrome !== undefined ? (
+            <StepCardLayer
+              workflow={workflow}
+              sourceChecks={sourceChecks}
+              nodes={nodes}
+              bounds={layout.bounds}
+              insets={chrome.fitInsets}
+              containerRef={containerRef}
+              reducedMotion={reducedMotion}
+            />
+          ) : null}
         </ReactFlow>
         <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}

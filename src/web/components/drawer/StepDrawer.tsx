@@ -18,14 +18,13 @@ export interface StepDrawerProps {
   stepId: string;
   sourceChecks: Record<string, SourceStatus>;
   onClose: () => void;
-  onSelectStep: (stepId: string) => void;
 }
 
 /**
  * The step detail drawer (contract §11). Renders only the sections that have data — a sparse
  * step produces a short, clean drawer instead of a wall of empty headings.
  */
-export function StepDrawer({ workflow, stepId, sourceChecks, onClose, onSelectStep }: StepDrawerProps) {
+export function StepDrawer({ workflow, stepId, sourceChecks, onClose }: StepDrawerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useFocusTrap(containerRef, true, onClose);
@@ -131,7 +130,7 @@ export function StepDrawer({ workflow, stepId, sourceChecks, onClose, onSelectSt
             assumptions={step.details?.assumptions ?? []}
           />
 
-          <StepDrawerConnections workflow={workflow} incoming={incoming} outgoing={outgoing} onSelectStep={onSelectStep} />
+          <StepDrawerConnections workflow={workflow} incoming={incoming} outgoing={outgoing} />
         </div>
       </div>
     </div>
