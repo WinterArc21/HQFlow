@@ -143,6 +143,18 @@ describe("createCodeHQServer — /api/source", () => {
     expect(JSON.stringify(body)).not.toContain("realFunction() {}");
   });
 
+  it("escapes '#', '?' and '%' in editor links so the whole file name reaches the editor", async () => {
+    delete process.env.WSL_DISTRO_NAME;
+    writeFileSync(path.join(root, "we#ird %20 name.ts"), "export {};\n");
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/source?${new URLSearchParams({ file: "we#ird %20 name.ts", line: "3" })}`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { editorUrl: string; exists: boolean };
+    expect(body.exists).toBe(true);
+    expect(body.editorUrl).toMatch(/\/we%23ird%20%2520%20name\.ts:3$/);
+    expect(new URL(body.editorUrl).hash).toBe("");
+  });
+
   it("routes editor links through the current WSL distribution", async () => {
     process.env.WSL_DISTRO_NAME = "Ubuntu 24.04";
     const running = await startServer();
