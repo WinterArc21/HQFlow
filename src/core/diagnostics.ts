@@ -7,6 +7,8 @@ import type { DiagnosticsReport, Issue } from "@schema/diagnostics";
 import { pathExists, writeFileAtomic } from "./fs-utils";
 import { codeHQPaths } from "./repository";
 
+const naturalOrder = new Intl.Collator("en", { numeric: true });
+
 function compareIssues(a: Issue, b: Issue): number {
   if (a.severity !== b.severity) {
     return a.severity === "error" ? -1 : 1;
@@ -14,12 +16,7 @@ function compareIssues(a: Issue, b: Issue): number {
   if (a.file !== b.file) {
     return a.file < b.file ? -1 : 1;
   }
-  const aPath = a.path ?? "";
-  const bPath = b.path ?? "";
-  if (aPath !== bPath) {
-    return aPath < bPath ? -1 : 1;
-  }
-  return 0;
+  return naturalOrder.compare(a.path ?? "", b.path ?? "");
 }
 
 /** Sorts `issues` (errors before warnings, then by file, then by path) and computes `valid`. */

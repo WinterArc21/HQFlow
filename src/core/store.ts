@@ -60,7 +60,7 @@ function compareWorkflowRecords(a: WorkflowRecord, b: WorkflowRecord, defaultWor
       return 1;
     }
   }
-  return a.workflow.name.localeCompare(b.workflow.name);
+  return a.workflow.name.localeCompare(b.workflow.name, undefined, { numeric: true });
 }
 
 function toStaleRecord(cached: CachedWorkflow, staleSince: string): WorkflowRecord {
