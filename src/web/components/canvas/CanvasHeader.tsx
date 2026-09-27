@@ -1,5 +1,6 @@
 import type { Workflow } from "@schema/workflow";
 import type { WorkflowRecord } from "../../api/types";
+import { countLabel } from "../../lib/pluralize";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { Badge } from "../primitives";
 import { CanvasToolbar, type CanvasToolbarProps } from "./CanvasToolbar";
@@ -20,12 +21,12 @@ export interface CanvasTitleProps {
 }
 
 /** The workflow's name, size, purpose and freshness — shared by the title strip and the island shell. */
-export function CanvasTitle({ workflow, itemLabel = "steps", modifiedAt, state }: CanvasTitleProps) {
+export function CanvasTitle({ workflow, itemLabel = "step", modifiedAt, state }: CanvasTitleProps) {
   return (
     <div className={styles.identity}>
       <div className={styles.titleRow}>
         <h1 className={styles.name}>{workflow.name}</h1>
-        <span className={styles.stepCount}>{workflow.steps.length} {itemLabel}</span>
+        <span className={styles.stepCount}>{countLabel(workflow.steps.length, itemLabel)}</span>
       </div>
       <div className={styles.detailsRow}>
         <p className={styles.purpose}>{workflow.purpose}</p>

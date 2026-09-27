@@ -33,6 +33,10 @@ const DOCK_HEIGHT = 4;
 const DRAWER_WIDTH = 15;
 /** Dots kept clear above the grown dock, so the workflow tree never reaches the title island. */
 const TREE_TOP_CLEARANCE = 5;
+/** Below this many dot columns the title and status islands can't share the top row. */
+const NARROW_COLUMNS = 24;
+/** In the narrow layout the title island starts under the two-dot status island. */
+const NARROW_IDENTITY_TOP = 3;
 
 /**
  * The app frame: the canvas fills the window and every piece of chrome floats over it as an
@@ -51,7 +55,9 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const treeId = useId();
 
   const { lastColumn, lastRow } = grid;
-  const identityWidth = Math.min(16, Math.max(8, lastColumn - 12));
+  const narrow = lastColumn < NARROW_COLUMNS;
+  const identityWidth = narrow ? lastColumn : Math.min(16, Math.max(8, lastColumn - 12));
+  const identityTop = narrow ? NARROW_IDENTITY_TOP : 0;
   const dockWidth = Math.min(DOCK_WIDTH, lastColumn);
   const dockLeft = Math.max(0, Math.floor((lastColumn - dockWidth) / 2));
   const drawerMeetsDock = dockLeft + dockWidth > lastColumn - DRAWER_WIDTH;
@@ -84,14 +90,14 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
-    legendPlacement: { l: 0, b: 0 },
+    legendPlacement: narrow ? { l: 0, b: DOCK_HEIGHT + 1 } : { l: 0, b: 0 },
     fitInsets: {
-      top: DOT_ORIGIN + 4 * DOT_STEP,
+      top: DOT_ORIGIN + (identityTop + 4) * DOT_STEP,
       right: DOT_ORIGIN,
       bottom: DOT_ORIGIN + (DOCK_HEIGHT + 1) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, titleTarget]);
+  }), [controlsTarget, identityTop, narrow, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.
@@ -105,7 +111,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
     <div className={styles.shell} style={drawerInsets}>
       <div className={styles.canvas}>{children(chrome)}</div>
 
-      <Island placement={{ l: 0, t: 0, w: identityWidth, h: "auto" }} role="banner">
+      <Island placement={{ l: 0, t: identityTop, w: identityWidth, h: "auto" }} role="banner">
         <div className={styles.identity}>
           <div className={styles.repository}>
             <span className={styles.mark} aria-hidden="true">HQ</span>

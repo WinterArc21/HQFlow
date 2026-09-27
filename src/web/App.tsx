@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
 import { IslandShell, type CodeHQStatus } from "./components/shell";
-import { WorkflowNavigator } from "./components/navigator";
+import { WorkflowNavigator, WorkflowRemovedNotice } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
@@ -36,15 +36,25 @@ export function App() {
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
   const closeDiagnostics = useCodeHQStore((state) => state.closeDiagnostics);
+  const [removedWorkflowName, setRemovedWorkflowName] = useState<string | null>(null);
+  const lastShownWorkflow = useRef<{ id: string; name: string } | null>(null);
+  const deletingWorkflowId = useRef<string | null>(null);
 
   useEffect(() => {
     if (snapshot === null) {
       return;
     }
     const knownIds = new Set(snapshot.workflows.map((record) => record.id));
-    if (selectedWorkflowId !== null && knownIds.has(selectedWorkflowId)) {
+    const shown = snapshot.workflows.find((record) => record.id === selectedWorkflowId);
+    if (shown !== undefined) {
+      lastShownWorkflow.current = { id: shown.id, name: shown.workflow.name };
       return;
     }
+    const lost = lastShownWorkflow.current;
+    if (lost !== null && lost.id === selectedWorkflowId && deletingWorkflowId.current !== lost.id) {
+      setRemovedWorkflowName(lost.name);
+    }
+    lastShownWorkflow.current = null;
     if (selectedWorkflowId === null && snapshot.repositoryMap !== null) {
       return;
     }
@@ -111,7 +121,14 @@ export function App() {
           onToggleCollapsed={close}
         />
       )}
-      notice={<DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />}
+      notice={
+        <>
+          {removedWorkflowName !== null ? (
+            <WorkflowRemovedNotice workflowName={removedWorkflowName} onDismiss={() => setRemovedWorkflowName(null)} />
+          ) : null}
+          <DiagnosticsBanner diagnostics={snapshot.diagnostics} workflows={snapshot.workflows} onOpenDiagnostics={toggleDiagnostics} />
+        </>
+      }
       overlays={
         <>
           {/* A selected step opens as a card on the canvas; the side panel is its "full details". */}
@@ -138,6 +155,7 @@ export function App() {
           state={selectedRecord.state}
           chrome={chrome}
           onDeleteWorkflow={async () => {
+            deletingWorkflowId.current = selectedRecord.workflow.id;
             await deleteWorkflow(selectedRecord.workflow.id);
             refetch();
           }}
