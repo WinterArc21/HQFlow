@@ -51,7 +51,7 @@ export function RepositoryOverview({ repositoryName, mapRecord, workflows, inval
       workflow={overview}
       sourceChecks={{}}
       canvasId={REPOSITORY_MAP_CANVAS_ID}
-      itemLabel="workflows"
+      itemLabel="workflow"
       exportEnabled={false}
       modifiedAt={mapRecord.modifiedAt}
       state={mapRecord.state}

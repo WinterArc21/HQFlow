@@ -12,7 +12,26 @@ const repoRelativePathSchema = z.string().min(1, { message: "Path must not be em
   }
 });
 
-const stepCategorySchema = z.enum(["entry", "logic", "decision", "data", "external", "output"]);
+// Ids key plain objects on both server and canvas (layouts, expanded steps), so names that
+// already exist on every object would read back as built-in functions.
+const RESERVED_IDS = new Set(Object.getOwnPropertyNames(Object.prototype));
+
+function idSchema(label: string) {
+  return z
+    .string()
+    .min(1, { message: `${label} must not be empty.` })
+    .refine((id) => !RESERVED_IDS.has(id), {
+      message: `${label} must not be a reserved JavaScript property name such as '__proto__', 'constructor' or 'toString'.`,
+    });
+}
+
+export function requiredTextSchema(label: string) {
+  return z.string().refine((text) => text.trim().length > 0, {
+    message: `${label} must not be empty or whitespace only.`,
+  });
+}
+
+const stepCategorySchema =z.enum(["entry", "logic", "decision", "data", "external", "output"]);
 
 const connectionTypeSchema = z.enum(["success", "failure", "conditional", "async"]);
 
@@ -78,9 +97,9 @@ const stepDetailsSchema = z
 
 export const workflowStepSchema = z
   .object({
-    id: z.string().min(1, { message: "WorkflowStep.id must not be empty." }),
-    name: z.string().min(1, { message: "WorkflowStep.name must not be empty." }),
-    purpose: z.string().min(1, { message: "WorkflowStep.purpose must not be empty." }),
+    id: idSchema("WorkflowStep.id"),
+    name: requiredTextSchema("WorkflowStep.name"),
+    purpose: requiredTextSchema("WorkflowStep.purpose"),
     category: stepCategorySchema.optional(),
     sources: z.array(sourceReferenceSchema).optional(),
     inputs: z.array(dataReferenceSchema).optional(),
@@ -94,7 +113,7 @@ export const workflowStepSchema = z
 
 export const workflowConnectionSchema = z
   .object({
-    id: z.string().min(1).optional(),
+    id: idSchema("WorkflowConnection.id").optional(),
     from: z.string().min(1, { message: "WorkflowConnection.from must not be empty." }),
     to: z.string().min(1, { message: "WorkflowConnection.to must not be empty." }),
     label: z.string().optional(),
@@ -108,9 +127,11 @@ export const workflowSchema = z
     schemaVersion: z.literal("0.1", { message: "Workflow.schemaVersion must be \"0.1\"." }),
     id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, {
       message: "Workflow.id must match ^[a-z0-9][a-z0-9-]*$ (lowercase letters, digits, and hyphens).",
+    }).refine((id) => !RESERVED_IDS.has(id), {
+      message: "Workflow.id must not be a reserved JavaScript property name such as 'constructor'.",
     }),
-    name: z.string().min(1, { message: "Workflow.name must not be empty." }),
-    purpose: z.string().min(1, { message: "Workflow.purpose must not be empty." }),
+    name: requiredTextSchema("Workflow.name"),
+    purpose: requiredTextSchema("Workflow.purpose"),
     entryPoint: sourceReferenceSchema.optional(),
     steps: z.array(workflowStepSchema).min(1, { message: "Workflow.steps must contain at least one step." }),
     connections: z.array(workflowConnectionSchema),

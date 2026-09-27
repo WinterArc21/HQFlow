@@ -1,5 +1,6 @@
 import { Check } from "@phosphor-icons/react";
 import type { WorkflowRecord } from "../../api/types";
+import { countLabel } from "../../lib/pluralize";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { Badge } from "../primitives";
 import styles from "./WorkflowListItem.module.css";
@@ -34,7 +35,7 @@ export function WorkflowListItem({ record, selected, onSelect }: WorkflowListIte
           <p className={styles.purpose}>{record.workflow.purpose}</p>
           <div className={styles.meta}>
             {record.state === "stale" ? <Badge tone="amber">Stale</Badge> : null}
-            <span className={styles.stepCount}>{record.workflow.steps.length} steps</span>
+            <span className={styles.stepCount}>{countLabel(record.workflow.steps.length, "step")}</span>
             <span className={styles.time}>{formatRelativeTime(record.modifiedAt)}</span>
           </div>
         </div>

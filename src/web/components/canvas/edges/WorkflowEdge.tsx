@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
+import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
 import { connectionLabelText } from "../edgeLabel";
 import type { WorkflowFlowEdge } from "../types";
 import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
@@ -10,6 +11,9 @@ import styles from "./WorkflowEdge.module.css";
 /** Branches turn with a broad radius so they feel routed rather than mechanically elbowed. */
 const EDGE_BORDER_RADIUS = 16;
 const RETRY_LOOP_OUTSET = 80;
+const RETRY_LABEL_LIFT = 12;
+const RETRY_LABEL_INSET = 36;
+const PARALLEL_EDGE_SPACING = 34;
 const RETURN_EDGE_LIFT = 84;
 const BEND_SNAP_DISTANCE_PX = 30;
 const BEND_ENDPOINT_LEAD = 18;
@@ -197,8 +201,12 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   if (isRetryLoop) {
     const bulgeX = Math.max(sourceX, targetX) + RETRY_LOOP_OUTSET;
     path = `M${sourceX},${sourceY} C${bulgeX},${sourceY} ${bulgeX},${targetY} ${targetX},${targetY}`;
-    labelX = bulgeX - 2;
-    labelY = (sourceY + targetY) / 2;
+    // Over the card's top-right corner, not at the curl's apex: the gap beside the card is where
+    // outgoing connections (and their fanned-out labels) run. The retry handles sit at fixed
+    // fractions of the card's height, so the card's top edge follows from them.
+    const cardHeight = Math.abs(sourceY - targetY) / (RETRY_OUT_FRACTION - RETRY_IN_FRACTION);
+    labelX = Math.max(sourceX, targetX) - RETRY_LABEL_INSET;
+    labelY = Math.min(sourceY, targetY) - cardHeight * RETRY_IN_FRACTION - RETRY_LABEL_LIFT;
   } else if (returnEdge) {
     const liftY = Math.min(sourceY, targetY) - RETURN_EDGE_LIFT;
     path = `M${sourceX},${sourceY} C${sourceX},${liftY} ${targetX},${liftY} ${targetX},${targetY}`;
@@ -218,6 +226,18 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         })
       : arrowSafeBezierPath({ x: sourceX, y: sourceY }, sourcePosition, { x: targetX, y: targetY }, targetPosition);
     [path, labelX, labelY] = geometry;
+    const parallelOffset = data.parallelOffset ?? 0;
+    if (parallelOffset !== 0) {
+      const length = Math.hypot(targetX - sourceX, targetY - sourceY) || 1;
+      const spread = parallelOffset * PARALLEL_EDGE_SPACING;
+      const fanPoint = {
+        x: (sourceX + targetX) / 2 - ((targetY - sourceY) / length) * spread,
+        y: (sourceY + targetY) / 2 + ((targetX - sourceX) / length) * spread,
+      };
+      path = smoothBendPath({ x: sourceX, y: sourceY }, sourcePosition, fanPoint, { x: targetX, y: targetY }, targetPosition);
+      labelX = fanPoint.x;
+      labelY = fanPoint.y;
+    }
   }
 
   let bendPoint = activeBend?.point;
@@ -335,8 +355,9 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       {showLabel ? (
         <EdgeLabelRenderer>
           <div
-            className={styles.label}
+            className={`${styles.label} ${bendable ? "" : styles.labelHoverable}`}
             data-edge-label={id}
+            {...(bendable ? {} : { title: labelText })}
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               color: `var(${visual.varName})`,
@@ -364,9 +385,9 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
             data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
             style={{ color: `var(${visual.varName})` }}
             aria-label={`Bend edge ${id}`}
-            title={activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
+            title={`${showLabel ? `${labelText}\n` : ""}${activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
               ? "Snapped to a 90-degree corner; drag to adjust"
-              : "Drag to bend; move near a corner to snap"}
+              : "Drag to bend; move near a corner to snap"}`}
             onPointerDown={(event) => {
               event.preventDefault();
               event.stopPropagation();

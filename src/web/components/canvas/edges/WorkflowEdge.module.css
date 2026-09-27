@@ -46,7 +46,17 @@
   font-size: var(--fs-micro);
   line-height: 1.35;
   white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* A bendable edge's drag handle sits on its label and carries the full text as its tooltip. */
   pointer-events: none;
+}
+
+/* Edges without a bend handle expose the full, possibly clamped text on the label itself. */
+.labelHoverable {
+  pointer-events: auto;
+  cursor: default;
 }
 
 .bendHandleRegion {

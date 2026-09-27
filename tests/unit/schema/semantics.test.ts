@@ -45,6 +45,19 @@ describe("validateWorkflowSemantics", () => {
     expect(duplicate?.message).toContain("'start'");
   });
 
+  it("rule 1 — flags duplicate explicit connection ids", () => {
+    const workflow = baseWorkflow({
+      connections: [
+        { id: "dup", from: "start", to: "finish", type: "success" },
+        { id: "dup", from: "finish", to: "start", type: "failure" },
+      ],
+    });
+
+    const duplicate = validateWorkflowSemantics(workflow, FILE).find((issue) => issue.message.includes("Duplicate connection id"));
+    expect(duplicate?.severity).toBe("error");
+    expect(duplicate?.path).toBe("connections[1].id");
+  });
+
   it("rule 2 — flags a connection referencing a missing step", () => {
     const workflow = baseWorkflow({ connections: [{ from: "start", to: "missing-step", type: "success" }] });
 

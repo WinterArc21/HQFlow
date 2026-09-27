@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { sourceReferenceSchema } from "./workflow";
+import { requiredTextSchema, sourceReferenceSchema } from "./workflow";
 
 const repositoryWorkflowSchema = z
   .object({
     id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, {
       message: "RepositoryWorkflow.id must use lowercase letters, digits, and hyphens.",
     }),
-    name: z.string().min(1, { message: "RepositoryWorkflow.name must not be empty." }),
-    purpose: z.string().min(1, { message: "RepositoryWorkflow.purpose must not be empty." }),
+    name: requiredTextSchema("RepositoryWorkflow.name"),
+    purpose: requiredTextSchema("RepositoryWorkflow.purpose"),
     entryPoint: sourceReferenceSchema.optional(),
   })
   .strict();

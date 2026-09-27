@@ -114,6 +114,7 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
+  overflow-wrap: anywhere;
 }
 
 .purpose {

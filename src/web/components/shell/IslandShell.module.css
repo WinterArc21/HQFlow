@@ -148,8 +148,24 @@
 }
 
 .locationRepo {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-tertiary);
+}
+
+.locationRepo[aria-hidden="true"] {
+  flex: none;
+}
+
+/* Matches IslandShell's NARROW_COLUMNS: the open workflow's name outranks the repository's. */
+@media (max-width: 685px) {
+  .locationRepo {
+    display: none;
+  }
 }
 
 .locationName {
@@ -170,6 +186,7 @@
 
 .controls {
   display: flex;
+  flex: none;
   margin-left: auto;
 }
 

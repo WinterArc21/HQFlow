@@ -302,6 +302,26 @@ describe("canvas outcome and legend semantics", () => {
     });
   });
 
+  it("fans out connections that share a source and target", () => {
+    const workflow = {
+      schemaVersion: "0.1" as const,
+      id: "parallel",
+      name: "Parallel",
+      purpose: "Tests parallel edges.",
+      steps: [makeStep({ id: "a", category: "entry" }), makeStep({ id: "b" })],
+      connections: [
+        { from: "a", to: "b", label: "one" },
+        { from: "a", to: "b", label: "two" },
+        { from: "a", to: "b", label: "three" },
+      ],
+    };
+    const layout = computeLayout(workflow, { expandedStepIds: {} });
+
+    const edges = buildFlowEdges(layout, new Set<string>(), null);
+
+    expect(edges.map((edge) => edge.data?.parallelOffset)).toEqual([-1, undefined, 1]);
+  });
+
   it("declares cardinal target anchors for every outcome band", () => {
     for (const band of ["success", "failure"] as const) {
       const data: OutcomeNodeData = {

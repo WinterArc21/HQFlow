@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { CodeHQProject } from "@schema/project";
+import { stripByteOrderMark } from "./fs-utils";
 
 const CODEHQ_DIR_NAME = ".codehq";
 
@@ -53,7 +54,7 @@ function tryReadJsonName(filePath: string, pick: (data: unknown) => unknown): st
   }
   try {
     const raw = readFileSync(filePath, "utf-8");
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed = JSON.parse(stripByteOrderMark(raw)) as unknown;
     const name = pick(parsed);
     return typeof name === "string" && name.length > 0 ? name : null;
   } catch {
