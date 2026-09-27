@@ -40,6 +40,10 @@ import styles from "./WorkflowCanvas.module.css";
  * test workflows (7 and 4 work steps) confirm this keeps the default 1440x900 view intrusion-
  * free while still growing in for a genuinely large workflow. */
 const MINIMAP_NODE_THRESHOLD = 10;
+/** The map is ~200px wide, so bounds / 100 keeps each node and the viewport frame ~2px thick. */
+const MINIMAP_MIN_FEATURE_DIVISOR = 100;
+/** Above this, only on-screen nodes and edges mount; image export turns it off to capture the whole graph. */
+const VIRTUALIZE_NODE_THRESHOLD = 60;
 const IMAGE_PADDING = 120;
 const MIN_IMAGE_SIZE = 800;
 const MAX_IMAGE_SIZE = 4096;
@@ -393,6 +397,7 @@ function WorkflowCanvasInner({
   const hasExpandedSteps = Object.keys(expandedStepIds).length > 0;
   const stepNodeCount = nodes.filter((node) => node.type === "step").length;
   const showMinimap = stepNodeCount > MINIMAP_NODE_THRESHOLD;
+  const minimapStrokeWidth = Math.max(2, Math.max(layout.bounds.width, layout.bounds.height) / MINIMAP_MIN_FEATURE_DIVISOR);
   const titleProps = {
     workflow,
     ...(itemLabel !== undefined ? { itemLabel } : {}),
@@ -438,6 +443,7 @@ function WorkflowCanvasInner({
           disableKeyboardA11y
           minZoom={0.2}
           maxZoom={2}
+          onlyRenderVisibleElements={!imageExporting && nodes.length > VIRTUALIZE_NODE_THRESHOLD}
           onMove={(_event, viewport) => updateOverflow(viewport)}
           onNodeDragStop={(_event, node) => saveNodePosition(canvasId, node.id, node.position)}
           onNodeClick={handleNodeClick}
@@ -445,7 +451,20 @@ function WorkflowCanvasInner({
           onPaneClick={handleClearSelection}
           aria-label={`${workflow.name} workflow canvas`}
         >
-          {showMinimap ? <MiniMap pannable zoomable={false} ariaLabel={`${workflow.name} overview map`} /> : null}
+          {showMinimap ? (
+            <MiniMap
+              pannable
+              zoomable={false}
+              ariaLabel={`${workflow.name} overview map`}
+              // Node strokes are in canvas units; scaling them with the graph keeps a long, thin
+              // chain from shrinking below one pixel tall in the map. The mask stroke is already
+              // in screen pixels.
+              nodeStrokeWidth={minimapStrokeWidth}
+              nodeStrokeColor="var(--xy-minimap-node-background-color)"
+              maskStrokeWidth={2}
+              maskStrokeColor="var(--accent-neutral)"
+            />
+          ) : null}
           {chrome !== undefined ? (
             <StepCardLayer
               workflow={workflow}

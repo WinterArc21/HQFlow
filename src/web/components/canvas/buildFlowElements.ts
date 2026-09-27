@@ -24,8 +24,8 @@ function isStepExpanded(expandedStepIds: Record<string, true>, stepId: string): 
 
 /** Rendered size of the visible geometric ports in both node stylesheets. */
 const HANDLE_SIZE = 10;
-const RETRY_IN_FRACTION = 0.28;
-const RETRY_OUT_FRACTION = 0.72;
+export const RETRY_IN_FRACTION = 0.28;
+export const RETRY_OUT_FRACTION = 0.72;
 
 /** The four target-side ports shared by work cards and terminal outcome pills. The default
  * "in" id is the left-facing port; the other ids name their physical side explicitly. */
@@ -276,11 +276,27 @@ export function buildFlowEdges(
   onBendChange?: (edgeId: string, bend: CanvasBend) => void,
 ): WorkflowFlowEdge[] {
   const nodeById = new Map(layout.nodes.map((node) => [node.id, node] as const));
+  const siblingsByPair = new Map<string, string[]>();
+  for (const edge of layout.edges) {
+    if (edge.source === edge.target) {
+      continue;
+    }
+    const key = `${edge.source}\u0000${edge.target}`;
+    siblingsByPair.set(key, [...(siblingsByPair.get(key) ?? []), edge.id]);
+  }
+  const parallelOffsetOf = (edge: LayoutResult["edges"][number]): number => {
+    const siblings = siblingsByPair.get(`${edge.source}\u0000${edge.target}`);
+    if (siblings === undefined || siblings.length < 2) {
+      return 0;
+    }
+    return siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
+  };
 
   return layout.edges.map((edge) => {
     // Only a literal self-loop means retry. Other DFS back edges retain their declared semantics.
     const isRetryLoop = backEdgeIds.has(edge.id) && edge.source === edge.target;
     const isReturnEdge = backEdgeIds.has(edge.id) && edge.source !== edge.target;
+    const parallelOffset = parallelOffsetOf(edge);
     const targetNode = nodeById.get(edge.target);
     const sourceNode = nodeById.get(edge.source);
     const cardinalHandles = !isRetryLoop && !isReturnEdge && targetNode?.isOutcome !== true && sourceNode !== undefined && targetNode !== undefined
@@ -320,6 +336,7 @@ export function buildFlowEdges(
         retry: isRetryLoop,
         returnEdge: isReturnEdge,
         branch: targetNode?.isOutcome === true,
+        ...(parallelOffset !== 0 ? { parallelOffset } : {}),
         ...(outcomeBand !== undefined ? { outcomeBand } : {}),
         dimmed,
         traced,
