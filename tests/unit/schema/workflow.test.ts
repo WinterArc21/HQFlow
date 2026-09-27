@@ -188,6 +188,34 @@ describe("parseWorkflow — shape and semantic rules", () => {
 
     expect(result.ok).toBe(false);
   });
+
+  it("rejects ids that collide with built-in object properties", () => {
+    const cases: Array<(data: RawWorkflow) => void> = [
+      (data) => { data.id = "constructor"; },
+      (data) => { data.steps[0]!.id = "__proto__"; },
+      (data) => { data.steps[0]!.id = "toString"; },
+      (data) => { data.connections[0]!.id = "hasOwnProperty"; },
+    ];
+    for (const mutate of cases) {
+      const data = loadFixture();
+      mutate(data);
+
+      const result = parseWorkflow(data, FILE);
+
+      expect(result.ok).toBe(false);
+      expect(result.ok ? "" : result.issues[0]?.message).toMatch(/reserved JavaScript property name/);
+    }
+  });
+
+  it("rejects names and purposes that are only whitespace", () => {
+    const data = loadFixture();
+    data.steps[0]!.name = "   ";
+
+    const result = parseWorkflow(data, FILE);
+
+    expect(result.ok).toBe(false);
+    expect(result.ok ? undefined : result.issues[0]?.path).toBe("steps[0].name");
+  });
 });
 
 describe("parseWorkflow — corrected field shapes (entryPoint, notes)", () => {

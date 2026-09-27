@@ -181,10 +181,35 @@ function checkDuplicateConnections(workflow: Workflow, file: string): Issue[] {
   return issues;
 }
 
+/** Explicit connection ids key canvas edges and saved bends, so two connections can't share one. */
+function checkUniqueConnectionIds(workflow: Workflow, file: string): Issue[] {
+  const issues: Issue[] = [];
+  const firstIndexById = new Map<string, number>();
+  workflow.connections.forEach((connection, index) => {
+    if (connection.id === undefined) {
+      return;
+    }
+    const firstIndex = firstIndexById.get(connection.id);
+    if (firstIndex === undefined) {
+      firstIndexById.set(connection.id, index);
+      return;
+    }
+    issues.push({
+      severity: "error",
+      file,
+      path: `connections[${index}].id`,
+      message: `Duplicate connection id '${connection.id}'. Connection ids must be unique within a workflow.`,
+      hint: `Rename this connection's id, or remove the id and let HQFlow derive one (it duplicates 'connections[${firstIndex}]').`,
+    });
+  });
+  return issues;
+}
+
 /** Runs relational and cross-object semantic rules over an already shape-valid `workflow`. */
 export function validateWorkflowSemantics(workflow: Workflow, file: string): Issue[] {
   return [
     ...checkUniqueStepIds(workflow, file),
+    ...checkUniqueConnectionIds(workflow, file),
     ...checkConnectionReferences(workflow, file),
     ...checkReachabilityAndSize(workflow, file),
     ...checkDuplicateConnections(workflow, file),

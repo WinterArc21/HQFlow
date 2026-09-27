@@ -145,8 +145,8 @@ connection only because two workflows mention the same file.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `id` | string | yes | Unique within the workflow. |
-| `name` | string | yes | Short product-language step name, e.g. `"Collect website data"` — not a function identifier. |
+| `id` | string | yes | Unique within the workflow. Must not be a built-in JavaScript property name (`__proto__`, `constructor`, `toString`, …). |
+| `name` | string | yes | Non-blank. Short product-language step name, e.g. `"Collect website data"` — not a function identifier. |
 | `purpose` | string | yes | One plain sentence: what this step does and why. No file paths or type names. |
 | `category` | one of: `"entry"`, `"logic"`, `"decision"`, `"data"`, `"external"`, `"output"` | no | Drives the step's marker color. Use `"entry"` for the step(s) that begin the workflow — this is also how reachability is computed. |
 | `sources` | `SourceReference[]` | no | Real files/symbols that implement this step (shown on expand and in the drawer). |
@@ -166,7 +166,7 @@ connection only because two workflows mention the same file.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `id` | string | no | Optional identifier for the connection. |
+| `id` | string | no | Optional identifier for the connection. Must be unique within the workflow when present. |
 | `from` | string | yes | Source step `id`. |
 | `to` | string | yes | Target step `id`. |
 | `label` | string | no | Short label shown on the connection. |
