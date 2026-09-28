@@ -273,6 +273,15 @@ export function registerRoutes(app: FastifyInstance, context: RouteContext): voi
     await reply.send(await store.reload());
   });
 
+  app.post<{ Params: { id: string } }>("/api/workflows/:id/mark-current", async (request, reply) => {
+    const record = store.getSnapshot().workflows.find((workflow) => workflow.id === request.params.id);
+    if (record === undefined) {
+      await reply.code(404).send({ error: `No workflow with id '${request.params.id}'.` });
+      return;
+    }
+    await reply.send(await store.markSourcesCurrent(record.id));
+  });
+
   app.get("/api/diagnostics", async (_request, reply) => {
     await reply.send(store.getSnapshot().diagnostics);
   });

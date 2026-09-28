@@ -1,0 +1,50 @@
+/* Stacked rather than side by side: it shares the narrow identity island with the title. No fill —
+   the island rounds its height up to the dot grid, so a tinted block would end short of its edge. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.headline svg {
+  flex-shrink: 0;
+  color: var(--accent-amber);
+}
+
+.detail {
+  margin: 0;
+  font-size: var(--fs-tiny);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.file {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-primary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--fs-tiny);
+  color: var(--accent-red);
+}

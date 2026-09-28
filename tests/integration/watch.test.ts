@@ -99,4 +99,45 @@ describe("watcher + store integration", () => {
     expect(afterRepair.diagnostics.valid).toBe(true);
     expect(existsSync(diagnosticsFile)).toBe(false);
   }, 15000);
+
+  it("flags a step live when a file it points at changes, and clears it when marked up to date", async () => {
+    mkdirSync(path.join(root, "src"), { recursive: true });
+    const sourceFile = path.join(root, "src", "validate.ts");
+    writeFileSync(sourceFile, "export function validate() { return true; }\n");
+    writeFileSync(
+      path.join(root, ".codehq", "workflows", "wf.json"),
+      JSON.stringify({
+        schemaVersion: "0.1",
+        id: "wf",
+        name: "Workflow",
+        purpose: "A test workflow.",
+        steps: [
+          { id: "validate", name: "Validate", purpose: "Validates input.", category: "logic", sources: [{ file: "src/validate.ts" }] },
+          { id: "respond", name: "Respond", purpose: "Responds.", category: "output" },
+        ],
+        connections: [{ from: "validate", to: "respond" }],
+      }),
+    );
+
+    store = createCodeHQStore(root);
+    const initial = await store.reload();
+    expect(initial.workflows[0]?.freshness?.outdatedSteps).toEqual({});
+    store.start();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // A code edit alone, with no reload call and no .codehq change, must reach the snapshot.
+    writeFileSync(sourceFile, "export function validate(input: string) { return input.length > 0; }\n");
+    const afterEdit = await waitFor<CodeHQSnapshot>(() => {
+      const snapshot = store?.getSnapshot();
+      return snapshot?.workflows[0]?.freshness?.outdatedSteps.validate !== undefined ? snapshot : undefined;
+    });
+    expect(afterEdit.workflows[0]?.freshness?.outdatedSteps).toEqual({
+      validate: [{ file: "src/validate.ts", change: "modified" }],
+    });
+    // Diagnostics are not re-run for a source edit, so a dismissed banner stays dismissed.
+    expect(afterEdit.diagnostics.generatedAt).toBe(initial.diagnostics.generatedAt);
+
+    const afterMark = await store.markSourcesCurrent("wf");
+    expect(afterMark.workflows[0]?.freshness?.outdatedSteps).toEqual({});
+  }, 15000);
 });

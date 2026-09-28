@@ -1,2 +1,11 @@
 /** Browser-facing type-only exports from the shared wire contract. */
-export type { CodeHQSnapshot, RepositoryMapRecord, SourceLookup, SourceStatus, WorkflowCanvasLayout, WorkflowRecord } from "@schema/wire";
+export type {
+  ChangedSourceFile,
+  CodeHQSnapshot,
+  RepositoryMapRecord,
+  SourceLookup,
+  SourceStatus,
+  WorkflowCanvasLayout,
+  WorkflowFreshness,
+  WorkflowRecord,
+} from "@schema/wire";

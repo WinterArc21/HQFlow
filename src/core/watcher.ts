@@ -71,3 +71,61 @@ export function watchHQ(codeHQDir: string, callbacks: WatcherCallbacks): CodeHQW
     },
   };
 }
+
+export interface SourceFileWatcher extends CodeHQWatcher {
+  /** Replaces the watched set with exactly these absolute paths. */
+  setFiles(absolutePaths: readonly string[]): void;
+}
+
+/**
+ * Watches the individual source files that workflows reference, so a code edit can flag the
+ * steps that point at it without anyone asking for a recheck. Same settle-and-debounce
+ * behaviour as `watchHQ`; the watched set follows whatever the current workflows reference.
+ */
+export function watchSourceFiles(callbacks: WatcherCallbacks): SourceFileWatcher {
+  const watcher: FSWatcher = watch([], {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: STABILITY_THRESHOLD_MS, pollInterval: POLL_INTERVAL_MS },
+  });
+  let watched = new Set<string>();
+
+  let debounceHandle: NodeJS.Timeout | null = null;
+  const scheduleChange = (): void => {
+    if (debounceHandle !== null) {
+      clearTimeout(debounceHandle);
+    }
+    debounceHandle = setTimeout(() => {
+      debounceHandle = null;
+      callbacks.onChange();
+    }, DEBOUNCE_MS);
+  };
+
+  watcher.on("add", scheduleChange);
+  watcher.on("change", scheduleChange);
+  watcher.on("unlink", scheduleChange);
+  watcher.on("error", (error: unknown) => {
+    callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+  });
+
+  return {
+    setFiles: (absolutePaths) => {
+      const next = new Set(absolutePaths);
+      const added = [...next].filter((file) => !watched.has(file));
+      const removed = [...watched].filter((file) => !next.has(file));
+      if (removed.length > 0) {
+        watcher.unwatch(removed);
+      }
+      if (added.length > 0) {
+        watcher.add(added);
+      }
+      watched = next;
+    },
+    close: async (): Promise<void> => {
+      if (debounceHandle !== null) {
+        clearTimeout(debounceHandle);
+        debounceHandle = null;
+      }
+      await watcher.close();
+    },
+  };
+}

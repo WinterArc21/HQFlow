@@ -21,6 +21,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-4);
+  position: relative;
   border-radius: 999px;
   border-width: 1.5px;
   border-style: solid;
@@ -31,6 +32,18 @@
     opacity var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard),
     box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+/* Positioned against the pill's own box, so it never changes the width layout.ts computed. */
+.changedMarker {
+  position: absolute;
+  top: -4px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--accent-amber);
+  box-shadow: 0 0 0 2px var(--bg-canvas);
 }
 
 .card:hover {

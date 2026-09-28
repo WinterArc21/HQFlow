@@ -46,6 +46,7 @@ function makeData(overrides: Partial<StepNodeData> = {}): StepNodeData {
     expanded: false,
     selected: false,
     hasMissingSource: false,
+    changedFiles: [],
     dimmed: false,
     tabIndex: -1,
     onToggleExpand: () => {},
@@ -188,6 +189,20 @@ describe("StepNode", () => {
     renderStepNode(makeProps(makeData()));
     expect(screen.queryByText("Missing sources")).not.toBeInTheDocument();
   });
+
+  it("flags a step whose referenced code changed, naming the files in its tooltip", () => {
+    const { unmount } = renderStepNode(
+      makeProps(makeData({ changedFiles: [{ file: "lib/scraper.ts", change: "modified" }] })),
+    );
+    expect(screen.getByText("Code changed").closest("[data-code-changed]")).toHaveAttribute(
+      "title",
+      "Code changed since this map was written:\nlib/scraper.ts changed",
+    );
+    expect(screen.getByRole("button", { name: /Code changed since this step was mapped/ })).toBeInTheDocument();
+    unmount();
+    renderStepNode(makeProps(makeData()));
+    expect(screen.queryByText("Code changed")).not.toBeInTheDocument();
+  });
 });
 
 describe("chooseCardinalHandles", () => {
@@ -308,6 +323,7 @@ describe("canvas outcome and legend semantics", () => {
       step: makeStep({ id: "done-" + band, name: "Done " + band }),
       tone: band,
       band,
+      changedFiles: [],
       dimmed: false,
       tabIndex: -1,
       onKeyDown: () => {},
@@ -334,6 +350,7 @@ describe("canvas outcome and legend semantics", () => {
       step: makeStep({ id: "done", name: "Done", purpose: "Processing ended." }),
       tone: "neutral",
       band: "success",
+      changedFiles: [],
       dimmed: false,
       tabIndex: -1,
       onKeyDown: () => {},

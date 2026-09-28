@@ -3,7 +3,7 @@ import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
 import { Badge, IconButton } from "../../primitives";
-import { formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
+import { describeChangedFiles, formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
 import type { StepFlowNode } from "../types";
 import { StepNodeDetail } from "./StepNodeDetail";
 import styles from "./StepNode.module.css";
@@ -30,6 +30,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     expanded,
     selected,
     hasMissingSource,
+    changedFiles,
     hasFailureOutcome,
     hasSuccessOutcome,
     hasRetry,
@@ -66,7 +67,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
         : styles.purpose;
   const accessibleName = `${index + 1}. ${step.name}. ${category.label} category.${
     hasMissingSource ? " Missing sources." : ""
-  }`;
+  }${changedFiles.length > 0 ? " Code changed since this step was mapped." : ""}`;
   const cardStyle = { "--node-accent": `var(${category.varName})` } as CSSProperties;
 
   return (
@@ -114,6 +115,11 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
           <span className={styles.name}>{step.name}</span>
           {selected ? <Check size={14} weight="bold" className={styles.selectedIcon} aria-hidden="true" /> : null}
           {hasMissingSource ? <Badge tone="red">Missing sources</Badge> : null}
+          {changedFiles.length > 0 ? (
+            <span className={styles.changedBadge} title={describeChangedFiles(changedFiles)} data-code-changed>
+              <Badge tone="amber" dot>Code changed</Badge>
+            </span>
+          ) : null}
           {/* Quiet until wanted: the toggle only paints once the card is hovered or holds focus
               (or is already expanded, so the control that undoes that never vanishes out from
               under the pointer). It keeps its box at all times — `opacity`, never `display` — so

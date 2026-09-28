@@ -3,6 +3,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
+import type { ChangedSourceFile } from "../../api/types";
 import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
 import type { CanvasBend } from "../../store/useCodeHQStore";
@@ -14,6 +15,8 @@ export interface StepNodeData extends Record<string, unknown> {
   expanded: boolean;
   selected: boolean;
   hasMissingSource: boolean;
+  /** Referenced files that changed since the workflow was written; empty when the step is current. */
+  changedFiles: ChangedSourceFile[];
   hasFailureOutcome?: boolean;
   hasSuccessOutcome?: boolean;
   hasRetry?: boolean;
@@ -37,6 +40,7 @@ export interface OutcomeNodeData extends Record<string, unknown> {
   step: WorkflowStep;
   tone: "success" | "failure" | "neutral";
   band: OutcomeBand;
+  changedFiles: ChangedSourceFile[];
   dimmed: boolean;
   tabIndex: 0 | -1;
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;

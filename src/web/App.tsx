@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { deleteWorkflow, recheck } from "./api/client";
+import { deleteWorkflow, markWorkflowSourcesCurrent, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
 import { IslandShell, type CodeHQStatus } from "./components/shell";
 import { WorkflowNavigator } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
+import { OutdatedNotice } from "./components/freshness";
 import { WorkflowCanvas } from "./components/canvas";
 import { RepositoryOverview } from "./components/repository-map";
 import { StepDrawer } from "./components/drawer";
@@ -111,7 +112,19 @@ export function App() {
           onToggleCollapsed={close}
         />
       )}
-      notice={<DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />}
+      notice={
+        <>
+          <DiagnosticsBanner diagnostics={snapshot.diagnostics} onOpenDiagnostics={toggleDiagnostics} />
+          {selectedRecord !== null ? (
+            <OutdatedNotice
+              record={selectedRecord}
+              onMarkCurrent={async () => {
+                await markWorkflowSourcesCurrent(selectedRecord.id);
+              }}
+            />
+          ) : null}
+        </>
+      }
       overlays={
         <>
           {displayedWorkflow !== null && selectedStepId !== null ? (
@@ -134,6 +147,7 @@ export function App() {
         <WorkflowCanvas
           workflow={selectedRecord.workflow}
           sourceChecks={selectedRecord.sourceChecks}
+          {...(selectedRecord.freshness !== undefined ? { outdatedSteps: selectedRecord.freshness.outdatedSteps } : {})}
           modifiedAt={selectedRecord.modifiedAt}
           state={selectedRecord.state}
           chrome={chrome}

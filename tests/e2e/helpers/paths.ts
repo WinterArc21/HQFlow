@@ -46,4 +46,5 @@ export const PORTS = {
   canvasGrammar: 4506,
   persistentLayout: 4507,
   persistentLayoutRestart: 4508,
+  outdatedSources: 4509,
 } as const;

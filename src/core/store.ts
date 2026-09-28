@@ -13,7 +13,9 @@ import { codeHQPaths, repositoryName, type CodeHQPaths } from "./repository";
 import { toRepoRelativePosix } from "./fs-utils";
 import type { CodeHQSnapshot, RepositoryMapRecord, WorkflowRecord } from "./types";
 import type { SourceStatus } from "./source-check";
-import { watchHQ, type CodeHQWatcher } from "./watcher";
+import { computeWorkflowFreshness, referencedFiles, resetWorkflowBaseline } from "./source-freshness";
+import { resolveInsideRepository } from "./safe-path";
+import { watchHQ, watchSourceFiles, type CodeHQWatcher, type SourceFileWatcher } from "./watcher";
 
 interface CachedWorkflow {
   id: string;
@@ -34,6 +36,8 @@ interface CachedRepositoryMap {
 export interface CodeHQStore {
   getSnapshot(): CodeHQSnapshot;
   reload(): Promise<CodeHQSnapshot>;
+  /** Accepts the current code as what `workflowId` describes, clearing its outdated steps. */
+  markSourcesCurrent(workflowId: string): Promise<CodeHQSnapshot>;
   subscribe(listener: (snapshot: CodeHQSnapshot) => void): () => void;
   start(): void;
   stop(): Promise<void>;
@@ -95,14 +99,54 @@ export function createCodeHQStore(root: string): CodeHQStore {
 
   let snapshot: CodeHQSnapshot = buildEmptySnapshot(root, paths);
   let watcher: CodeHQWatcher | null = null;
+  let sourceWatcher: SourceFileWatcher | null = null;
   let watcherIssue: Issue | null = null;
-  let reloadInFlight: Promise<CodeHQSnapshot> | null = null;
-  let reloadQueued = false;
+  // One job at a time, so a freshness pass can never publish records a concurrent reload has
+  // already replaced. A queued full reload subsumes a queued freshness pass.
+  let jobInFlight: Promise<CodeHQSnapshot> | null = null;
+  let queuedJob: "reload" | "freshness" | null = null;
 
   function notify(): void {
     for (const listener of listeners) {
       listener(snapshot);
     }
+  }
+
+  async function withFreshness(records: WorkflowRecord[]): Promise<WorkflowRecord[]> {
+    if (records.length === 0) {
+      return records;
+    }
+    let freshness;
+    try {
+      freshness = await computeWorkflowFreshness(
+        root,
+        records.map((record) => ({ id: record.id, workflow: record.workflow })),
+      );
+    } catch (error) {
+      // Freshness is advisory: an unwritable runtime directory must never cost the user the board.
+      process.stderr.write(`[codehq] could not check source freshness: ${error instanceof Error ? error.message : String(error)}\n`);
+      return records;
+    }
+    return records.map((record) => {
+      const result = freshness.get(record.id);
+      return result !== undefined ? { ...record, freshness: result } : record;
+    });
+  }
+
+  function watchReferencedSources(): void {
+    if (sourceWatcher === null) {
+      return;
+    }
+    const files = new Set<string>();
+    for (const record of snapshot.workflows) {
+      for (const file of referencedFiles(record.workflow)) {
+        const resolved = resolveInsideRepository(root, file);
+        if (resolved.ok) {
+          files.add(resolved.absolutePath);
+        }
+      }
+    }
+    sourceWatcher.setFiles([...files]);
   }
 
   function applyOutcome(outcome: WorkflowFileOutcome): WorkflowRecord | null {
@@ -173,27 +217,47 @@ export function createCodeHQStore(root: string): CodeHQStore {
       repository: { name: repositoryName(root, result.project), root, codeHQDir: paths.dir },
       project: result.project,
       repositoryMap,
-      workflows: records,
+      workflows: await withFreshness(records),
       diagnostics,
     };
 
     notify();
+    watchReferencedSources();
     return snapshot;
   }
 
-  function runGuardedReload(): Promise<CodeHQSnapshot> {
-    if (reloadInFlight === null) {
-      reloadInFlight = performReload().finally(() => {
-        reloadInFlight = null;
-        if (reloadQueued) {
-          reloadQueued = false;
-          void runGuardedReload();
+  /** Recomputes only freshness after a source edit; `.codehq` and diagnostics are untouched. */
+  async function performFreshnessRefresh(): Promise<CodeHQSnapshot> {
+    const workflows = await withFreshness(snapshot.workflows);
+    const changed = workflows.some(
+      (record, index) => JSON.stringify(record.freshness) !== JSON.stringify(snapshot.workflows[index]?.freshness),
+    );
+    if (!changed) {
+      return snapshot;
+    }
+    snapshot = { ...snapshot, generatedAt: new Date().toISOString(), workflows };
+    notify();
+    return snapshot;
+  }
+
+  function runGuarded(job: "reload" | "freshness"): Promise<CodeHQSnapshot> {
+    if (jobInFlight === null) {
+      jobInFlight = (job === "reload" ? performReload() : performFreshnessRefresh()).finally(() => {
+        jobInFlight = null;
+        const next = queuedJob;
+        queuedJob = null;
+        if (next !== null) {
+          void runGuarded(next);
         }
       });
-      return reloadInFlight;
+      return jobInFlight;
     }
-    reloadQueued = true;
-    return reloadInFlight;
+    queuedJob = queuedJob === "reload" || job === "reload" ? "reload" : "freshness";
+    return jobInFlight;
+  }
+
+  function runGuardedReload(): Promise<CodeHQSnapshot> {
+    return runGuarded("reload");
   }
 
   function handleWatcherError(error: Error): void {
@@ -210,6 +274,15 @@ export function createCodeHQStore(root: string): CodeHQStore {
   return {
     getSnapshot: () => snapshot,
     reload: () => runGuardedReload(),
+    markSourcesCurrent: async (workflowId) => {
+      await resetWorkflowBaseline(root, workflowId);
+      // If a job is already running it may have read the old baseline, so wait for it and then
+      // run a pass of our own rather than returning its result.
+      if (jobInFlight !== null) {
+        await jobInFlight.catch(() => undefined);
+      }
+      return runGuarded("freshness");
+    },
     subscribe: (listener) => {
       listeners.add(listener);
       return () => {
@@ -226,11 +299,22 @@ export function createCodeHQStore(root: string): CodeHQStore {
         },
         onError: handleWatcherError,
       });
+      sourceWatcher = watchSourceFiles({
+        onChange: () => {
+          void runGuarded("freshness");
+        },
+        onError: handleWatcherError,
+      });
+      watchReferencedSources();
     },
     stop: async () => {
       if (watcher !== null) {
         await watcher.close();
         watcher = null;
+      }
+      if (sourceWatcher !== null) {
+        await sourceWatcher.close();
+        sourceWatcher = null;
       }
     },
   };

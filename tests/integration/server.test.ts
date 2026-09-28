@@ -128,6 +128,26 @@ describe("createCodeHQServer — endpoint shapes", () => {
     const body = (await response.json()) as { generatedAt: string };
     expect(typeof body.generatedAt).toBe("string");
   });
+
+  it("POST /api/workflows/:id/mark-current clears outdated steps, and 404s for an unknown id", async () => {
+    const running = await startServer();
+    const sourceFile = path.join(root, "real-source.ts");
+    type Body = { workflows: Array<{ freshness?: { outdatedSteps: Record<string, unknown> } }> };
+    try {
+      writeFileSync(sourceFile, "export function realFunction() { return 2; }\n");
+      const recheck = (await (await fetch(`${running.url}/api/recheck`, { method: "POST" })).json()) as Body;
+      expect(Object.keys(recheck.workflows[0]?.freshness?.outdatedSteps ?? {})).toEqual(["step-1"]);
+
+      const response = await fetch(`${running.url}/api/workflows/sample/mark-current`, { method: "POST" });
+      expect(response.status).toBe(200);
+      expect(((await response.json()) as Body).workflows[0]?.freshness?.outdatedSteps).toEqual({});
+
+      const missing = await fetch(`${running.url}/api/workflows/nope/mark-current`, { method: "POST" });
+      expect(missing.status).toBe(404);
+    } finally {
+      writeFileSync(sourceFile, "export function realFunction() {}\n");
+    }
+  });
 });
 
 describe("createCodeHQServer — /api/source", () => {

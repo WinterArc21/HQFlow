@@ -172,6 +172,12 @@
   text-overflow: ellipsis;
 }
 
+/* Carries the changed-file list as a native tooltip; the badge inside does the drawing. */
+.changedBadge {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
 .selectedIcon {
   flex-shrink: 0;
   color: var(--accent-blue);

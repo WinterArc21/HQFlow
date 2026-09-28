@@ -120,3 +120,8 @@ export function recheck(): Promise<CodeHQSnapshot> {
 export function deleteWorkflow(id: string): Promise<CodeHQSnapshot> {
   return requestJson<CodeHQSnapshot>(`/api/workflows/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+/** `POST /api/workflows/:id/mark-current` — accepts the current code as what the workflow describes. */
+export function markWorkflowSourcesCurrent(id: string): Promise<CodeHQSnapshot> {
+  return requestJson<CodeHQSnapshot>(`/api/workflows/${encodeURIComponent(id)}/mark-current`, { method: "POST" });
+}

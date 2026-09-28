@@ -5,7 +5,7 @@
  * truth, so the deterministic layout in `layout.ts` can never drift from what actually renders.
  */
 import type { DataReference, SourceReference, WorkflowStep } from "@schema/workflow";
-import type { SourceStatus } from "../../api/types";
+import type { ChangedSourceFile, SourceStatus } from "../../api/types";
 
 /** Collapsed cards stay on the story. Expanded cards show files, symbols, and I/O. */
 export type Depth = "workflow" | "symbols";
@@ -213,4 +213,10 @@ export function computeNodeHeight(step: WorkflowStep, effectiveDepth: Depth): nu
   }
 
   return height;
+}
+
+/** Tooltip text for a step whose referenced code changed since the workflow was written. */
+export function describeChangedFiles(changedFiles: readonly ChangedSourceFile[]): string {
+  const lines = changedFiles.map((changed) => `${changed.file} ${changed.change === "deleted" ? "was deleted" : "changed"}`);
+  return ["Code changed since this map was written:", ...lines].join("\n");
 }

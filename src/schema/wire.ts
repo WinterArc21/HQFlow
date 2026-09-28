@@ -8,6 +8,24 @@ export type SourceStatus = "found" | "missing";
 
 export type CodeHQStatus = "uninitialized" | "empty" | "ready";
 
+/** A referenced source file whose contents differ from when the workflow was last written. */
+export interface ChangedSourceFile {
+  file: string;
+  change: "modified" | "deleted";
+}
+
+/**
+ * Whether the code a workflow points at has changed since the workflow was written. HQFlow
+ * records a content hash of every referenced file when it first sees a new version of the
+ * workflow, and compares against that baseline from then on.
+ */
+export interface WorkflowFreshness {
+  /** When the baseline was recorded: the workflow write, or the last "mark as up to date". */
+  baselineAt: string;
+  /** Keyed by step id; only steps with at least one changed file appear. */
+  outdatedSteps: Record<string, ChangedSourceFile[]>;
+}
+
 export interface WorkflowRecord {
   id: string;
   file: string;
@@ -17,6 +35,7 @@ export interface WorkflowRecord {
   staleSince?: string;
   /** Keyed by `${file}` or `${file}#${symbol}`. */
   sourceChecks: Record<string, SourceStatus>;
+  freshness?: WorkflowFreshness;
 }
 
 export interface RepositoryMapRecord {

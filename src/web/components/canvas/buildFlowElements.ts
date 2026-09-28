@@ -3,7 +3,7 @@
 import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Position, type NodeHandle } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
-import type { SourceStatus } from "../../api/types";
+import type { ChangedSourceFile, SourceStatus } from "../../api/types";
 import { outcomeTone } from "../../design/semantics";
 import { computeIncomingTypes } from "./graph";
 import type { LayoutResult } from "./layout";
@@ -120,6 +120,8 @@ export interface BuildFlowNodesParams extends TraceHandlers {
   backEdgeIds: ReadonlySet<string>;
   expandedStepIds: Record<string, true>;
   sourceChecks: Record<string, SourceStatus>;
+  /** Steps whose referenced code changed since the workflow was written, keyed by step id. */
+  outdatedSteps?: Record<string, ChangedSourceFile[]>;
   selectedStepId: string | null;
   /** The active trace's one-hop step set (anchor + immediate upstream/downstream), or `null` when
    * nothing is hovered/focused/selected — every node dims when this is non-null and doesn't
@@ -129,6 +131,9 @@ export interface BuildFlowNodesParams extends TraceHandlers {
   onToggleExpand: (stepId: string) => void;
   onNodeKeyDown: (event: ReactKeyboardEvent<HTMLElement>, stepId: string) => void;
 }
+
+/** Shared so a current step's node data keeps a stable reference across snapshots. */
+const NO_CHANGED_FILES: ChangedSourceFile[] = [];
 
 export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode | OutcomeFlowNode> {
   const stepById = new Map(params.workflow.steps.map((step) => [step.id, step] as const));
@@ -185,6 +190,7 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
     }
 
     const dimmed = params.traceStepIds !== null && !params.traceStepIds.has(step.id);
+    const changedFiles = params.outdatedSteps?.[step.id] ?? NO_CHANGED_FILES;
     const traceHandlers = {
       onHoverStart: () => params.onHoverStart(step.id),
       onHoverEnd: params.onHoverEnd,
@@ -219,6 +225,7 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
           step,
           tone,
           band,
+          changedFiles,
           dimmed,
           tabIndex: params.getTabIndex(step.id),
           onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => params.onNodeKeyDown(event, step.id),
@@ -253,6 +260,7 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
         expanded: isStepExpanded(params.expandedStepIds, step.id),
         selected: step.id === params.selectedStepId,
         hasMissingSource: stepHasMissingSource(step, params.sourceChecks),
+        changedFiles,
         hasFailureOutcome,
         hasSuccessOutcome,
         hasRetry,

@@ -5,7 +5,7 @@ import { getNodesBounds, getViewportForBounds, MiniMap, ReactFlow, ReactFlowProv
 import { toPng } from "html-to-image";
 import type { ReactNode } from "react";
 import type { Workflow } from "@schema/workflow";
-import type { SourceStatus, WorkflowRecord } from "../../api/types";
+import type { ChangedSourceFile, SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
@@ -62,6 +62,8 @@ export interface CanvasChrome {
 export interface WorkflowCanvasProps {
   workflow: Workflow;
   sourceChecks: Record<string, SourceStatus>;
+  /** Steps whose referenced code changed since the workflow was written. Omitted in exports. */
+  outdatedSteps?: Record<string, ChangedSourceFile[]>;
   /** A separate key lets another view reuse the complete canvas without impersonating a workflow API resource. */
   canvasId?: string;
   itemLabel?: string;
@@ -93,6 +95,7 @@ export function WorkflowCanvas(props: WorkflowCanvasProps) {
 function WorkflowCanvasInner({
   workflow,
   sourceChecks,
+  outdatedSteps,
   canvasId: requestedCanvasId,
   itemLabel,
   exportEnabled = true,
@@ -195,6 +198,7 @@ function WorkflowCanvasInner({
         backEdgeIds,
         expandedStepIds,
         sourceChecks,
+        ...(outdatedSteps !== undefined ? { outdatedSteps } : {}),
         selectedStepId: visualSelectedStepId,
         traceStepIds: tracePath?.stepIds ?? null,
         getTabIndex,
@@ -212,6 +216,7 @@ function WorkflowCanvasInner({
       backEdgeIds,
       expandedStepIds,
       sourceChecks,
+      outdatedSteps,
       visualSelectedStepId,
       tracePath,
       getTabIndex,

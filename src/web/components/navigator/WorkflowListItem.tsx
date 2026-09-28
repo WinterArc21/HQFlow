@@ -16,6 +16,7 @@ export interface WorkflowListItemProps {
  * tech.
  */
 export function WorkflowListItem({ record, selected, onSelect }: WorkflowListItemProps) {
+  const outdatedCount = Object.keys(record.freshness?.outdatedSteps ?? {}).length;
   return (
     <li>
       <button
@@ -34,6 +35,7 @@ export function WorkflowListItem({ record, selected, onSelect }: WorkflowListIte
           <p className={styles.purpose}>{record.workflow.purpose}</p>
           <div className={styles.meta}>
             {record.state === "stale" ? <Badge tone="amber">Stale</Badge> : null}
+            {outdatedCount > 0 ? <Badge tone="amber" dot>{outdatedCount} outdated</Badge> : null}
             <span className={styles.stepCount}>{record.workflow.steps.length} steps</span>
             <span className={styles.time}>{formatRelativeTime(record.modifiedAt)}</span>
           </div>
