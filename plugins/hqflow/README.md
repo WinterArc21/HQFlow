@@ -23,12 +23,12 @@ Node server, inline UI, authoring guide, skill, manifest, and icon. The build al
 populates `plugins/hqflow/dist/` for the repo marketplace. Generated runtime files
 are ignored by Git; another checkout must build before installing.
 
-Open **Workflow Library** from the sidebar, enter an absolute repository path, and
-select **Connect**. Run `hqflow init` in that repository if it has no `.codehq/`
+HQFlow starts in the repository named by `HQFLOW_ROOT`, or its working directory.
+To use another one, tell ChatGPT the path ("use HQFlow on C:\code\shop") and it
+selects it for you. Open **Workflow Library** from the sidebar to browse maps; the
+first one opens automatically. Run `hqflow init` in a repository with no `.codehq/`
 folder. Ask ChatGPT to map a workflow; source inspection requires the host's file
-tools or files you provide. Selection lasts for the MCP process; reconnect after
-a restart. `HQFLOW_ROOT` can supply the initial repository path when launching
-the server directly.
+tools or files you provide. The selection lasts for the MCP process.
 
 ## MCP capabilities
 

@@ -23,7 +23,7 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
       entryPoint: { file: "checkout.ts", symbol: "checkout" },
       steps: [{ id: "create-order", name: "Create Order", purpose: "Persist the new order.", category: "entry", sources: [{ file: "checkout.ts", symbol: "checkout", line: 1 }] }], connections: [],
     }));
-    await client.connect(new StdioClientTransport({ command: process.execPath, args: ["./dist/server.js"], cwd: installed }));
+    await client.connect(new StdioClientTransport({ command: process.execPath, args: ["./dist/server.js"], cwd: installed, env: { ...process.env, HQFLOW_ROOT: repository } as Record<string, string> }));
     const initial = await client.callTool({ name: "hqflow_open", arguments: {} }) as CallToolResult;
     expect(initial.isError).not.toBe(true);
     const ui = await client.readResource({ uri: "ui://hqflow/workflow-canvas-v1" });
@@ -57,14 +57,12 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
     }, { html: content.text, initialResult: initial });
     const frame = page.frameLocator("#plugin");
     try {
-      await expect(frame.getByRole("button", { name: "Connect", exact: true })).toBeVisible();
+      await expect(frame.getByText("Plugin Test", { exact: true })).toBeVisible();
     } catch (error) {
       throw new Error(`Plugin UI failed to mount: ${errors.join("; ")}`, { cause: error });
     }
-    await frame.getByLabel("Repository", { exact: true }).fill(repository);
-    await frame.getByRole("button", { name: "Connect", exact: true }).click();
-    await expect(frame.getByText("Plugin Test", { exact: true })).toBeVisible();
-    await frame.getByRole("button", { name: "Checkout Create an order. 1 steps" }).click();
+    // The only workflow opens on its own; no library rail or repository form.
+    await expect(frame.getByRole("navigation", { name: "Workflows" })).toHaveCount(0);
     await expect(frame.locator(".react-flow__node")).toHaveCount(1);
     await expect(frame.getByText("Create Order", { exact: true })).toBeVisible();
     await frame.locator(".react-flow__node").click();
