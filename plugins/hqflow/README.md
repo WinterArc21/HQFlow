@@ -25,8 +25,9 @@ are ignored by Git; another checkout must build before installing.
 
 HQFlow starts in the repository named by `HQFLOW_ROOT`, or its working directory.
 To use another one, tell ChatGPT the path ("use HQFlow on C:\code\shop") and it
-selects it for you. Open **Workflow Library** from the sidebar to browse maps; the
-first one opens automatically. Run `hqflow init` in a repository with no `.codehq/`
+selects it for you. Open **Workflow Library** from the sidebar to get the full HQFlow app: the
+repository overview, workflow navigator, step cards and diagnostics, exactly as
+`hqflow serve` shows them. Run `hqflow init` in a repository with no `.codehq/`
 folder. Ask ChatGPT to map a workflow; source inspection requires the host's file
 tools or files you provide. The selection lasts for the MCP process.
 

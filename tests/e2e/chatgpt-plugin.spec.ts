@@ -1,11 +1,11 @@
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { REPO_ROOT } from "./helpers/paths";
+import { REPO_ROOT, SOURCE_FIXTURE_DIR } from "./helpers/paths";
 
 test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({ page }, testInfo) => {
   const root = await mkdtemp(path.join(tmpdir(), "hqflow-plugin-browser-"));
@@ -15,13 +15,14 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
   try {
     // A cached install outside HQFlow has no node_modules: the bundle must stand alone.
     await cp(path.join(REPO_ROOT, "dist/hqflow-plugin"), installed, { recursive: true });
-    await mkdir(path.join(repository, ".codehq/workflows"), { recursive: true });
-    await writeFile(path.join(repository, "checkout.ts"), "export function checkout() {}\n");
-    await writeFile(path.join(repository, ".codehq/project.json"), JSON.stringify({ schemaVersion: "0.1", project: { id: "test", name: "Plugin Test" } }));
-    await writeFile(path.join(repository, ".codehq/workflows/checkout.json"), JSON.stringify({
-      schemaVersion: "0.1", id: "checkout", name: "Checkout", purpose: "Create an order.",
-      entryPoint: { file: "checkout.ts", symbol: "checkout" },
-      steps: [{ id: "create-order", name: "Create Order", purpose: "Persist the new order.", category: "entry", sources: [{ file: "checkout.ts", symbol: "checkout", line: 1 }] }], connections: [],
+    await cp(SOURCE_FIXTURE_DIR, repository, { recursive: true });
+    await writeFile(path.join(repository, ".codehq/repository-map.json"), JSON.stringify({
+      schemaVersion: "0.1",
+      workflows: [
+        { id: "generate-video", name: "Generate Video", purpose: "Turns a prompt into a rendered video." },
+        { id: "upload-assets", name: "Upload Assets", purpose: "Stores user media for later renders." },
+      ],
+      connections: [{ from: "upload-assets", to: "generate-video", label: "asset ids", sources: [{ file: "package.json" }] }],
     }));
     await client.connect(new StdioClientTransport({ command: process.execPath, args: ["./dist/server.js"], cwd: installed, env: { ...process.env, HQFLOW_ROOT: repository } as Record<string, string> }));
     const initial = await client.callTool({ name: "hqflow_open", arguments: {} }) as CallToolResult;
@@ -57,18 +58,19 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
     }, { html: content.text, initialResult: initial });
     const frame = page.frameLocator("#plugin");
     try {
-      await expect(frame.getByText("Plugin Test", { exact: true })).toBeVisible();
+      // The plugin renders HQFlow's own app: the repository map opens first.
+      await expect(frame.getByRole("heading", { name: "Repository Overview" })).toBeVisible();
     } catch (error) {
       throw new Error(`Plugin UI failed to mount: ${errors.join("; ")}`, { cause: error });
     }
-    // The only workflow opens on its own; no library rail or repository form.
-    await expect(frame.getByRole("navigation", { name: "Workflows" })).toHaveCount(0);
-    await expect(frame.locator(".react-flow__node")).toHaveCount(1);
-    await expect(frame.getByText("Create Order", { exact: true })).toBeVisible();
-    await frame.locator(".react-flow__node").click();
-    await expect(frame.getByRole("dialog")).toBeVisible();
-    await expect(frame.getByText("checkout.ts", { exact: false }).first()).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath("hqflow-plugin.png"), fullPage: true });
+    await expect(frame.locator('[data-step-node="generate-video"]')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("hqflow-plugin-overview.png") });
+    await frame.locator('[data-step-node="generate-video"]').click();
+    await expect(frame.getByRole("heading", { name: "Generate Video" })).toBeVisible();
+    const firstStep = frame.locator("[data-step-node]").first();
+    await firstStep.click();
+    await expect(frame.locator("[data-step-card]")).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("hqflow-plugin-workflow.png") });
     expect(errors).toEqual([]);
   } finally {
     await client.close();
