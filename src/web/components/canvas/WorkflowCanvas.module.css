@@ -27,7 +27,6 @@
      and are not. */
   --canvas-node-body: color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface));
   --canvas-node-border: color-mix(in srgb, var(--text-primary) 18%, var(--border-subtle));
-  --canvas-node-divider: color-mix(in srgb, var(--text-primary) 10%, transparent);
   --canvas-port-center: var(--bg-inset);
   --canvas-port-ring: color-mix(in srgb, var(--text-primary) 55%, var(--border-strong));
   --canvas-node-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4.5%, transparent), 0 2px 5px color-mix(in srgb, var(--bg-canvas) 38%, transparent), 0 15px 34px color-mix(in srgb, var(--bg-canvas) 26%, transparent);

@@ -130,8 +130,8 @@
 }
 
 /* Transparent, not `--canvas-node-header`: the gradient is strongest across the top-left where the
-   title sits, and an opaque header band would mask exactly the part of it that does the work. The
-   divider takes a touch of accent so it doesn't read as a foreign grey line across a tinted card. */
+   title sits, and an opaque header band would mask exactly the part of it that does the work. Spacing
+   and type separate title, purpose, and footer; an inner line would only cut the card into boxes. */
 .header {
   height: 40px;
   flex-shrink: 0;
@@ -140,7 +140,6 @@
   gap: var(--space-2);
   padding: 0 12px;
   background: transparent;
-  border-bottom: 1px solid color-mix(in srgb, var(--node-accent) 18%, var(--canvas-node-divider));
   line-height: 1;
 }
 
@@ -242,7 +241,6 @@
   /* A translucent inset wash rather than the opaque footer token, so the tail of the gradient still
      shows through and the footer reads as part of the same card rather than a plate stuck on it. */
   background: color-mix(in srgb, var(--bg-inset) 30%, transparent);
-  border-top: 1px solid color-mix(in srgb, var(--node-accent) 18%, var(--canvas-node-divider));
 }
 
 /* The accent nudged 15% toward the text colour. Tinting the card moves the background toward this
@@ -312,10 +310,6 @@
   flex-shrink: 0;
   margin: 0 12px;
   padding-top: 5px;
-  background-image: linear-gradient(var(--border-subtle), var(--border-subtle));
-  background-position: top;
-  background-repeat: no-repeat;
-  background-size: 100% 1px;
 }
 
 .sectionLabel {
