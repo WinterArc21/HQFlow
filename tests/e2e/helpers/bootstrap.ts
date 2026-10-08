@@ -17,7 +17,8 @@ import { CLI_ENTRY, REPO_ROOT, SHARED_FIXTURE_DIR, SOURCE_FIXTURE_DIR, WEB_DIST_
  * `CodeHQ_E2E_FORCE_BUILD=1`, to force a rebuild before the next run).
  */
 export function ensureBuilt(): void {
-  const alreadyBuilt = fs.existsSync(CLI_ENTRY) && fs.existsSync(WEB_DIST_INDEX);
+  const alreadyBuilt = fs.existsSync(CLI_ENTRY) && fs.existsSync(WEB_DIST_INDEX)
+    && fs.existsSync(`${REPO_ROOT}/dist/hqflow-plugin/dist/server.js`);
   if (alreadyBuilt && process.env["CodeHQ_E2E_FORCE_BUILD"] !== "1") {
     return;
   }

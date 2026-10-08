@@ -1,0 +1,6 @@
+{
+  "name": "hqflow-chatgpt-plugin",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" }
+}

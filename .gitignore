@@ -1,5 +1,6 @@
 node_modules
 dist
+plugins/hqflow/dist/
 coverage
 .vite
 playwright-report

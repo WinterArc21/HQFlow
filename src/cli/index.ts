@@ -11,6 +11,8 @@ import { runOpen } from "./commands/open";
 import { printValidateResult, runValidate } from "./commands/validate";
 import { red } from "./output";
 import { resolveCliVersion } from "./version";
+import { startPluginStdio } from "../server/plugin-runtime";
+import { resolveCliRoot } from "./resolve-root";
 
 function isDebugMode(program: Command): boolean {
   return program.opts<{ debug?: boolean }>().debug === true || process.env.HQFLOW_DEBUG === "1";
@@ -68,6 +70,15 @@ function buildProgram(): Command {
         ...(options.open !== undefined ? { open: options.open } : {}),
       });
       process.exitCode = result.exitCode;
+    });
+
+  program
+    .command("mcp")
+    .description("Start the HQFlow ChatGPT plugin MCP server over stdio (Node.js 22+)")
+    .option("--root <path>", "Repository root (defaults to autodetection from the current directory)")
+    .action(async (options: { root?: string }) => {
+      if (Number(process.versions.node.split(".")[0]) < 22) throw new Error("HQFlow's MCP plugin requires Node.js 22 or newer.");
+      await startPluginStdio(resolveCliRoot(options.root), resolveCliVersion());
     });
 
   program

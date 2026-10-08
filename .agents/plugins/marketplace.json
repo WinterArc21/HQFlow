@@ -1,0 +1,12 @@
+{
+  "name": "hqflow-plugins",
+  "interface": { "displayName": "HQFlow Plugins" },
+  "plugins": [
+    {
+      "name": "hqflow",
+      "source": { "source": "local", "path": "./plugins/hqflow" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Developer Tools"
+    }
+  ]
+}

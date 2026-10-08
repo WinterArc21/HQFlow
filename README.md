@@ -62,6 +62,16 @@ Then paste this into your coding agent:
 
 ## Commands
 
+### ChatGPT plugin
+
+HQFlow also provides a local ChatGPT plugin using OpenAI MCP Extensions, with a
+sidebar workflow library, the existing interactive canvas, workflow mentions, and
+validated workflow saves. See [plugin setup](./plugins/hqflow/README.md) for building
+and installing it. The plugin requires Node.js 22+; the existing CLI requires Node.js 20+.
+
+`hqflow mcp [--root <path>]` starts its MCP server over stdio. Build the plugin assets
+first with `pnpm build:plugin` when working from this checkout.
+
 ### `hqflow init [--force]`
 
 Scaffolds `.codehq/` in the current repository: `project.json`, `SKILL.md`, and an empty
