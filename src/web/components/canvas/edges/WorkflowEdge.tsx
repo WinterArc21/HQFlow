@@ -369,10 +369,11 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       {showLabel ? (
         <EdgeLabelRenderer>
           <div
-            className={`${styles.label} ${bendable ? "" : styles.labelHoverable}`}
+            className={`${styles.label} ${bendable ? "" : styles.labelHoverable} ${build !== undefined ? `hq-edge-build ${build.set}` : ""}`}
             data-edge-label={id}
             {...(bendable ? {} : { title: labelText })}
             style={{
+              ...buildTiming,
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               color: `var(${visual.varName})`,
               opacity: dimmed ? DIMMED_OPACITY_FACTOR : 1,
