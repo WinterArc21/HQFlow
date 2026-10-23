@@ -10,7 +10,8 @@
   overflow: hidden;
   pointer-events: all;
   cursor: default;
-  background-color: var(--bg-surface);
+  background-color: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
   border: 2px solid color-mix(in srgb, var(--step-accent) 70%, var(--border-strong));
   border-radius: 12px;
   box-shadow:

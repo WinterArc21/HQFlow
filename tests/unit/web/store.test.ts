@@ -102,7 +102,7 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toBeUndefined();
   });
 
-  it("keeps canvas state in memory while persisting only the theme", () => {
+  it("keeps canvas state in memory while persisting only appearance preferences", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
@@ -112,7 +112,7 @@ describe("useCodeHQStore", () => {
     expect(raw).not.toBeNull();
     const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
-    expect(parsed.version).toBe(4);
+    expect(parsed.version).toBe(5);
     expect(parsed.state.theme).toBe("light");
     expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
@@ -121,7 +121,9 @@ describe("useCodeHQStore", () => {
       },
     });
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
-    expect(Object.keys(parsed.state)).toEqual(["theme"]);
+    expect(Object.keys(parsed.state).sort()).toEqual(
+      ["cardSurface", "categoryColors", "darkScene", "gridMode", "lightScene", "motion", "theme"],
+    );
   });
 
   it("hydrates repository-local canvas state for the selected workflow", () => {

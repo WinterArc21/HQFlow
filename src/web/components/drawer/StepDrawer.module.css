@@ -20,7 +20,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-surface);
+  background-color: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
   border-left: 1px solid var(--border-strong);
   box-shadow: -8px 0 24px var(--grid-line);
   overflow: hidden;

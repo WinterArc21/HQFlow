@@ -1,0 +1,27 @@
+/* Behind everything: the app's own surfaces paint over it, and it never takes the pointer. */
+.canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  animation: sceneIn var(--dur-slow) var(--ease-standard);
+  animation-duration: 600ms;
+}
+
+.crisp {
+  image-rendering: pixelated;
+}
+
+@keyframes sceneIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    animation: none;
+  }
+}

@@ -76,6 +76,7 @@
   border: 2px solid color-mix(in srgb, var(--node-accent) 62%, var(--canvas-node-border));
   border-radius: 10px;
   box-shadow: var(--canvas-node-shadow);
+  backdrop-filter: var(--card-filter);
   cursor: pointer;
   outline-offset: 2px;
   transition:

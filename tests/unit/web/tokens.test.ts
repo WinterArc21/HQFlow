@@ -2,6 +2,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SCENES } from "@web/design/scenes";
 
 /**
  * Enforces contract §10/§12: "no hex value may appear in any component file, ever" — every
@@ -41,5 +42,17 @@ describe("design token guard", () => {
       .map((file) => relative(WEB_ROOT, file));
 
     expect(offenders).toEqual([]);
+  });
+
+  it("defines a token block, with all five shader colours, for every registered scene", () => {
+    const tokens = readFileSync(ALLOWED_FILE, "utf8");
+    for (const scene of SCENES) {
+      const start = tokens.indexOf(`:root[data-scene="${scene.id}"]`);
+      expect(start, scene.id).toBeGreaterThan(-1);
+      const block = tokens.slice(start, tokens.indexOf("}", start));
+      for (let i = 0; i < 5; i += 1) {
+        expect(block, `${scene.id} --scene-c${i}`).toContain(`--scene-c${i}:`);
+      }
+    }
   });
 });

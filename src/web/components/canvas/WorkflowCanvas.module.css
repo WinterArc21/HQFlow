@@ -15,8 +15,9 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  background-color: var(--bg-canvas);
-  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  /* A shader scene clears both, so its background shows through (tokens.css, Scenes). */
+  background-color: var(--stage-bg);
+  background-image: var(--stage-grid);
   background-position: 0 0;
   background-size: 28px 28px;
   /* `--canvas-node-header`, `--canvas-node-footer`, `--canvas-node-body-hover`, and
@@ -25,7 +26,7 @@
      hover state are mixed from the card's own `--node-accent` instead of from a neutral — nothing
      reads those four any more, so they are gone rather than left as tokens that look load-bearing
      and are not. */
-  --canvas-node-body: color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface));
+  --canvas-node-body: color-mix(in srgb, color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface)) var(--card-alpha), transparent);
   --canvas-node-border: color-mix(in srgb, var(--text-primary) 18%, var(--border-subtle));
   --canvas-port-center: var(--bg-inset);
   --canvas-port-ring: color-mix(in srgb, var(--text-primary) 55%, var(--border-strong));
@@ -173,7 +174,7 @@
   align-items: flex-end;
   justify-content: center;
   padding-bottom: var(--space-2);
-  background-image: linear-gradient(to bottom, transparent, var(--bg-canvas) 85%);
+  background-image: linear-gradient(to bottom, transparent, var(--overflow-fade) 85%);
 }
 
 .overflowFadeRight {
@@ -184,7 +185,7 @@
   align-items: center;
   justify-content: flex-end;
   padding-right: var(--space-2);
-  background-image: linear-gradient(to right, transparent, var(--bg-canvas) 60%);
+  background-image: linear-gradient(to right, transparent, var(--overflow-fade) 60%);
 }
 
 /* Narrow shells stack the title island down the middle of the stage (IslandShell's

@@ -289,7 +289,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   // opacity/transition as the semantic stroke so a dimmed edge's halo fades with it, and it never
   // captures pointer events (edges are not interactive; nodes drive path tracing).
   const haloStyle: CSSProperties = {
-    stroke: "var(--bg-canvas)",
+    stroke: "var(--edge-halo)",
     strokeWidth: strokeWidth + HALO_WIDTH_PADDING,
     opacity,
     transition: edgeTransition,

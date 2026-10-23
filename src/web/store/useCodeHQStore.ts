@@ -14,6 +14,11 @@ export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } fr
  */
 
 export type Theme = "dark" | "light";
+/** Ambient motion: `full` animates scenes and edges, `calm` slows them, `still` freezes them. */
+export type MotionLevel = "full" | "calm" | "still";
+/** `scene` keeps whatever the active scene chose. */
+export type GridMode = "scene" | "dots" | "none";
+export type CardSurface = "scene" | "solid" | "glass";
 
 export interface StepPanRequest {
   workflowId: string;
@@ -21,7 +26,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 4;
+const PERSIST_VERSION = 5;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -40,6 +45,15 @@ interface CodeHQUiState {
   searchOpen: boolean;
   diagnosticsOpen: boolean;
   theme: Theme;
+  /** The scene shown in each theme family; the theme toggle swaps between the two. */
+  darkScene: string;
+  lightScene: string;
+  motion: MotionLevel;
+  gridMode: GridMode;
+  cardSurface: CardSurface;
+  /** Per-scene card colour overrides, keyed by scene id then category, as `#rrggbb`. */
+  categoryColors: Record<string, Partial<Record<string, string>>>;
+  appearanceOpen: boolean;
 }
 
 interface CodeHQUiActions {
@@ -60,6 +74,13 @@ interface CodeHQUiActions {
   toggleDiagnostics: () => void;
   closeDiagnostics: () => void;
   setTheme: (theme: Theme) => void;
+  /** Shows a scene: switches to its theme family and remembers it for that family. */
+  setScene: (sceneId: string, base: Theme) => void;
+  setMotion: (motion: MotionLevel) => void;
+  setGridMode: (gridMode: GridMode) => void;
+  setCardSurface: (cardSurface: CardSurface) => void;
+  setCategoryColors: (sceneId: string, colors: Partial<Record<string, string>> | null) => void;
+  setAppearanceOpen: (open: boolean) => void;
 }
 
 export type CodeHQStore = CodeHQUiState & CodeHQUiActions;
@@ -118,6 +139,13 @@ const INITIAL_STATE: CodeHQUiState = {
   searchOpen: false,
   diagnosticsOpen: false,
   theme: getInitialTheme(),
+  darkScene: "graphite",
+  lightScene: "paper",
+  motion: "full",
+  gridMode: "scene",
+  cardSurface: "scene",
+  categoryColors: {},
+  appearanceOpen: false,
 };
 
 export const useCodeHQStore = create<CodeHQStore>()(
@@ -252,14 +280,43 @@ export const useCodeHQStore = create<CodeHQStore>()(
       closeDiagnostics: () => set({ diagnosticsOpen: false }),
 
       setTheme: (theme) => set({ theme }),
+
+      setScene: (sceneId, base) => set(base === "dark" ? { theme: base, darkScene: sceneId } : { theme: base, lightScene: sceneId }),
+
+      setMotion: (motion) => set({ motion }),
+
+      setGridMode: (gridMode) => set({ gridMode }),
+
+      setCardSurface: (cardSurface) => set({ cardSurface }),
+
+      setCategoryColors: (sceneId, colors) => set((state) => {
+        const categoryColors = { ...state.categoryColors };
+        if (colors === null || Object.keys(colors).length === 0) {
+          delete categoryColors[sceneId];
+        } else {
+          categoryColors[sceneId] = colors;
+        }
+        return { categoryColors };
+      }),
+
+      setAppearanceOpen: (appearanceOpen) => set({ appearanceOpen }),
     }),
     {
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme }),
+      partialize: (state) => ({
+        theme: state.theme,
+        darkScene: state.darkScene,
+        lightScene: state.lightScene,
+        motion: state.motion,
+        gridMode: state.gridMode,
+        cardSurface: state.cardSurface,
+        categoryColors: state.categoryColors,
+      }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
+       * v5 added appearance fields; older states simply take their defaults from the initial state.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {

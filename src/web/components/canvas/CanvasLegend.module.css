@@ -7,7 +7,8 @@
   align-items: center;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  background: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
   color: var(--text-tertiary);
   font-family: var(--font-ui);
   font-size: var(--fs-micro);

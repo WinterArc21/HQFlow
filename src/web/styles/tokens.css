@@ -117,6 +117,23 @@
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- scene plumbing (design/scenes.ts) — what a scene may swap besides colours ---- */
+  --stage-bg: var(--bg-canvas);
+  --stage-grid: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  --surface-alpha: 100%;
+  --surface-filter: none;
+  --card-alpha: 100%;
+  --card-filter: none;
+  --edge-halo: var(--bg-canvas);
+  --overflow-fade: var(--bg-canvas);
+  --scene-c0: #0e0f11;
+  --scene-c1: #191c20;
+  --scene-c2: #5b8def;
+  --scene-c3: #5ec4c0;
+  --scene-c4: #d98cb4;
 }
 
 :root[data-theme="light"] {
@@ -150,6 +167,344 @@
   --grid-line-strong: rgba(0, 0, 0, 0.07);
   --grid-dot: rgba(0, 0, 0, 0.085);
   --shadow-node-rest: 0 1px 2px rgba(22, 24, 27, 0.08), 0 8px 24px rgba(22, 24, 27, 0.06);
+}
+
+/* ================================================================================================
+ * Scenes. Each block is a complete look: background shader colours (--scene-c0..c4, read by
+ * components/backdrop), surfaces, text, and every accent re-picked to read on that background.
+ * Dark scenes ride on the dark defaults above; light scenes ride on the paper block.
+ * `[data-scene-probe]` lets the appearance picker read a scene's colours without applying it.
+ * Light-scene accents keep >=4.5:1 against their white surface, as the paper ones do.
+ * ============================================================================================== */
+
+:root[data-scene="graphite"],
+[data-scene-probe="graphite"] {
+  --scene-c0: #0e0f11;
+  --scene-c1: #1b1e23;
+  --scene-c2: #5ec4c0;
+  --scene-c3: #d98cb4;
+  --scene-c4: #e08d55;
+}
+
+:root[data-scene="paper"],
+[data-scene-probe="paper"] {
+  --scene-c0: #f6f4f0;
+  --scene-c1: #e9e4da;
+  --scene-c2: #0f7f7a;
+  --scene-c3: #a83a72;
+  --scene-c4: #a85718;
+}
+
+:root[data-scene="aurora"],
+[data-scene-probe="aurora"] {
+  --scene-c0: #03060d;
+  --scene-c1: #0a1a33;
+  --scene-c2: #2ee6a6;
+  --scene-c3: #2fb8ff;
+  --scene-c4: #9d6bff;
+  --bg-canvas: #060a14;
+  --bg-surface: #0c1322;
+  --bg-raised: #111a2c;
+  --bg-inset: #050912;
+  --border-subtle: #1c2840;
+  --border-strong: #2a3a58;
+  --text-primary: #eaf2ff;
+  --text-secondary: #a3b3cb;
+  --text-tertiary: #6f809a;
+  --accent-blue: #6ea8ff;
+  --accent-green: #4ade80;
+  --accent-amber: #fbbf24;
+  --accent-red: #ff7d7d;
+  --accent-violet: #b69cff;
+  --accent-neutral: #8391a7;
+  --accent-cyan: #5eead4;
+  --accent-ice: #c7f9ff;
+  --accent-output: #6ee7a8;
+  --accent-rose: #f9a8d4;
+  --accent-orange: #fdba74;
+  --focus-ring: #6ea8ff;
+  --grid-dot: rgba(199, 249, 255, 0.12);
+}
+
+:root[data-scene="nebula"],
+[data-scene-probe="nebula"] {
+  --scene-c0: #04020a;
+  --scene-c1: #1b1446;
+  --scene-c2: #6d28d9;
+  --scene-c3: #db2777;
+  --scene-c4: #a5f3fc;
+  --bg-canvas: #07050f;
+  --bg-surface: #110d1f;
+  --bg-raised: #171229;
+  --bg-inset: #05030b;
+  --border-subtle: #251d3d;
+  --border-strong: #362b59;
+  --text-primary: #f1ecff;
+  --text-secondary: #b0a7cc;
+  --text-tertiary: #7a7099;
+  --accent-blue: #7aa2ff;
+  --accent-green: #5ee0a0;
+  --accent-amber: #f6c35b;
+  --accent-red: #ff7a8a;
+  --accent-violet: #c4a5ff;
+  --accent-neutral: #8d86a6;
+  --accent-cyan: #67e8f9;
+  --accent-ice: #e0e7ff;
+  --accent-output: #86efac;
+  --accent-rose: #f0abfc;
+  --accent-orange: #fdba8c;
+  --focus-ring: #7aa2ff;
+  --grid-dot: rgba(224, 231, 255, 0.12);
+}
+
+:root[data-scene="abyss"],
+[data-scene-probe="abyss"] {
+  --scene-c0: #010810;
+  --scene-c1: #04324a;
+  --scene-c2: #4fe3d0;
+  --scene-c3: #b8fff0;
+  --scene-c4: #ff7ac6;
+  --bg-canvas: #02121a;
+  --bg-surface: #062029;
+  --bg-raised: #0a2a35;
+  --bg-inset: #010b10;
+  --border-subtle: #0f3a46;
+  --border-strong: #16505f;
+  --text-primary: #e6fbff;
+  --text-secondary: #98c2cc;
+  --text-tertiary: #628e99;
+  --accent-blue: #60a5fa;
+  --accent-green: #34d399;
+  --accent-amber: #fcd34d;
+  --accent-red: #fb7185;
+  --accent-violet: #a5b4fc;
+  --accent-neutral: #7fa3ac;
+  --accent-cyan: #2dd4bf;
+  --accent-ice: #ccfbf1;
+  --accent-output: #6ee7b7;
+  --accent-rose: #f9a8d4;
+  --accent-orange: #fdba74;
+  --focus-ring: #60a5fa;
+  --grid-dot: rgba(204, 251, 241, 0.12);
+}
+
+:root[data-scene="synthwave"],
+[data-scene-probe="synthwave"] {
+  --scene-c0: #0a0220;
+  --scene-c1: #4a0f5c;
+  --scene-c2: #ffd166;
+  --scene-c3: #ff2e88;
+  --scene-c4: #22d3ee;
+  --bg-canvas: #0b0418;
+  --bg-surface: #140a28;
+  --bg-raised: #1b0f35;
+  --bg-inset: #070211;
+  --border-subtle: #2c1850;
+  --border-strong: #42246f;
+  --text-primary: #fdf2ff;
+  --text-secondary: #c8b0dd;
+  --text-tertiary: #8e76a8;
+  --accent-blue: #60a5fa;
+  --accent-green: #4ade80;
+  --accent-amber: #fbbf24;
+  --accent-red: #ff6b8b;
+  --accent-violet: #c084fc;
+  --accent-neutral: #9c86b5;
+  --accent-cyan: #22d3ee;
+  --accent-ice: #a5f3fc;
+  --accent-output: #72f1b8;
+  --accent-rose: #ff6ad5;
+  --accent-orange: #ff9f43;
+  --focus-ring: #22d3ee;
+  --grid-dot: rgba(255, 106, 213, 0.16);
+}
+
+:root[data-scene="ember"],
+[data-scene-probe="ember"] {
+  --scene-c0: #0a0405;
+  --scene-c1: #2a0a0e;
+  --scene-c2: #8e2416;
+  --scene-c3: #e8742a;
+  --scene-c4: #ffd27a;
+  --bg-canvas: #0c0607;
+  --bg-surface: #170d0e;
+  --bg-raised: #1f1213;
+  --bg-inset: #070304;
+  --border-subtle: #2e1a1a;
+  --border-strong: #452626;
+  --text-primary: #fff1e6;
+  --text-secondary: #cfb0a1;
+  --text-tertiary: #94766a;
+  --accent-blue: #7cb3ff;
+  --accent-green: #9be38a;
+  --accent-amber: #ffc145;
+  --accent-red: #ff6b5b;
+  --accent-violet: #c9a2ff;
+  --accent-neutral: #a08a80;
+  --accent-cyan: #6ee7d8;
+  --accent-ice: #ffe8c7;
+  --accent-output: #b8f28a;
+  --accent-rose: #ff8fc7;
+  --accent-orange: #ff9a3c;
+  --focus-ring: #ffc145;
+  --grid-dot: rgba(255, 210, 122, 0.12);
+}
+
+:root[data-scene="sorbet"],
+[data-scene-probe="sorbet"] {
+  --scene-c0: #fff4ec;
+  --scene-c1: #ffc2a6;
+  --scene-c2: #cdb5ff;
+  --scene-c3: #a8edd2;
+  --scene-c4: #a6d4ff;
+  --bg-canvas: #fff6f0;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-inset: #fbeee6;
+  --border-subtle: #f0dcd2;
+  --border-strong: #e2c4b6;
+  --text-primary: #2a1f2d;
+  --text-secondary: #67566a;
+  --text-tertiary: #988699;
+  --accent-blue: #3b5bdb;
+  --accent-green: #2b8a3e;
+  --accent-amber: #a85400;
+  --accent-red: #c92a2a;
+  --accent-violet: #6741d9;
+  --accent-neutral: #6b5a6e;
+  --accent-cyan: #0b7285;
+  --accent-ice: #1c4f8f;
+  --accent-output: #2b8a3e;
+  --accent-rose: #c2255c;
+  --accent-orange: #c4420c;
+  --focus-ring: #3b5bdb;
+  --grid-dot: rgba(42, 31, 45, 0.1);
+}
+
+:root[data-scene="riso"],
+[data-scene-probe="riso"] {
+  --scene-c0: #f6f1e7;
+  --scene-c1: #ff48b0;
+  --scene-c2: #0078bf;
+  --scene-c3: #ffe800;
+  --scene-c4: #00a95c;
+  --bg-canvas: #f6f1e7;
+  --bg-surface: #fffdf8;
+  --bg-raised: #fffdf8;
+  --bg-inset: #efe8da;
+  --border-subtle: #e2d8c6;
+  --border-strong: #cbbda5;
+  --text-primary: #1d1b2e;
+  --text-secondary: #55526b;
+  --text-tertiary: #8a8699;
+  --accent-blue: #0063a8;
+  --accent-green: #00785a;
+  --accent-amber: #a35b00;
+  --accent-red: #c42b27;
+  --accent-violet: #5b3fb0;
+  --accent-neutral: #5d5a6e;
+  --accent-cyan: #00788c;
+  --accent-ice: #0b4f8a;
+  --accent-output: #00805f;
+  --accent-rose: #c4106f;
+  --accent-orange: #c84b08;
+  --focus-ring: #0063a8;
+  --grid-dot: rgba(0, 120, 191, 0.2);
+}
+
+:root[data-scene="topo"],
+[data-scene-probe="topo"] {
+  --scene-c0: #f4f0e6;
+  --scene-c1: #b9aa8e;
+  --scene-c2: #7f6a4c;
+  --scene-c3: #d9e4d2;
+  --scene-c4: #f0dcc4;
+  --bg-canvas: #f3efe6;
+  --bg-surface: #fffdf8;
+  --bg-raised: #fffdf8;
+  --bg-inset: #ebe5d8;
+  --border-subtle: #ded6c5;
+  --border-strong: #c6baa2;
+  --text-primary: #24221d;
+  --text-secondary: #5e584c;
+  --text-tertiary: #8c8574;
+  --accent-blue: #2f5d9e;
+  --accent-green: #3c7a3e;
+  --accent-amber: #925c00;
+  --accent-red: #a8432f;
+  --accent-violet: #6b4e9b;
+  --accent-neutral: #6b6558;
+  --accent-cyan: #1d7a74;
+  --accent-ice: #2c5e57;
+  --accent-output: #3c7a3e;
+  --accent-rose: #a8456f;
+  --accent-orange: #a8521a;
+  --focus-ring: #2f5d9e;
+  --grid-dot: rgba(127, 106, 76, 0.16);
+}
+
+:root[data-scene="dawn"],
+[data-scene-probe="dawn"] {
+  --scene-c0: #fdf3e7;
+  --scene-c1: #ffd3b8;
+  --scene-c2: #f6a5c0;
+  --scene-c3: #a7c4ff;
+  --scene-c4: #e4dcff;
+  --bg-canvas: #fdf6ee;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-inset: #f7ece4;
+  --border-subtle: #efdfd6;
+  --border-strong: #dfc6bb;
+  --text-primary: #2b2140;
+  --text-secondary: #665a7d;
+  --text-tertiary: #958aa8;
+  --accent-blue: #3d5bd9;
+  --accent-green: #2f8050;
+  --accent-amber: #a35a05;
+  --accent-red: #c13a4a;
+  --accent-violet: #6d48c7;
+  --accent-neutral: #665a7d;
+  --accent-cyan: #127a8a;
+  --accent-ice: #2e4fae;
+  --accent-output: #2f8050;
+  --accent-rose: #b8336a;
+  --accent-orange: #b84c18;
+  --focus-ring: #3d5bd9;
+  --grid-dot: rgba(43, 33, 64, 0.1);
+}
+
+/* A shader scene paints its own background, so the stage turns transparent and the chrome turns
+   to frosted glass over it. Edge casings thin to a translucent halo so they don't draw dark tubes
+   across a bright background. */
+:root[data-scene-shader] {
+  --stage-bg: transparent;
+  --stage-grid: none;
+  --surface-alpha: 72%;
+  --surface-filter: blur(18px) saturate(1.6);
+  --card-alpha: 84%;
+  --card-filter: blur(12px) saturate(1.4);
+  --edge-halo: color-mix(in srgb, var(--bg-canvas) 45%, transparent);
+  --overflow-fade: transparent;
+}
+
+/* The appearance panel's overrides, after the scenes so they win at equal specificity. */
+:root[data-grid="dots"] {
+  --stage-grid: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+}
+
+:root[data-grid="none"] {
+  --stage-grid: none;
+}
+
+:root[data-cards="solid"] {
+  --card-alpha: 100%;
+  --card-filter: none;
+}
+
+:root[data-cards="glass"] {
+  --card-alpha: 74%;
+  --card-filter: blur(14px) saturate(1.5);
 }
 
 @media (prefers-reduced-motion: reduce) {
