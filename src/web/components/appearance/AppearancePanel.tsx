@@ -1,7 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { X } from "@phosphor-icons/react";
 import { SCENES } from "../../design/scenes";
-import { useCodeHQStore, type CardSurface, type GridMode, type MotionLevel } from "../../store/useCodeHQStore";
+import { useCodeHQStore, type MotionLevel } from "../../store/useCodeHQStore";
 import { activeScene } from "../backdrop";
 import { IconButton } from "../primitives";
 import { Island } from "../shell/Island";
@@ -21,17 +21,6 @@ const MOTION_CHOICES: Choice<MotionLevel>[] = [
   { value: "calm", label: "Calm" },
   { value: "still", label: "Still" },
 ];
-const GRID_CHOICES: Choice<GridMode>[] = [
-  { value: "scene", label: "Scene" },
-  { value: "dots", label: "Dots" },
-  { value: "none", label: "None" },
-];
-const CARD_CHOICES: Choice<CardSurface>[] = [
-  { value: "scene", label: "Scene" },
-  { value: "solid", label: "Solid" },
-  { value: "glass", label: "Glass" },
-];
-
 function Segmented<T extends string>({ label, value, choices, onChange }: { label: string; value: T; choices: Choice<T>[]; onChange: (value: T) => void }) {
   return (
     <div className={styles.row}>
@@ -55,20 +44,16 @@ function Segmented<T extends string>({ label, value, choices, onChange }: { labe
 }
 
 /**
- * Appearance: pick a scene and tune motion, grid and card surface. Card colours belong to the
- * scene. Everything persists locally; nothing reaches the workflow files.
+ * Appearance: pick a scene and how much it moves. Grid, card surface, and card colours
+ * belong to the scene. Everything persists locally; nothing reaches the workflow files.
  */
 export function AppearancePanel({ onClose }: { onClose: () => void }) {
   const grid = useDotGrid();
   const panelRef = useRef<HTMLDivElement>(null);
   const scene = useCodeHQStore(activeScene);
   const motion = useCodeHQStore((state) => state.motion);
-  const gridMode = useCodeHQStore((state) => state.gridMode);
-  const cardSurface = useCodeHQStore((state) => state.cardSurface);
   const setScene = useCodeHQStore((state) => state.setScene);
   const setMotion = useCodeHQStore((state) => state.setMotion);
-  const setGridMode = useCodeHQStore((state) => state.setGridMode);
-  const setCardSurface = useCodeHQStore((state) => state.setCardSurface);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -134,8 +119,6 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
         </section>
 
         <Segmented label="Motion" value={motion} choices={MOTION_CHOICES} onChange={setMotion} />
-        <Segmented label="Grid" value={gridMode} choices={GRID_CHOICES} onChange={setGridMode} />
-        <Segmented label="Cards" value={cardSurface} choices={CARD_CHOICES} onChange={setCardSurface} />
 
       </div>
     </Island>

@@ -16,9 +16,6 @@ export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } fr
 export type Theme = "dark" | "light";
 /** Ambient motion: `full` animates scenes and edges, `calm` slows them, `still` freezes them. */
 export type MotionLevel = "full" | "calm" | "still";
-/** `scene` keeps whatever the active scene chose. */
-export type GridMode = "scene" | "dots" | "none";
-export type CardSurface = "scene" | "solid" | "glass";
 
 export interface StepPanRequest {
   workflowId: string;
@@ -26,7 +23,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 6;
+const PERSIST_VERSION = 7;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -49,8 +46,6 @@ interface CodeHQUiState {
   darkScene: string;
   lightScene: string;
   motion: MotionLevel;
-  gridMode: GridMode;
-  cardSurface: CardSurface;
   appearanceOpen: boolean;
 }
 
@@ -75,8 +70,6 @@ interface CodeHQUiActions {
   /** Shows a scene: switches to its theme family and remembers it for that family. */
   setScene: (sceneId: string, base: Theme) => void;
   setMotion: (motion: MotionLevel) => void;
-  setGridMode: (gridMode: GridMode) => void;
-  setCardSurface: (cardSurface: CardSurface) => void;
   setAppearanceOpen: (open: boolean) => void;
 }
 
@@ -139,8 +132,6 @@ const INITIAL_STATE: CodeHQUiState = {
   darkScene: "abyss",
   lightScene: "sorbet",
   motion: "full",
-  gridMode: "scene",
-  cardSurface: "scene",
   appearanceOpen: false,
 };
 
@@ -281,10 +272,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setMotion: (motion) => set({ motion }),
 
-      setGridMode: (gridMode) => set({ gridMode }),
-
-      setCardSurface: (cardSurface) => set({ cardSurface }),
-
       setAppearanceOpen: (appearanceOpen) => set({ appearanceOpen }),
     }),
     {
@@ -296,13 +283,12 @@ export const useCodeHQStore = create<CodeHQStore>()(
         darkScene: state.darkScene,
         lightScene: state.lightScene,
         motion: state.motion,
-        gridMode: state.gridMode,
-        cardSurface: state.cardSurface,
       }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        * v5 added appearance fields; older states simply take their defaults from the initial state.
        * v6 dropped the per-scene card colour overrides: each scene now owns its card colours.
+       * v7 dropped the grid and card-surface overrides: each scene owns those too.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {
@@ -312,6 +298,8 @@ export const useCodeHQStore = create<CodeHQStore>()(
         delete state.depth;
         delete state.canvasLayouts;
         delete state.categoryColors;
+        delete state.gridMode;
+        delete state.cardSurface;
         return state as unknown as CodeHQUiState;
       },
     },

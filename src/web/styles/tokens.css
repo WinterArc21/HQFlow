@@ -382,25 +382,6 @@
   --overflow-fade: transparent;
 }
 
-/* The appearance panel's overrides, after the scenes so they win at equal specificity. */
-:root[data-grid="dots"] {
-  --stage-grid: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
-}
-
-:root[data-grid="none"] {
-  --stage-grid: none;
-}
-
-:root[data-cards="solid"] {
-  --card-alpha: 100%;
-  --card-filter: none;
-}
-
-:root[data-cards="glass"] {
-  --card-alpha: 74%;
-  --card-filter: blur(14px) saturate(1.5);
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 0ms;

@@ -33,7 +33,7 @@ export function buildPaletteActions(onRecheck: () => Promise<void>, onResetLayou
     {
       id: "action:appearance",
       label: "Change scene and colours",
-      detail: "Opens appearance: scenes, motion, grid, and card colours.",
+      detail: "Opens appearance: scenes and motion.",
       run: async () => {
         useCodeHQStore.getState().setAppearanceOpen(true);
       },

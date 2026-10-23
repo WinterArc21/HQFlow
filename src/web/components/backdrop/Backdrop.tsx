@@ -45,7 +45,7 @@ export function activeScene(state: Pick<CodeHQStore, "theme" | "darkScene" | "li
 }
 
 /**
- * Writes the active scene and the appearance overrides onto `<html>`. It runs from a store
+ * Writes the active scene and motion level onto `<html>`. It runs from a store
  * subscription, not an effect, so the document already shows the new scene by the time any
  * component re-renders and reads a colour back from it.
  */
@@ -56,8 +56,6 @@ function applyAppearance(state: CodeHQStore): void {
   root.setAttribute("data-scene", scene.id);
   root.setAttribute("data-motion", prefersReducedMotion() ? "still" : state.motion);
   toggleAttribute(root, "data-scene-shader", supportsWebGL2() ? "" : null);
-  toggleAttribute(root, "data-grid", state.gridMode === "scene" ? null : state.gridMode);
-  toggleAttribute(root, "data-cards", state.cardSurface === "scene" ? null : state.cardSurface);
 }
 
 /**
