@@ -100,35 +100,6 @@ void main() {
 `;
 
 const SCENES: Record<ShaderId, string> = {
-  nebula: /* glsl */ `
-vec3 starLayer(vec2 css, float cell, float seed, float twinkle) {
-  vec2 g = floor(css / cell);
-  vec2 f = fract(css / cell) - 0.5;
-  float h = hash(g + seed);
-  vec2 o = vec2(hash(g + seed + 1.3), hash(g + seed + 7.1)) - 0.5;
-  float d = length(f - o * 0.7) * cell;
-  float size = mix(0.6, 1.8, h * h);
-  float b = exp(-d * d / (size * size)) * step(0.55, h);
-  b *= 0.65 + 0.35 * sin(u_time * twinkle + h * 50.0);
-  return mix(vec3(1.0), u_c[4], h) * b;
-}
-
-vec3 sceneColor(vec2 css) {
-  vec2 p = (css - u_pan * 0.15) / u_res.y;
-  float t = u_time * 0.015;
-  float n1 = fbm(p * 1.5 + vec2(t, -t) + fbm(p * 2.2 + t) * 1.3);
-  float n2 = fbm(p * 2.7 - vec2(t * 1.3, 0.0) + 4.0);
-  vec3 col = u_c[0];
-  col = mix(col, u_c[1], smoothstep(0.25, 0.8, n1) * 0.9);
-  col = mix(col, u_c[2], smoothstep(0.45, 0.95, n1 * n2 * 1.7) * 0.55);
-  col += u_c[3] * pow(smoothstep(0.5, 1.0, n2), 3.0) * 0.4;
-  col += u_c[2] * mouseGlow(css, 280.0) * 0.18;
-  col += starLayer(css - u_pan * 0.05, 70.0, 0.0, 1.7) * 0.9;
-  col += starLayer(css - u_pan * 0.25, 38.0, 19.0, 3.1) * 0.55;
-  col += u_c[4] * pulseRing(css) * 0.4;
-  return col;
-}
-`,
   abyss: /* glsl */ `
 float caustic(vec2 uv, float t) {
   vec2 p = mod(uv * 6.2831, 6.2831) - 250.0;
@@ -165,21 +136,6 @@ vec3 sceneColor(vec2 css) {
   return col;
 }
 `,
-  ember: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  float px = 3.0;
-  vec2 cell = floor(css / px);
-  vec2 cp = cell * px;
-  vec2 uv = cp / u_res.y;
-  float t = u_time * 0.07;
-  float heat = fbm(vec2(uv.x * 2.4, uv.y * 1.6 + t * 2.0) + fbm(uv * 3.0 - vec2(0.0, t * 3.0)) * 0.9);
-  heat *= smoothstep(-0.2, 1.1, cp.y / u_res.y);
-  heat = pow(heat, 1.45) * 1.25 + mouseGlow(cp, 200.0) * 0.45 + pulseRing(cp) * 0.6;
-  float level = clamp(heat, 0.0, 1.0) * 4.0 + bayer8(cell) - 0.5;
-  int idx = int(clamp(floor(level), 0.0, 4.0));
-  return u_c[idx];
-}
-`,
   silk: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 cell = cellOf(css);
@@ -198,33 +154,6 @@ vec3 sceneColor(vec2 css) {
   vec2 v2 = c / u_res - 0.5;
   v *= 1.0 - dot(v2, v2) * 0.5;
   v += mouseGlow(c, 240.0) * 0.22 + pulseRing(c) * 0.4;
-  return ditherRamp(v, cell);
-}
-`,
-  eclipse: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 cell = cellOf(css);
-  vec2 c = cellCentre(css);
-  float aspect = u_res.x / u_res.y;
-  vec2 p = (c - u_pan * 0.05) / u_res.y;
-  float t = u_time * 0.05;
-  vec2 centre = vec2(aspect * 0.62 + 0.02 * sin(t * 0.7), 0.4 + 0.015 * cos(t * 0.9));
-  vec2 d = p - centre;
-  float r = length(d);
-  float radius = 0.2;
-  // Streamers: noise sampled on a circle (no seam at the angle wrap), drifting outward and turning.
-  vec2 dir = d / max(r, 1e-4);
-  float a = t * 0.6;
-  vec2 rot = vec2(dir.x * cos(a) - dir.y * sin(a), dir.x * sin(a) + dir.y * cos(a));
-  float streak = fbm(rot * 2.6 + vec2(0.0, r * 3.0 - t * 1.4));
-  float fine = noise(rot * 9.0 - vec2(r * 6.0 - t, 0.0));
-  float outside = max(r - radius, 0.0);
-  float corona = exp(-outside * (5.0 - 2.6 * streak)) * (0.55 + 0.6 * streak + 0.25 * fine);
-  float rim = exp(-outside * 60.0) * 0.6;
-  // A faint warm haze over the sky so the dark field still dithers; the disc itself stays black.
-  float sky = corona * 0.68 + rim + 0.1 * (1.0 - smoothstep(0.0, 1.4, r)) + 0.04 * noise(p * 3.0 + t * 0.3);
-  float v = mix(0.0, sky, smoothstep(radius - 0.004, radius + 0.002, r));
-  v += mouseGlow(c, 220.0) * 0.18 + pulseRing(c) * 0.35;
   return ditherRamp(v, cell);
 }
 `,
@@ -258,37 +187,6 @@ vec3 sceneColor(vec2 css) {
   return ditherRamp(v, cell);
 }
 `,
-  lava: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 cell = cellOf(css);
-  vec2 c = cellCentre(css);
-  float aspect = u_res.x / u_res.y;
-  vec2 p = (c - u_pan * 0.06) / u_res.y;
-  float t = u_time * 0.09;
-  // Metaballs: each blob rises and sinks on its own slow orbit; their fields add, so blobs
-  // swell into each other and pinch apart smoothly.
-  float field = 0.0;
-  for (int i = 0; i < 7; i++) {
-    float fi = float(i);
-    vec2 centre = vec2(
-      aspect * (0.12 + 0.13 * fi + 0.06 * sin(t * 0.7 + fi * 2.1)),
-      0.5 + 0.42 * sin(t * (0.35 + 0.07 * fi) + fi * 1.9)
-    );
-    float r = 0.07 + 0.035 * sin(fi * 3.7);
-    vec2 d = p - centre;
-    field += r * r / (dot(d, d) + 1e-4);
-  }
-  if (u_mouse.x >= 0.0) {
-    vec2 d = p - u_mouse / u_res.y;
-    field += 0.004 / (dot(d, d) + 1e-4);
-  }
-  // Inside a blob it glows hotter toward the core; outside, a soft halo fades into the dark.
-  float v = smoothstep(0.35, 1.0, field) * 0.42 + smoothstep(1.0, 3.5, field) * 0.5;
-  v += 0.06 + 0.06 * (1.0 - p.y);
-  v += pulseRing(c) * 0.35;
-  return ditherRamp(v, cell);
-}
-`,
   sorbet: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 uv = css / u_res.y;
@@ -312,51 +210,6 @@ vec3 sceneColor(vec2 css) {
   col /= total;
   col += (u_c[1] - u_c[0]) * pulseRing(css) * 0.4;
   col += (hash(css) - 0.5) * 0.04;
-  return col;
-}
-`,
-  riso: /* glsl */ `
-float dotLayer(vec2 css, vec2 offset, float seed, float t) {
-  vec2 local = css - offset - 14.0;
-  vec2 cell = floor(local / 28.0 + 0.5);
-  vec2 centre = cell * 28.0 + 14.0 + offset;
-  float v = fbm(centre / 340.0 + vec2(t, seed));
-  v = smoothstep(0.38, 0.82, v);
-  v += mouseGlow(centre, 170.0) * 0.75 + pulseRing(centre) * 0.9;
-  float r = mix(0.9, 7.5, clamp(v, 0.0, 1.0));
-  float d = length(css - centre);
-  return 1.0 - smoothstep(r - 0.75, r + 0.75, d);
-}
-
-vec3 sceneColor(vec2 css) {
-  float t = u_time * 0.035;
-  float pink = dotLayer(css, vec2(0.0), 0.0, t);
-  float blue = dotLayer(css, vec2(4.0, 3.0), 11.0, t * 1.2);
-  vec3 col = u_c[0];
-  col *= mix(vec3(1.0), u_c[1], pink * 0.5);
-  col *= mix(vec3(1.0), u_c[2], blue * 0.42);
-  col -= (hash(floor(css)) - 0.5) * 0.03;
-  return col;
-}
-`,
-  topo: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 p = (css - u_pan * 0.2) / 460.0;
-  if (u_mouse.x >= 0.0) {
-    vec2 m = (u_mouse - u_pan * 0.2) / 460.0;
-    p = mix(p, m, mouseGlow(css, 180.0) * 0.35);
-  }
-  float h = fbm(p + vec2(u_time * 0.008, 0.0)) + 0.35 * fbm(p * 2.3 - u_time * 0.006);
-  h += pulseRing(css) * 0.03;
-  vec3 col = mix(u_c[3], u_c[4], smoothstep(0.35, 0.85, h));
-  col = mix(u_c[0], col, 0.6);
-  float lv = h * 16.0;
-  float f = abs(fract(lv) - 0.5);
-  float w = fwidth(lv);
-  bool major = mod(floor(lv + 0.5), 5.0) == 0.0;
-  float width = major ? 1.3 : 0.7;
-  float line = 1.0 - smoothstep(w * width * 0.5, w * width, f);
-  col = mix(col, major ? u_c[2] : u_c[1], line * (major ? 0.7 : 0.45));
   return col;
 }
 `,

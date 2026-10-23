@@ -55,7 +55,7 @@ function applyAppearance(state: CodeHQStore): void {
   root.setAttribute("data-theme", scene.base);
   root.setAttribute("data-scene", scene.id);
   root.setAttribute("data-motion", prefersReducedMotion() ? "still" : state.motion);
-  toggleAttribute(root, "data-scene-shader", scene.shader !== null && supportsWebGL2() ? "" : null);
+  toggleAttribute(root, "data-scene-shader", supportsWebGL2() ? "" : null);
   toggleAttribute(root, "data-grid", state.gridMode === "scene" ? null : state.gridMode);
   toggleAttribute(root, "data-cards", state.cardSurface === "scene" ? null : state.cardSurface);
   const overrides = state.categoryColors[scene.id] ?? {};
@@ -78,7 +78,7 @@ export function Backdrop() {
   const scene = useCodeHQStore(activeScene);
   const motion = useCodeHQStore((state) => state.motion);
   const reducedMotion = usePrefersReducedMotion();
-  return scene.shader !== null ? <ShaderCanvas key={scene.id} scene={scene} motion={reducedMotion ? "still" : motion} /> : null;
+  return <ShaderCanvas key={scene.id} scene={scene} motion={reducedMotion ? "still" : motion} />;
 }
 
 let webgl2: boolean | undefined;
@@ -116,7 +116,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
   useEffect(() => {
     const canvas = canvasRef.current;
     const gl = canvas?.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "low-power" }) ?? null;
-    if (canvas === null || gl === null || scene.shader === null) {
+    if (canvas === null || gl === null) {
       return;
     }
     const vs = compile(gl, gl.VERTEX_SHADER, VERTEX_SOURCE);
@@ -186,7 +186,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       // A dither scene renders one shader pixel per dither cell and lets the browser scale it up
       // crisply; smooth scenes render below device resolution.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const scale = scene.pixel !== undefined ? 1 / scene.pixel : (scene.crisp ? 1 : SMOOTH_SCALE) * dpr;
+      const scale = scene.pixel !== undefined ? 1 / scene.pixel : SMOOTH_SCALE * dpr;
       canvas.width = Math.max(1, Math.ceil(window.innerWidth * scale));
       canvas.height = Math.max(1, Math.ceil(window.innerHeight * scale));
       canvas.style.width = `${canvas.width / scale}px`;
@@ -247,7 +247,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
   return (
     <canvas
       ref={canvasRef}
-      className={`${styles.canvas} ${scene.crisp || scene.pixel !== undefined ? styles.crisp : ""}`}
+      className={`${styles.canvas} ${scene.pixel !== undefined ? styles.crisp : ""}`}
       data-scene-canvas={scene.id}
       aria-hidden="true"
     />

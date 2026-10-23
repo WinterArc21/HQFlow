@@ -177,55 +177,6 @@
  * Light-scene accents keep >=4.5:1 against their white surface, as the paper ones do.
  * ============================================================================================== */
 
-:root[data-scene="graphite"],
-[data-scene-probe="graphite"] {
-  --scene-c0: #0e0f11;
-  --scene-c1: #1b1e23;
-  --scene-c2: #5ec4c0;
-  --scene-c3: #d98cb4;
-  --scene-c4: #e08d55;
-}
-
-:root[data-scene="paper"],
-[data-scene-probe="paper"] {
-  --scene-c0: #f6f4f0;
-  --scene-c1: #e9e4da;
-  --scene-c2: #0f7f7a;
-  --scene-c3: #a83a72;
-  --scene-c4: #a85718;
-}
-
-:root[data-scene="nebula"],
-[data-scene-probe="nebula"] {
-  --scene-c0: #04020a;
-  --scene-c1: #1b1446;
-  --scene-c2: #6d28d9;
-  --scene-c3: #db2777;
-  --scene-c4: #a5f3fc;
-  --bg-canvas: #07050f;
-  --bg-surface: #110d1f;
-  --bg-raised: #171229;
-  --bg-inset: #05030b;
-  --border-subtle: #251d3d;
-  --border-strong: #362b59;
-  --text-primary: #f1ecff;
-  --text-secondary: #b0a7cc;
-  --text-tertiary: #7a7099;
-  --accent-blue: #7aa2ff;
-  --accent-green: #5ee0a0;
-  --accent-amber: #f6c35b;
-  --accent-red: #ff7a8a;
-  --accent-violet: #c4a5ff;
-  --accent-neutral: #8d86a6;
-  --accent-cyan: #67e8f9;
-  --accent-ice: #e0e7ff;
-  --accent-output: #86efac;
-  --accent-rose: #f0abfc;
-  --accent-orange: #fdba8c;
-  --focus-ring: #7aa2ff;
-  --grid-dot: rgba(224, 231, 255, 0.12);
-}
-
 :root[data-scene="abyss"],
 [data-scene-probe="abyss"] {
   --scene-c0: #010810;
@@ -257,37 +208,6 @@
   --grid-dot: rgba(204, 251, 241, 0.12);
 }
 
-:root[data-scene="ember"],
-[data-scene-probe="ember"] {
-  --scene-c0: #0a0405;
-  --scene-c1: #2a0a0e;
-  --scene-c2: #8e2416;
-  --scene-c3: #e8742a;
-  --scene-c4: #ffd27a;
-  --bg-canvas: #0c0607;
-  --bg-surface: #170d0e;
-  --bg-raised: #1f1213;
-  --bg-inset: #070304;
-  --border-subtle: #2e1a1a;
-  --border-strong: #452626;
-  --text-primary: #fff1e6;
-  --text-secondary: #cfb0a1;
-  --text-tertiary: #94766a;
-  --accent-blue: #7cb3ff;
-  --accent-green: #9be38a;
-  --accent-amber: #ffc145;
-  --accent-red: #ff6b5b;
-  --accent-violet: #c9a2ff;
-  --accent-neutral: #a08a80;
-  --accent-cyan: #6ee7d8;
-  --accent-ice: #ffe8c7;
-  --accent-output: #b8f28a;
-  --accent-rose: #ff8fc7;
-  --accent-orange: #ff9a3c;
-  --focus-ring: #ffc145;
-  --grid-dot: rgba(255, 210, 122, 0.12);
-}
-
 :root[data-scene="sorbet"],
 [data-scene-probe="sorbet"] {
   --scene-c0: #fff4ec;
@@ -317,68 +237,6 @@
   --accent-orange: #c4420c;
   --focus-ring: #3b5bdb;
   --grid-dot: rgba(42, 31, 45, 0.1);
-}
-
-:root[data-scene="riso"],
-[data-scene-probe="riso"] {
-  --scene-c0: #f6f1e7;
-  --scene-c1: #ff48b0;
-  --scene-c2: #0078bf;
-  --scene-c3: #ffe800;
-  --scene-c4: #00a95c;
-  --bg-canvas: #f6f1e7;
-  --bg-surface: #fffdf8;
-  --bg-raised: #fffdf8;
-  --bg-inset: #efe8da;
-  --border-subtle: #e2d8c6;
-  --border-strong: #cbbda5;
-  --text-primary: #1d1b2e;
-  --text-secondary: #55526b;
-  --text-tertiary: #8a8699;
-  --accent-blue: #0063a8;
-  --accent-green: #00785a;
-  --accent-amber: #a35b00;
-  --accent-red: #c42b27;
-  --accent-violet: #5b3fb0;
-  --accent-neutral: #5d5a6e;
-  --accent-cyan: #00788c;
-  --accent-ice: #0b4f8a;
-  --accent-output: #00805f;
-  --accent-rose: #c4106f;
-  --accent-orange: #c84b08;
-  --focus-ring: #0063a8;
-  --grid-dot: rgba(0, 120, 191, 0.2);
-}
-
-:root[data-scene="topo"],
-[data-scene-probe="topo"] {
-  --scene-c0: #f4f0e6;
-  --scene-c1: #b9aa8e;
-  --scene-c2: #7f6a4c;
-  --scene-c3: #d9e4d2;
-  --scene-c4: #f0dcc4;
-  --bg-canvas: #f3efe6;
-  --bg-surface: #fffdf8;
-  --bg-raised: #fffdf8;
-  --bg-inset: #ebe5d8;
-  --border-subtle: #ded6c5;
-  --border-strong: #c6baa2;
-  --text-primary: #24221d;
-  --text-secondary: #5e584c;
-  --text-tertiary: #8c8574;
-  --accent-blue: #2f5d9e;
-  --accent-green: #3c7a3e;
-  --accent-amber: #925c00;
-  --accent-red: #a8432f;
-  --accent-violet: #6b4e9b;
-  --accent-neutral: #6b6558;
-  --accent-cyan: #1d7a74;
-  --accent-ice: #2c5e57;
-  --accent-output: #3c7a3e;
-  --accent-rose: #a8456f;
-  --accent-orange: #a8521a;
-  --focus-ring: #2f5d9e;
-  --grid-dot: rgba(127, 106, 76, 0.16);
 }
 
 :root[data-scene="dawn"],
@@ -443,37 +301,6 @@
   --grid-dot: rgba(255, 180, 140, 0.12);
 }
 
-:root[data-scene="eclipse"],
-[data-scene-probe="eclipse"] {
-  --scene-c0: #050303;
-  --scene-c1: #2a0d07;
-  --scene-c2: #7d2a12;
-  --scene-c3: #ea7d2e;
-  --scene-c4: #fff0c2;
-  --bg-canvas: #070404;
-  --bg-surface: #140b09;
-  --bg-raised: #1c100c;
-  --bg-inset: #040202;
-  --border-subtle: #2e1a14;
-  --border-strong: #47281e;
-  --text-primary: #fff3e6;
-  --text-secondary: #cfb3a2;
-  --text-tertiary: #937565;
-  --accent-blue: #7aa2ff;
-  --accent-green: #5ee0a0;
-  --accent-amber: #ffc145;
-  --accent-red: #ff7a85;
-  --accent-violet: #c4a5ff;
-  --accent-neutral: #937565;
-  --accent-cyan: #67e8f9;
-  --accent-ice: #ffe6bf;
-  --accent-output: #86efac;
-  --accent-rose: #f9a8d4;
-  --accent-orange: #ffa25c;
-  --focus-ring: #ffb454;
-  --grid-dot: rgba(255, 196, 120, 0.12);
-}
-
 :root[data-scene="tide"],
 [data-scene-probe="tide"] {
   --scene-c0: #02070d;
@@ -503,37 +330,6 @@
   --accent-orange: #fdba74;
   --focus-ring: #5fd3ee;
   --grid-dot: rgba(216, 251, 255, 0.12);
-}
-
-:root[data-scene="lava"],
-[data-scene-probe="lava"] {
-  --scene-c0: #0a0408;
-  --scene-c1: #2b0a24;
-  --scene-c2: #7a1640;
-  --scene-c3: #f0532f;
-  --scene-c4: #ffd36b;
-  --bg-canvas: #0b0509;
-  --bg-surface: #170b13;
-  --bg-raised: #1f0f1a;
-  --bg-inset: #060205;
-  --border-subtle: #2f1626;
-  --border-strong: #4a2239;
-  --text-primary: #fff0f3;
-  --text-secondary: #d1aebc;
-  --text-tertiary: #957282;
-  --accent-blue: #7aa2ff;
-  --accent-green: #5ee0a0;
-  --accent-amber: #f6c35b;
-  --accent-red: #ff7a85;
-  --accent-violet: #c4a5ff;
-  --accent-neutral: #957282;
-  --accent-cyan: #67e8f9;
-  --accent-ice: #ffe1b3;
-  --accent-output: #86efac;
-  --accent-rose: #ff8fc0;
-  --accent-orange: #ff8a5c;
-  --focus-ring: #ff7a52;
-  --grid-dot: rgba(255, 211, 107, 0.12);
 }
 
 /* A shader scene paints its own background, so the stage turns transparent and the chrome turns

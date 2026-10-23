@@ -131,7 +131,6 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
                 role="radio"
                 aria-checked={option.id === scene.id}
                 className={styles.scene}
-                data-scene-shader={option.shader !== null ? "" : undefined}
                 style={{ "--i": index } as CSSProperties}
                 title={option.tagline}
                 onClick={() => setScene(option.id, option.base)}
