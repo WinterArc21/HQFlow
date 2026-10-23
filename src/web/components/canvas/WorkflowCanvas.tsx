@@ -240,20 +240,26 @@ function WorkflowCanvasInner({
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(initialNodes);
   const previousWorkflowId = useRef(canvasId);
+  const previousRevision = useRef(workflowRevision);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
     const reset = previousWorkflowId.current !== canvasId;
+    // A new revision of the same workflow re-flows every card the user has not dragged: keeping
+    // their old positions would stack them on the cards the new layout placed around them.
+    // Expanding a card keeps positions, so the rest of the map holds still.
+    const reflow = reset || previousRevision.current !== workflowRevision;
     previousWorkflowId.current = canvasId;
+    previousRevision.current = workflowRevision;
     setNodes((current) => {
       const positions = new Map(current.map((node) => [node.id, node.position]));
       return generatedNodes.map((node) => ({
         ...node,
-        position: reset
+        position: reflow
           ? canvasLayout?.nodePositions[node.id] ?? node.position
           : positions.get(node.id) ?? canvasLayout?.nodePositions[node.id] ?? node.position,
       }));
     });
-  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, setNodes]);
+  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, setNodes, workflowRevision]);
   useLayoutEffect(() => {
     if (handledLayoutResetRevision.current === layoutResetRevision) {
       return;
