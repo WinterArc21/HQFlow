@@ -17,7 +17,33 @@
   box-shadow:
     0 0 0 6px color-mix(in srgb, var(--step-accent) 14%, transparent),
     0 18px 44px color-mix(in srgb, var(--bg-canvas) 55%, transparent);
-  animation: grow var(--dur-base) var(--ease-standard);
+}
+
+/* The surface dissolves in first (ditherDissolve.ts); the content then settles out of a soft blur. */
+.card > :not(.glow) {
+  animation: settle var(--dur-slow) var(--ease-out-expo) 260ms backwards;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+/* The newest dither pixels, lit in the step's accent; one canvas pixel per dither cell. */
+.glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+:global(:root[data-motion="still"]) .card > * {
+  animation: none;
 }
 
 :global(:root[data-theme="light"]) .card {
@@ -29,13 +55,6 @@
 .card:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
-}
-
-@keyframes grow {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
 }
 
 .header {
@@ -177,7 +196,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card {
+  .card > * {
     animation: none;
   }
 }
