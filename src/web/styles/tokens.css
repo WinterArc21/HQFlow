@@ -505,6 +505,37 @@
   --grid-dot: rgba(216, 251, 255, 0.12);
 }
 
+:root[data-scene="lava"],
+[data-scene-probe="lava"] {
+  --scene-c0: #0a0408;
+  --scene-c1: #2b0a24;
+  --scene-c2: #7a1640;
+  --scene-c3: #f0532f;
+  --scene-c4: #ffd36b;
+  --bg-canvas: #0b0509;
+  --bg-surface: #170b13;
+  --bg-raised: #1f0f1a;
+  --bg-inset: #060205;
+  --border-subtle: #2f1626;
+  --border-strong: #4a2239;
+  --text-primary: #fff0f3;
+  --text-secondary: #d1aebc;
+  --text-tertiary: #957282;
+  --accent-blue: #7aa2ff;
+  --accent-green: #5ee0a0;
+  --accent-amber: #f6c35b;
+  --accent-red: #ff7a85;
+  --accent-violet: #c4a5ff;
+  --accent-neutral: #957282;
+  --accent-cyan: #67e8f9;
+  --accent-ice: #ffe1b3;
+  --accent-output: #86efac;
+  --accent-rose: #ff8fc0;
+  --accent-orange: #ff8a5c;
+  --focus-ring: #ff7a52;
+  --grid-dot: rgba(255, 211, 107, 0.12);
+}
+
 /* A shader scene paints its own background, so the stage turns transparent and the chrome turns
    to frosted glass over it. Edge casings thin to a translucent halo so they don't draw dark tubes
    across a bright background. */

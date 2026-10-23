@@ -258,6 +258,37 @@ vec3 sceneColor(vec2 css) {
   return ditherRamp(v, cell);
 }
 `,
+  lava: /* glsl */ `
+vec3 sceneColor(vec2 css) {
+  vec2 cell = cellOf(css);
+  vec2 c = cellCentre(css);
+  float aspect = u_res.x / u_res.y;
+  vec2 p = (c - u_pan * 0.06) / u_res.y;
+  float t = u_time * 0.09;
+  // Metaballs: each blob rises and sinks on its own slow orbit; their fields add, so blobs
+  // swell into each other and pinch apart smoothly.
+  float field = 0.0;
+  for (int i = 0; i < 7; i++) {
+    float fi = float(i);
+    vec2 centre = vec2(
+      aspect * (0.12 + 0.13 * fi + 0.06 * sin(t * 0.7 + fi * 2.1)),
+      0.5 + 0.42 * sin(t * (0.35 + 0.07 * fi) + fi * 1.9)
+    );
+    float r = 0.07 + 0.035 * sin(fi * 3.7);
+    vec2 d = p - centre;
+    field += r * r / (dot(d, d) + 1e-4);
+  }
+  if (u_mouse.x >= 0.0) {
+    vec2 d = p - u_mouse / u_res.y;
+    field += 0.004 / (dot(d, d) + 1e-4);
+  }
+  // Inside a blob it glows hotter toward the core; outside, a soft halo fades into the dark.
+  float v = smoothstep(0.35, 1.0, field) * 0.42 + smoothstep(1.0, 3.5, field) * 0.5;
+  v += 0.06 + 0.06 * (1.0 - p.y);
+  v += pulseRing(c) * 0.35;
+  return ditherRamp(v, cell);
+}
+`,
   sorbet: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 uv = css / u_res.y;
