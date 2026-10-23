@@ -180,6 +180,27 @@ vec3 sceneColor(vec2 css) {
   return u_c[idx];
 }
 `,
+  silk: /* glsl */ `
+vec3 sceneColor(vec2 css) {
+  vec2 cell = cellOf(css);
+  vec2 c = cellCentre(css);
+  vec2 p = (c - u_pan * 0.08) / u_res.y;
+  float t = u_time * 0.07;
+  // Layered sine warps fold the plane like cloth; low frequencies keep every fold soft.
+  vec2 q = p * 2.4;
+  for (int i = 1; i < 6; i++) {
+    float fi = float(i);
+    q += (0.42 / fi) * vec2(sin(fi * q.y * 1.15 + t * 1.3 + fi * 1.7), cos(fi * q.x * 0.95 - t * 1.1 + fi * 2.3));
+  }
+  float sheen = 0.5 + 0.5 * sin(q.x * 2.2 + q.y * 1.4 + t * 0.8);
+  // Body of the fold plus a narrow specular ridge along each crest, like light on satin.
+  float v = 0.06 + sheen * 0.56 + pow(sheen, 10.0) * 0.22;
+  vec2 v2 = c / u_res - 0.5;
+  v *= 1.0 - dot(v2, v2) * 0.5;
+  v += mouseGlow(c, 240.0) * 0.22 + pulseRing(c) * 0.4;
+  return ditherRamp(v, cell);
+}
+`,
   sorbet: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 uv = css / u_res.y;

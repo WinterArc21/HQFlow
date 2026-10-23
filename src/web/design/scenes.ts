@@ -6,7 +6,7 @@
  */
 import type { Theme } from "../store/useCodeHQStore";
 
-export type ShaderId = "ember" | "abyss" | "nebula" | "sorbet" | "topo" | "riso" | "dawn";
+export type ShaderId = "silk" | "ember" | "abyss" | "nebula" | "sorbet" | "topo" | "riso" | "dawn";
 
 export interface Scene {
   id: string;
@@ -28,6 +28,7 @@ export const SCENES: readonly Scene[] = [
   { id: "nebula", name: "Nebula", base: "dark", shader: "nebula", tagline: "Violet gas clouds and a slow starfield." },
   { id: "abyss", name: "Abyss", base: "dark", shader: "abyss", tagline: "Caustic light on a deep ocean floor." },
   { id: "ember", name: "Ember", base: "dark", shader: "ember", tagline: "Ordered-dither heat, rising like a forge.", pixel: 3 },
+  { id: "silk", name: "Silk", base: "dark", shader: "silk", tagline: "Dithered satin folding over itself.", pixel: 2 },
   { id: "paper", name: "Paper", base: "light", shader: null, tagline: "Warm paper and a quiet dot grid." },
   { id: "sorbet", name: "Sorbet", base: "light", shader: "sorbet", tagline: "A soft pastel mesh with film grain." },
   { id: "riso", name: "Riso", base: "light", shader: "riso", tagline: "Two-ink halftone that breathes on the grid.", crisp: true },
