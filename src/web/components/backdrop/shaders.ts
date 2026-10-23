@@ -217,12 +217,12 @@ vec3 sceneColor(vec2 css) {
   float a = t * 0.6;
   vec2 rot = vec2(dir.x * cos(a) - dir.y * sin(a), dir.x * sin(a) + dir.y * cos(a));
   float streak = fbm(rot * 2.6 + vec2(0.0, r * 3.0 - t * 1.4));
-  float fine = fbm(rot * 9.0 - vec2(r * 6.0 - t, 0.0));
+  float fine = noise(rot * 9.0 - vec2(r * 6.0 - t, 0.0));
   float outside = max(r - radius, 0.0);
   float corona = exp(-outside * (5.0 - 2.6 * streak)) * (0.55 + 0.6 * streak + 0.25 * fine);
   float rim = exp(-outside * 60.0) * 0.6;
   // A faint warm haze over the sky so the dark field still dithers; the disc itself stays black.
-  float sky = corona * 0.68 + rim + 0.1 * (1.0 - smoothstep(0.0, 1.4, r)) + 0.04 * fbm(p * 3.0 + t * 0.3);
+  float sky = corona * 0.68 + rim + 0.1 * (1.0 - smoothstep(0.0, 1.4, r)) + 0.04 * noise(p * 3.0 + t * 0.3);
   float v = mix(0.0, sky, smoothstep(radius - 0.004, radius + 0.002, r));
   v += mouseGlow(c, 220.0) * 0.18 + pulseRing(c) * 0.35;
   return ditherRamp(v, cell);
