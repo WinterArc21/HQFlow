@@ -140,17 +140,16 @@ function WorkflowCanvasInner({
     [layout, layoutResetRevision],
   );
 
-  // Path tracing (contract §11): hover wins over keyboard focus, which wins over the persisted
-  // selection, matching how each one takes over the user's attention — a hover is the most
-  // momentary/explicit signal, selection the most passive/lingering one.
+  // Path tracing follows the pointer only. Focus and selection outlive the gesture that set
+  // them (closing a step card hands focus back to its node), so tracing them left the board
+  // dimmed after the user had moved on.
   const [hoveredStepId, setHoveredStepId] = useState<string | null>(null);
-  const [focusedStepId, setFocusedStepId] = useState<string | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [imageExporting, setImageExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const realStepIds = useMemo(() => new Set(workflow.steps.map((step) => step.id)), [workflow]);
   const visualSelectedStepId = imageExporting ? null : selectedStepId;
-  const candidateTraceAnchorId = imageExporting ? null : hoveredStepId ?? focusedStepId ?? selectedStepId;
+  const candidateTraceAnchorId = imageExporting ? null : hoveredStepId;
   const traceAnchorId = candidateTraceAnchorId !== null && realStepIds.has(candidateTraceAnchorId) ? candidateTraceAnchorId : null;
   const tracePath = useMemo(
     () => (traceAnchorId !== null ? computeTracePath(workflow, traceAnchorId) : null),
@@ -158,8 +157,6 @@ function WorkflowCanvasInner({
   );
   const onHoverStart = useCallback((stepId: string) => setHoveredStepId(stepId), []);
   const onHoverEnd = useCallback(() => setHoveredStepId(null), []);
-  const onFocusStep = useCallback((stepId: string) => setFocusedStepId(stepId), []);
-  const onBlurStep = useCallback(() => setFocusedStepId(null), []);
   const handleClearSelection = useCallback(() => selectStep(null), [selectStep]);
   const handleSelectNode = useCallback((nodeId: string) => {
     selectStep(nodeId);
@@ -210,8 +207,6 @@ function WorkflowCanvasInner({
         onNodeKeyDown: handleNodeKeyDown,
         onHoverStart,
         onHoverEnd,
-        onFocusStep,
-        onBlurStep,
       }),
     ],
     [
@@ -227,8 +222,6 @@ function WorkflowCanvasInner({
       handleNodeKeyDown,
       onHoverStart,
       onHoverEnd,
-      onFocusStep,
-      onBlurStep,
     ],
   );
   const initialNodes = useMemo(

@@ -52,8 +52,6 @@ function makeData(overrides: Partial<StepNodeData> = {}): StepNodeData {
     onKeyDown: () => {},
     onHoverStart: () => {},
     onHoverEnd: () => {},
-    onFocusStep: () => {},
-    onBlurStep: () => {},
     ...overrides,
   };
 }
@@ -247,8 +245,6 @@ describe("canvas outcome and legend semantics", () => {
       onNodeKeyDown: () => {},
       onHoverStart: () => {},
       onHoverEnd: () => {},
-      onFocusStep: () => {},
-      onBlurStep: () => {},
     });
     const source = nodes.find((node) => node.id === "source");
 
@@ -333,8 +329,6 @@ describe("canvas outcome and legend semantics", () => {
       onKeyDown: () => {},
       onHoverStart: () => {},
       onHoverEnd: () => {},
-      onFocusStep: () => {},
-      onBlurStep: () => {},
     };
       const props = { ...makeProps(makeData()), id: data.step.id, type: "outcome", data } as NodeProps<OutcomeFlowNode>;
       const { container, unmount } = render(
@@ -359,8 +353,6 @@ describe("canvas outcome and legend semantics", () => {
       onKeyDown: () => {},
       onHoverStart: () => {},
       onHoverEnd: () => {},
-      onFocusStep: () => {},
-      onBlurStep: () => {},
     };
     const props = { ...makeProps(makeData()), id: "done", type: "outcome", data } as NodeProps<OutcomeFlowNode>;
     const { container } = render(

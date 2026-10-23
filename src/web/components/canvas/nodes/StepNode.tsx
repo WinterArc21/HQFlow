@@ -48,8 +48,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     onKeyDown,
     onHoverStart,
     onHoverEnd,
-    onFocusStep,
-    onBlurStep,
   } = data;
   const category = categoryToken(step.category);
   const io = stepIoSummary(step);
@@ -89,8 +87,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       onPointerMove={trackSpotlight}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      onFocus={onFocusStep}
-      onBlur={onBlurStep}
     >
       {/* Only source ports carrying an edge are visible. A target's arrival is already marked by
           the arrowhead, so target-side dots would double up on that same point. Dynamic source

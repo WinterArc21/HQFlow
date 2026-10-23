@@ -1,6 +1,6 @@
 /** Converts a `LayoutResult` plus current UI state into the plain node/edge arrays React Flow
  * renders. Kept out of `WorkflowCanvas.tsx` so that component stays focused on wiring. */
-import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Position, type NodeHandle } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
@@ -105,13 +105,10 @@ export function chooseCardinalHandles(
     : { sourceHandle: "out-top", targetHandle: "in-bottom" };
 }
 
-/** Shared hover/focus wiring every node (step or outcome) needs for path tracing (contract §11:
- * "Must work for keyboard focus too, not just mouse"). */
+/** Shared hover wiring every node (step or outcome) needs for path tracing. */
 export interface TraceHandlers {
   onHoverStart: (stepId: string) => void;
   onHoverEnd: () => void;
-  onFocusStep: (stepId: string) => void;
-  onBlurStep: () => void;
 }
 
 export interface BuildFlowNodesParams extends TraceHandlers {
@@ -188,8 +185,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
     const traceHandlers = {
       onHoverStart: () => params.onHoverStart(step.id),
       onHoverEnd: params.onHoverEnd,
-      onFocusStep: (_event: ReactFocusEvent<HTMLElement>) => params.onFocusStep(step.id),
-      onBlurStep: (_event: ReactFocusEvent<HTMLElement>) => params.onBlurStep(),
     };
 
     if (layoutNode.isOutcome) {

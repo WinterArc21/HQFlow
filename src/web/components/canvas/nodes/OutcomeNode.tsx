@@ -24,7 +24,7 @@ const TONE_LABELS = {
  * into.
  */
 export function OutcomeNode({ data }: NodeProps<OutcomeFlowNode>) {
-  const { step, tone, band, dimmed, tabIndex, onKeyDown, onHoverStart, onHoverEnd, onFocusStep, onBlurStep } = data;
+  const { step, tone, band, dimmed, tabIndex, onKeyDown, onHoverStart, onHoverEnd } = data;
   const cardClassName = [styles.card, TONE_CLASS_NAMES[tone], dimmed ? styles.dimmed : ""].filter(Boolean).join(" ");
   const accessibleName = `${TONE_LABELS[tone]}: ${step.name}.${step.purpose.length > 0 ? ` ${step.purpose}` : ""}`;
 
@@ -38,8 +38,6 @@ export function OutcomeNode({ data }: NodeProps<OutcomeFlowNode>) {
       onKeyDown={onKeyDown}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      onFocus={onFocusStep}
-      onBlur={onBlurStep}
     >
       {/* Outcome edges keep their success/failure semantics in the edge renderer, while their
           physical attachment follows the same live cardinal choice as work-card edges. */}

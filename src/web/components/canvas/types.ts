@@ -1,7 +1,7 @@
 /** Shared React Flow node/edge type aliases, kept separate so nodes/edges/canvas can all import
  * them without reaching into one another. */
 import type { Edge, Node } from "@xyflow/react";
-import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
 import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
@@ -27,8 +27,6 @@ export interface StepNodeData extends Record<string, unknown> {
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onHoverStart: () => void;
   onHoverEnd: () => void;
-  onFocusStep: (event: ReactFocusEvent<HTMLElement>) => void;
-  onBlurStep: (event: ReactFocusEvent<HTMLElement>) => void;
 }
 
 export type StepFlowNode = Node<StepNodeData, "step">;
@@ -42,8 +40,6 @@ export interface OutcomeNodeData extends Record<string, unknown> {
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onHoverStart: () => void;
   onHoverEnd: () => void;
-  onFocusStep: (event: ReactFocusEvent<HTMLElement>) => void;
-  onBlurStep: (event: ReactFocusEvent<HTMLElement>) => void;
 }
 
 export type OutcomeFlowNode = Node<OutcomeNodeData, "outcome">;
