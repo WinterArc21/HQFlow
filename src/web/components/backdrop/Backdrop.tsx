@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { CATEGORY_KEYS, sceneFor, type Scene } from "../../design/scenes";
+import { sceneFor, type Scene } from "../../design/scenes";
 import { useCodeHQStore, type CodeHQStore, type MotionLevel } from "../../store/useCodeHQStore";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { fragmentSource, VERTEX_SOURCE } from "./shaders";
@@ -58,15 +58,6 @@ function applyAppearance(state: CodeHQStore): void {
   toggleAttribute(root, "data-scene-shader", supportsWebGL2() ? "" : null);
   toggleAttribute(root, "data-grid", state.gridMode === "scene" ? null : state.gridMode);
   toggleAttribute(root, "data-cards", state.cardSurface === "scene" ? null : state.cardSurface);
-  const overrides = state.categoryColors[scene.id] ?? {};
-  for (const category of CATEGORY_KEYS) {
-    const color = overrides[category];
-    if (color === undefined) {
-      root.style.removeProperty(`--cat-${category}`);
-    } else {
-      root.style.setProperty(`--cat-${category}`, color);
-    }
-  }
 }
 
 /**

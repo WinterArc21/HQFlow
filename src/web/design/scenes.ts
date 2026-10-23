@@ -39,6 +39,3 @@ export function sceneFor(id: string | undefined, base: Theme): Scene {
   const scene = findScene(id);
   return scene !== undefined && scene.base === base ? scene : findScene(DEFAULT_SCENE[base])!;
 }
-
-export const CATEGORY_KEYS = ["entry", "logic", "decision", "data", "external", "output"] as const;
-export type CategoryKey = (typeof CATEGORY_KEYS)[number];

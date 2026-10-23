@@ -112,7 +112,7 @@ describe("useCodeHQStore", () => {
     expect(raw).not.toBeNull();
     const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
-    expect(parsed.version).toBe(5);
+    expect(parsed.version).toBe(6);
     expect(parsed.state.theme).toBe("light");
     expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
@@ -122,7 +122,7 @@ describe("useCodeHQStore", () => {
     });
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
     expect(Object.keys(parsed.state).sort()).toEqual(
-      ["cardSurface", "categoryColors", "darkScene", "gridMode", "lightScene", "motion", "theme"],
+      ["cardSurface", "darkScene", "gridMode", "lightScene", "motion", "theme"],
     );
   });
 

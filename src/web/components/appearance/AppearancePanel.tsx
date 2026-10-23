@@ -1,13 +1,11 @@
 import { useEffect, useRef, type CSSProperties } from "react";
-import { ArrowCounterClockwise, Shuffle, X } from "@phosphor-icons/react";
-import { CATEGORY_KEYS, SCENES, type CategoryKey } from "../../design/scenes";
-import { categoryToken } from "../../design/semantics";
+import { X } from "@phosphor-icons/react";
+import { SCENES } from "../../design/scenes";
 import { useCodeHQStore, type CardSurface, type GridMode, type MotionLevel } from "../../store/useCodeHQStore";
-import { activeScene, readCssColor, toHexColor } from "../backdrop";
+import { activeScene } from "../backdrop";
 import { IconButton } from "../primitives";
 import { Island } from "../shell/Island";
 import { useDotGrid } from "../shell/dotGrid";
-import { shuffledPalette } from "./palette";
 import styles from "./AppearancePanel.module.css";
 
 const PANEL_WIDTH = 14;
@@ -57,8 +55,8 @@ function Segmented<T extends string>({ label, value, choices, onChange }: { labe
 }
 
 /**
- * Appearance: pick a scene, tune motion, grid and card surface, and recolour each card category
- * for the scene you are on. Everything persists locally; nothing reaches the workflow files.
+ * Appearance: pick a scene and tune motion, grid and card surface. Card colours belong to the
+ * scene. Everything persists locally; nothing reaches the workflow files.
  */
 export function AppearancePanel({ onClose }: { onClose: () => void }) {
   const grid = useDotGrid();
@@ -67,12 +65,10 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
   const motion = useCodeHQStore((state) => state.motion);
   const gridMode = useCodeHQStore((state) => state.gridMode);
   const cardSurface = useCodeHQStore((state) => state.cardSurface);
-  const overrides = useCodeHQStore((state) => state.categoryColors[scene.id]);
   const setScene = useCodeHQStore((state) => state.setScene);
   const setMotion = useCodeHQStore((state) => state.setMotion);
   const setGridMode = useCodeHQStore((state) => state.setGridMode);
   const setCardSurface = useCodeHQStore((state) => state.setCardSurface);
-  const setCategoryColors = useCodeHQStore((state) => state.setCategoryColors);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -94,16 +90,6 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
 
-  // `applyAppearance` has already written this scene onto the document, so the computed
-  // `--cat-*` values here are the colours on screen.
-  const colors = Object.fromEntries(
-    CATEGORY_KEYS.map((key) => [key, overrides?.[key] ?? toHexColor(readCssColor(`var(--cat-${key})`))]),
-  ) as Record<CategoryKey, string>;
-  const setColor = (key: CategoryKey, color: string) => {
-    // Entry and output are the two ends of one workflow and share a colour (semantics.ts).
-    const linked = key === "entry" || key === "output" ? { entry: color, output: color } : { [key]: color };
-    setCategoryColors(scene.id, { ...overrides, ...linked });
-  };
   const width = Math.min(PANEL_WIDTH, grid.lastColumn);
 
   return (
@@ -151,38 +137,6 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
         <Segmented label="Grid" value={gridMode} choices={GRID_CHOICES} onChange={setGridMode} />
         <Segmented label="Cards" value={cardSurface} choices={CARD_CHOICES} onChange={setCardSurface} />
 
-        <section aria-label="Card colours">
-          <div className={styles.sectionHeader}>
-            <span className={styles.sectionLabel}>Card colours · {scene.name}</span>
-            <IconButton
-              label="Shuffle card colours"
-              icon={<Shuffle size={14} />}
-              size="sm"
-              onClick={() => setCategoryColors(scene.id, shuffledPalette(scene.base))}
-            />
-            <IconButton
-              label="Reset card colours"
-              icon={<ArrowCounterClockwise size={14} />}
-              size="sm"
-              disabled={overrides === undefined}
-              onClick={() => setCategoryColors(scene.id, null)}
-            />
-          </div>
-          <div className={styles.colors}>
-            {CATEGORY_KEYS.map((key) => (
-              <label key={key} className={styles.color} style={{ "--swatch": colors[key] } as CSSProperties}>
-                <input
-                  type="color"
-                  className={styles.colorInput}
-                  value={colors[key]}
-                  onChange={(event) => setColor(key, event.target.value)}
-                />
-                <span className={styles.colorDot} aria-hidden="true" />
-                <span className={styles.colorLabel}>{categoryToken(key).label}</span>
-              </label>
-            ))}
-          </div>
-        </section>
       </div>
     </Island>
   );

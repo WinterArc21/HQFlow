@@ -26,7 +26,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 5;
+const PERSIST_VERSION = 6;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -51,8 +51,6 @@ interface CodeHQUiState {
   motion: MotionLevel;
   gridMode: GridMode;
   cardSurface: CardSurface;
-  /** Per-scene card colour overrides, keyed by scene id then category, as `#rrggbb`. */
-  categoryColors: Record<string, Partial<Record<string, string>>>;
   appearanceOpen: boolean;
 }
 
@@ -79,7 +77,6 @@ interface CodeHQUiActions {
   setMotion: (motion: MotionLevel) => void;
   setGridMode: (gridMode: GridMode) => void;
   setCardSurface: (cardSurface: CardSurface) => void;
-  setCategoryColors: (sceneId: string, colors: Partial<Record<string, string>> | null) => void;
   setAppearanceOpen: (open: boolean) => void;
 }
 
@@ -144,7 +141,6 @@ const INITIAL_STATE: CodeHQUiState = {
   motion: "full",
   gridMode: "scene",
   cardSurface: "scene",
-  categoryColors: {},
   appearanceOpen: false,
 };
 
@@ -289,16 +285,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setCardSurface: (cardSurface) => set({ cardSurface }),
 
-      setCategoryColors: (sceneId, colors) => set((state) => {
-        const categoryColors = { ...state.categoryColors };
-        if (colors === null || Object.keys(colors).length === 0) {
-          delete categoryColors[sceneId];
-        } else {
-          categoryColors[sceneId] = colors;
-        }
-        return { categoryColors };
-      }),
-
       setAppearanceOpen: (appearanceOpen) => set({ appearanceOpen }),
     }),
     {
@@ -312,11 +298,11 @@ export const useCodeHQStore = create<CodeHQStore>()(
         motion: state.motion,
         gridMode: state.gridMode,
         cardSurface: state.cardSurface,
-        categoryColors: state.categoryColors,
       }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        * v5 added appearance fields; older states simply take their defaults from the initial state.
+       * v6 dropped the per-scene card colour overrides: each scene now owns its card colours.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {
@@ -325,6 +311,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
         const state = { ...(persisted as Record<string, unknown>) };
         delete state.depth;
         delete state.canvasLayouts;
+        delete state.categoryColors;
         return state as unknown as CodeHQUiState;
       },
     },
