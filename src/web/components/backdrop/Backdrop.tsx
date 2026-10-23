@@ -144,6 +144,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       res: uniform("u_res"),
       buf: uniform("u_buf"),
       scale: uniform("u_scale"),
+      px: uniform("u_px"),
       time: uniform("u_time"),
       mouse: uniform("u_mouse"),
       pan: uniform("u_pan"),
@@ -182,13 +183,19 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
     window.addEventListener(PULSE_EVENT, onPulse);
 
     const resize = () => {
-      const scale = (scene.crisp ? 1 : SMOOTH_SCALE) * Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(window.innerWidth * scale));
-      canvas.height = Math.max(1, Math.round(window.innerHeight * scale));
+      // A dither scene renders one shader pixel per dither cell and lets the browser scale it up
+      // crisply; smooth scenes render below device resolution.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const scale = scene.pixel !== undefined ? 1 / scene.pixel : (scene.crisp ? 1 : SMOOTH_SCALE) * dpr;
+      canvas.width = Math.max(1, Math.ceil(window.innerWidth * scale));
+      canvas.height = Math.max(1, Math.ceil(window.innerHeight * scale));
+      canvas.style.width = `${canvas.width / scale}px`;
+      canvas.style.height = `${canvas.height / scale}px`;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(u.res, window.innerWidth, window.innerHeight);
       gl.uniform2f(u.buf, canvas.width, canvas.height);
-      gl.uniform1f(u.scale, canvas.width / window.innerWidth);
+      gl.uniform1f(u.scale, scale);
+      gl.uniform1f(u.px, scene.pixel ?? 1);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -240,7 +247,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
   return (
     <canvas
       ref={canvasRef}
-      className={`${styles.canvas} ${scene.crisp ? styles.crisp : ""}`}
+      className={`${styles.canvas} ${scene.crisp || scene.pixel !== undefined ? styles.crisp : ""}`}
       data-scene-canvas={scene.id}
       aria-hidden="true"
     />

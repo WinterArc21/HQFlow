@@ -12,6 +12,7 @@ import type { ShaderId } from "../../design/scenes";
  *   u_mouse  pointer in CSS pixels, or negative when the pointer is away
  *   u_pan    canvas pan in CSS pixels, for a little parallax
  *   u_pulse  xy = where a live update landed (CSS px), z = its age in seconds (< 0 = none)
+ *   u_px     CSS pixels per dither cell (1 for smooth scenes)
  */
 const PRELUDE = /* glsl */ `#version 300 es
 precision highp float;
@@ -23,6 +24,7 @@ uniform vec2 u_mouse;
 uniform vec2 u_pan;
 uniform vec3 u_pulse;
 uniform vec3 u_c[5];
+uniform float u_px;
 out vec4 outColor;
 
 float hash(vec2 p) {
@@ -57,6 +59,22 @@ float bayer2(vec2 a) {
 }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+
+/** The dither cell a pixel belongs to, and that cell's centre in CSS pixels. */
+vec2 cellOf(vec2 css) { return floor(css / u_px); }
+vec2 cellCentre(vec2 css) { return (floor(css / u_px) + 0.5) * u_px; }
+
+/**
+ * Maps 0..1 onto the five scene colours, ordered-dithering between the two neighbours a value
+ * falls between. Only adjacent colours ever mix, so a smooth field reads as a smooth gradient
+ * with the dither grain on top, never as noise.
+ */
+vec3 ditherRamp(float v, vec2 cell) {
+  float level = clamp(v, 0.0, 1.0) * 3.999;
+  float base = floor(level);
+  int i = int(base + step(bayer8(cell), level - base));
+  return u_c[i];
+}
 
 float mouseGlow(vec2 css, float radius) {
   if (u_mouse.x < 0.0) return 0.0;
