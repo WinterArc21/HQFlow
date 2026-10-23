@@ -171,10 +171,11 @@
 
 /* ================================================================================================
  * Scenes. Each block is a complete look: background shader colours (--scene-c0..c4, read by
- * components/backdrop), surfaces, text, and every accent re-picked to read on that background.
+ * components/backdrop), surfaces, text, every accent re-picked to read on that background, and
+ * card colours (--cat-*) curated for it: dark scenes keep >=8:1 against their canvas.
  * Dark scenes ride on the dark defaults above; light scenes ride on the paper block.
  * `[data-scene-probe]` lets the appearance picker read a scene's colours without applying it.
- * Light-scene accents keep >=4.5:1 against their white surface, as the paper ones do.
+ * Light-scene accents and card colours keep >=4.5:1 against their white surface.
  * ============================================================================================== */
 
 :root[data-scene="abyss"],
@@ -204,6 +205,13 @@
   --accent-output: #6ee7b7;
   --accent-rose: #f9a8d4;
   --accent-orange: #fdba74;
+  /* card colours, curated for this scene */
+  --cat-entry: #7cf5c8;
+  --cat-logic: #4fd8ff;
+  --cat-decision: #ff8fc8;
+  --cat-data: #ffc78a;
+  --cat-external: #b3a4ff;
+  --cat-output: #7cf5c8;
   --focus-ring: #60a5fa;
   --grid-dot: rgba(204, 251, 241, 0.12);
 }
@@ -235,6 +243,13 @@
   --accent-output: #2b8a3e;
   --accent-rose: #c2255c;
   --accent-orange: #c4420c;
+  /* card colours, curated for this scene */
+  --cat-entry: #1e7a5a;
+  --cat-logic: #2f62c9;
+  --cat-decision: #c2306f;
+  --cat-data: #bd4b17;
+  --cat-external: #6b45c9;
+  --cat-output: #1e7a5a;
   --focus-ring: #3b5bdb;
   --grid-dot: rgba(42, 31, 45, 0.1);
 }
@@ -266,6 +281,13 @@
   --accent-output: #2f8050;
   --accent-rose: #b8336a;
   --accent-orange: #b84c18;
+  /* card colours, curated for this scene */
+  --cat-entry: #2b7864;
+  --cat-logic: #4352c4;
+  --cat-decision: #b3326e;
+  --cat-data: #ad5418;
+  --cat-external: #7a42bd;
+  --cat-output: #2b7864;
   --focus-ring: #3d5bd9;
   --grid-dot: rgba(43, 33, 64, 0.1);
 }
@@ -297,6 +319,13 @@
   --accent-output: #86efac;
   --accent-rose: #ff9fc8;
   --accent-orange: #ffb48c;
+  /* card colours, curated for this scene */
+  --cat-entry: #ffd9a8;
+  --cat-logic: #a8b8ff;
+  --cat-decision: #ff8fbf;
+  --cat-data: #ff9e7a;
+  --cat-external: #d6a0ff;
+  --cat-output: #ffd9a8;
   --focus-ring: #ff9fc8;
   --grid-dot: rgba(255, 180, 140, 0.12);
 }
@@ -328,6 +357,13 @@
   --accent-output: #86efac;
   --accent-rose: #f9a8d4;
   --accent-orange: #fdba74;
+  /* card colours, curated for this scene */
+  --cat-entry: #8cf0c6;
+  --cat-logic: #6fcfff;
+  --cat-decision: #ff9ec8;
+  --cat-data: #ffd08a;
+  --cat-external: #b0a4ff;
+  --cat-output: #8cf0c6;
   --focus-ring: #5fd3ee;
   --grid-dot: rgba(216, 251, 255, 0.12);
 }

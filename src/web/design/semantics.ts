@@ -56,8 +56,8 @@ export interface ToneVisual {
  * category colour and can run from the first node to the last.
  *
  * Each category reads its own `--cat-*` token (tokens.css), which defaults to the accent named
- * above. Scenes and the appearance panel recolour a category through that token alone, so a new
- * card colour never leaks into the edges, badges, or drawer services that share the accent.
+ * above. Each scene curates its card colours through that token alone, so a card colour never
+ * leaks into the edges, badges, or drawer services that share the accent.
  */
 const CATEGORY_VISUALS: Record<NonNullable<WorkflowStep["category"]>, CategoryVisual> = {
   entry: { varName: "--cat-entry", label: "Entry" },

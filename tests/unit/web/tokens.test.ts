@@ -44,7 +44,7 @@ describe("design token guard", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("defines a token block, with all five shader colours, for every registered scene", () => {
+  it("defines a token block, with shader and card colours, for every registered scene", () => {
     const tokens = readFileSync(ALLOWED_FILE, "utf8");
     for (const scene of SCENES) {
       const start = tokens.indexOf(`:root[data-scene="${scene.id}"]`);
@@ -52,6 +52,9 @@ describe("design token guard", () => {
       const block = tokens.slice(start, tokens.indexOf("}", start));
       for (let i = 0; i < 5; i += 1) {
         expect(block, `${scene.id} --scene-c${i}`).toContain(`--scene-c${i}:`);
+      }
+      for (const category of ["entry", "logic", "decision", "data", "external", "output"]) {
+        expect(block, `${scene.id} --cat-${category}`).toContain(`--cat-${category}:`);
       }
     }
   });
