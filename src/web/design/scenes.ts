@@ -6,7 +6,7 @@
  */
 import type { Theme } from "../store/useCodeHQStore";
 
-export type ShaderId = "aurora" | "ember" | "synthwave" | "abyss" | "nebula" | "sorbet" | "topo" | "riso" | "dawn";
+export type ShaderId = "ember" | "abyss" | "nebula" | "sorbet" | "topo" | "riso" | "dawn";
 
 export interface Scene {
   id: string;
@@ -25,10 +25,8 @@ export interface Scene {
 
 export const SCENES: readonly Scene[] = [
   { id: "graphite", name: "Graphite", base: "dark", shader: null, tagline: "The quiet original. Dots on charcoal." },
-  { id: "aurora", name: "Aurora", base: "dark", shader: "aurora", tagline: "Northern lights drift behind the map." },
   { id: "nebula", name: "Nebula", base: "dark", shader: "nebula", tagline: "Violet gas clouds and a slow starfield." },
   { id: "abyss", name: "Abyss", base: "dark", shader: "abyss", tagline: "Caustic light on a deep ocean floor." },
-  { id: "synthwave", name: "Synthwave", base: "dark", shader: "synthwave", tagline: "Striped sun over an endless neon grid." },
   { id: "ember", name: "Ember", base: "dark", shader: "ember", tagline: "Ordered-dither heat, rising like a forge.", pixel: 3 },
   { id: "paper", name: "Paper", base: "light", shader: null, tagline: "Warm paper and a quiet dot grid." },
   { id: "sorbet", name: "Sorbet", base: "light", shader: "sorbet", tagline: "A soft pastel mesh with film grain." },

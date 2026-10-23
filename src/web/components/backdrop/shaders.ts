@@ -100,31 +100,6 @@ void main() {
 `;
 
 const SCENES: Record<ShaderId, string> = {
-  aurora: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 uv = css / u_res.y;
-  vec2 p = uv - u_pan * 0.00008;
-  float t = u_time * 0.05;
-  vec3 col = mix(u_c[0], u_c[1], smoothstep(0.0, 1.2, uv.y));
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    float line = 0.2 + fi * 0.16
-      + 0.08 * sin(p.x * 2.1 + t * 3.0 + fi * 1.9)
-      + 0.16 * (fbm(vec2(p.x * 1.2 + fi * 7.0, t + fi)) - 0.5);
-    float d = p.y - line;
-    float band = d > 0.0 ? exp(-d * 6.0) : exp(d * 38.0);
-    float streak = 0.45 + 0.55 * fbm(vec2(p.x * 26.0 + fi * 3.0, t * 3.0));
-    vec3 tint = i == 0 ? u_c[2] : (i == 1 ? u_c[3] : u_c[4]);
-    col += tint * band * streak * (0.42 - fi * 0.08) * (1.0 + mouseGlow(css, 300.0) * 0.8);
-  }
-  float star = step(0.9978, hash(floor(css / 2.5)));
-  col += star * (0.5 + 0.5 * sin(u_time * 2.0 + hash(floor(css)) * 40.0)) * (1.0 - smoothstep(0.0, 0.7, uv.y)) * 0.55;
-  col += u_c[2] * pulseRing(css) * 0.45;
-  vec2 v = css / u_res - 0.5;
-  col *= 1.0 - dot(v, v) * 0.7;
-  return col;
-}
-`,
   nebula: /* glsl */ `
 vec3 starLayer(vec2 css, float cell, float seed, float twinkle) {
   vec2 g = floor(css / cell);
@@ -187,42 +162,6 @@ vec3 sceneColor(vec2 css) {
   col += u_c[4] * spark * (0.5 + 0.5 * sin(u_time * 1.4 + h * 30.0));
   col += u_c[3] * mouseGlow(css, 240.0) * 0.14;
   col += u_c[2] * pulseRing(css) * 0.5;
-  return col;
-}
-`,
-  synthwave: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 uv = vec2(css.x - 0.5 * u_res.x - u_pan.x * 0.04, css.y) / u_res.y;
-  float horizon = 0.66;
-  vec3 col;
-  if (uv.y < horizon) {
-    float k = uv.y / horizon;
-    col = mix(u_c[0], u_c[1], pow(k, 1.8));
-    vec2 sc = vec2(0.0, horizon - 0.15);
-    float r = 0.21;
-    float d = length(uv - sc);
-    float sy = clamp((uv.y - (sc.y - r)) / (2.0 * r), 0.0, 1.0);
-    vec3 sun = mix(u_c[2], u_c[3], sy);
-    float gap = smoothstep(0.42, 1.0, sy) * 0.55;
-    float stripe = step(gap, fract(uv.y * 34.0 - u_time * 0.25));
-    float disc = smoothstep(r + 0.002, r - 0.002, d);
-    col = mix(col, sun, disc * stripe * 0.85);
-    col += u_c[3] * exp(-max(d - r, 0.0) * 7.0) * 0.22;
-    float star = step(0.998, hash(floor(css / 2.0))) * (1.0 - k);
-    col += star * 0.6;
-  } else {
-    float y = uv.y - horizon;
-    float z = 0.14 / max(y, 0.0004);
-    vec2 g = vec2(uv.x * z * 2.2, z + u_time * 0.55);
-    vec2 w = fwidth(g);
-    vec2 a = abs(fract(g - 0.5) - 0.5) / max(w, 0.0001);
-    float line = 1.0 - min(min(a.x, a.y), 1.0);
-    float fade = smoothstep(0.0, 0.12, y);
-    col = mix(u_c[1] * 0.35, u_c[0], smoothstep(0.0, 0.3, y));
-    col += u_c[4] * line * (0.25 + 0.55 * fade) * (1.0 + mouseGlow(css, 220.0) * 1.5);
-    col += u_c[3] * exp(-y * 30.0) * 0.5;
-    col += u_c[4] * pulseRing(css) * 0.6;
-  }
   return col;
 }
 `,
