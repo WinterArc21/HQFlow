@@ -1,0 +1,201 @@
+/* One 8s loop. Card i starts drawing at i x 1.3s; its edge is inked in the 0.5s before that. The
+   cursor keyframes below follow the same schedule (0%, 16%, 32.5%, 49% of the loop). */
+.preview {
+  width: 100%;
+  max-width: 510px;
+  height: auto;
+  overflow: visible;
+  --loop: 8s;
+  --step: 1.3s;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--accent-ice);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ink var(--loop) linear infinite;
+  animation-delay: calc(var(--i) * var(--step) - 0.5s);
+}
+
+.failure {
+  stroke: var(--accent-red);
+}
+
+@keyframes ink {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  6% {
+    stroke-dashoffset: 0;
+  }
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  90%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.card {
+  animation: cardLife var(--loop) linear infinite;
+  animation-delay: calc(var(--i) * var(--step));
+}
+
+@keyframes cardLife {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  90%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.outline {
+  fill: color-mix(in srgb, var(--accent) 0%, var(--bg-surface));
+  fill-opacity: 0;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent));
+  animation: trace var(--loop) var(--ease-standard) infinite;
+  animation-delay: inherit;
+}
+
+@keyframes trace {
+  0% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+  }
+  10% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  16% {
+    fill: color-mix(in srgb, var(--accent) 16%, var(--bg-surface));
+    fill-opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill: color-mix(in srgb, var(--accent) 16%, var(--bg-surface));
+    fill-opacity: 0.9;
+  }
+}
+
+.chip,
+.label,
+.line {
+  animation: pop var(--loop) var(--ease-standard) infinite;
+  animation-delay: inherit;
+}
+
+.chip {
+  fill: var(--accent);
+}
+
+.label {
+  fill: var(--text-primary);
+  font: 600 14px var(--font-ui);
+}
+
+.line {
+  fill: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+}
+
+@keyframes pop {
+  0%,
+  9% {
+    opacity: 0;
+  }
+  15%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* The pen: arrives at each card's leading edge as that card starts drawing, then traces it. */
+.cursor {
+  fill: var(--focus-ring);
+  stroke: var(--bg-surface);
+  stroke-width: 1.2;
+  animation: pen var(--loop) var(--ease-standard) infinite;
+}
+
+@keyframes pen {
+  0% {
+    transform: translate(16px, 84px);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  8% {
+    transform: translate(152px, 58px);
+  }
+  13% {
+    transform: translate(186px, 84px);
+  }
+  24% {
+    transform: translate(322px, 110px);
+  }
+  29% {
+    transform: translate(254px, 150px);
+  }
+  40% {
+    transform: translate(322px, 170px);
+  }
+  45% {
+    transform: translate(356px, 84px);
+  }
+  56% {
+    transform: translate(492px, 110px);
+  }
+  70% {
+    transform: translate(470px, 190px);
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: translate(470px, 190px);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion and the Still level show the finished map. */
+@media (prefers-reduced-motion: reduce) {
+  .edge,
+  .card,
+  .outline,
+  .chip,
+  .label,
+  .line {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 0.9;
+  }
+
+  .cursor {
+    display: none;
+  }
+}
+
+:global(:root[data-motion="still"]) .preview * {
+  animation: none;
+  stroke-dashoffset: 0;
+  fill-opacity: 0.9;
+}
+
+:global(:root[data-motion="still"]) .cursor {
+  display: none;
+}

@@ -6,13 +6,16 @@ export interface StateLayoutProps {
   title: string;
   children: ReactNode;
   actions?: ReactNode;
+  /** Decorative art above the title. */
+  hero?: ReactNode;
 }
 
 /** Shared centred-card layout for the four full-page states. */
-export function StateLayout({ icon, title, children, actions }: StateLayoutProps) {
+export function StateLayout({ icon, title, children, actions, hero }: StateLayoutProps) {
   return (
     <div className={styles.layout}>
       <div className={styles.card}>
+        {hero !== undefined ? <div className={styles.hero}>{hero}</div> : null}
         {icon !== undefined ? (
           <div className={styles.icon} aria-hidden="true">
             {icon}
