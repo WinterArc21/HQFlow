@@ -53,8 +53,13 @@ export function CopyButton({ value, label = "Copy", variant = "secondary", size 
 
   return (
     <span>
-      <Button variant={variant} size={size} onClick={handleClick}>
-        {label}
+      <Button variant={variant} size={size} onClick={handleClick} data-copied={status === "copied" ? "true" : undefined}>
+        <span className={styles.labelSwap}>
+          <span className={styles.label}>{label}</span>
+          <svg className={styles.tick} viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 8.5 L6.5 12 L13 4.5" pathLength={1} />
+          </svg>
+        </span>
       </Button>
       <span className={`${styles.status} ${toneClass}`} role="status" aria-live="polite">
         {text}

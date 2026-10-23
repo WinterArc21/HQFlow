@@ -12,3 +12,42 @@
 .failed {
   color: var(--accent-red);
 }
+
+/* On copy the label lifts away and a tick draws itself in its place, then they swap back. The
+   button keeps the label's width throughout, so nothing around it moves. */
+.labelSwap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.label {
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-spring);
+}
+
+.tick {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--accent-green);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+[data-copied="true"] .label {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.9);
+}
+
+[data-copied="true"] .tick {
+  opacity: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 420ms var(--ease-out-expo) 80ms;
+}

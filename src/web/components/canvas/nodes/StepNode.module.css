@@ -368,3 +368,87 @@
   font-size: var(--fs-micro);
   color: var(--text-tertiary);
 }
+
+/* ---- micro-interactions ---- */
+
+/* A soft light in the card's own colour follows the pointer across it, and the card lifts a hair.
+   The light is a pseudo-element over the body, so it never touches the gradient that encodes the
+   category; it fades in and out with hover. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--node-accent) 20%, transparent),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:hover {
+  translate: 0 -2px;
+}
+
+.card {
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard),
+    opacity var(--dur-fast) var(--ease-standard),
+    translate var(--dur-base) var(--ease-spring);
+}
+
+/* The selected card wears a ring of light that slowly orbits it, in the selection blue fading into
+   the card's own colour. */
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.selected::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 14px;
+  padding: 2px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--ring-angle),
+    var(--accent-blue),
+    color-mix(in srgb, var(--node-accent) 80%, transparent) 30%,
+    transparent 50%,
+    color-mix(in srgb, var(--node-accent) 80%, transparent) 70%,
+    var(--accent-blue)
+  );
+  mask: linear-gradient(black, black) content-box exclude, linear-gradient(black, black);
+  animation: ringOrbit 4s linear infinite;
+}
+
+@keyframes ringOrbit {
+  to {
+    --ring-angle: 360deg;
+  }
+}
+
+:global(:root[data-motion="still"]) .selected::before {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selected::before {
+    animation: none;
+  }
+
+  .card:hover {
+    translate: none;
+  }
+}

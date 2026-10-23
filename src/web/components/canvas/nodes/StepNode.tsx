@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
@@ -22,6 +22,13 @@ import styles from "./StepNode.module.css";
  * Category is carried by the card's own accent gradient rather than by a spine: see `.card` in the
  * stylesheet for why the leading edge tops out at 15%.
  */
+/** Feeds the hover spotlight its position without a re-render: two custom properties, in %. */
+function trackSpotlight(event: ReactPointerEvent<HTMLDivElement>): void {
+  const rect = event.currentTarget.getBoundingClientRect();
+  event.currentTarget.style.setProperty("--mx", `${((event.clientX - rect.left) / rect.width) * 100}%`);
+  event.currentTarget.style.setProperty("--my", `${((event.clientY - rect.top) / rect.height) * 100}%`);
+}
+
 export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
   const {
     step,
@@ -79,6 +86,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       aria-current={selected ? "true" : undefined}
       style={cardStyle}
       onKeyDown={onKeyDown}
+      onPointerMove={trackSpotlight}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
       onFocus={onFocusStep}

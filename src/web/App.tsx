@@ -106,6 +106,7 @@ export function App() {
       {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
       locationLabel={selectedRecord?.workflow.name ?? "Overview"}
       status={connectionStatus}
+      pulseKey={snapshot.generatedAt}
       {...(connectionStatus === "invalid" ? { errorCount } : {})}
       navigator={(close) => (
         <WorkflowNavigator

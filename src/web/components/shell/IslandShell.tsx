@@ -20,6 +20,8 @@ export interface IslandShellProps {
   locationLabel: string;
   status: CodeHQStatus;
   errorCount?: number;
+  /** Changes on every snapshot, so the status dot can ping. */
+  pulseKey?: string;
   /** The workflow navigator; `close` dismisses the tree island. */
   navigator: (close: () => void) => ReactNode;
   /** Shown under the title, e.g. the diagnostics banner. */
@@ -45,7 +47,7 @@ const NARROW_IDENTITY_TOP = 3;
  * right carries status, the agent prompt and theme; the bottom dock carries search, the canvas
  * controls, and the workflow tree, which opens by growing the dock upward.
  */
-export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, navigator, notice, overlays, children }: IslandShellProps) {
+export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, pulseKey, navigator, notice, overlays, children }: IslandShellProps) {
   const grid = useDotGrid();
   const openSearch = useCodeHQStore((state) => state.openSearch);
   const appearanceOpen = useCodeHQStore((state) => state.appearanceOpen);
@@ -132,7 +134,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
 
       <Island placement={{ r: 0, t: 0, w: "auto", h: 2 }}>
         <div className={styles.status}>
-          <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} />
+          <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} {...(pulseKey !== undefined ? { pulseKey } : {})} />
           <span className={styles.divider} aria-hidden="true" />
           <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
           <span data-appearance-toggle="">

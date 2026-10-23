@@ -30,3 +30,48 @@
 .red {
   color: var(--accent-red);
 }
+
+.dot {
+  position: relative;
+}
+
+/* Live breathes: a slow glow that says "watching". */
+.breathing {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 22%, transparent);
+  }
+}
+
+/* One ring out of the dot for every snapshot that arrives. */
+.ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: ping 900ms var(--ease-out-expo) forwards;
+}
+
+@keyframes ping {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathing,
+  .ping {
+    animation: none;
+  }
+
+  .ping {
+    display: none;
+  }
+}
