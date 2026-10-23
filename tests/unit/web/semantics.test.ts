@@ -12,28 +12,25 @@ import type { WorkflowStep } from "@schema/workflow";
 
 describe("categoryToken", () => {
   const cases: Array<[WorkflowStep["category"], string]> = [
-    ["entry", "--accent-output"],
-    ["logic", "--accent-cyan"],
-    ["decision", "--accent-rose"],
-    ["data", "--accent-orange"],
-    ["external", "--accent-violet"],
-    ["output", "--accent-output"],
+    ["entry", "--cat-entry"],
+    ["logic", "--cat-logic"],
+    ["decision", "--cat-decision"],
+    ["data", "--cat-data"],
+    ["external", "--cat-external"],
+    ["output", "--cat-output"],
   ];
 
   it("maps every category to the intended distinct design token", () => {
     for (const [category, varName] of cases) {
       expect(categoryToken(category).varName, category).toBe(varName);
     }
-    const shared = categoryToken("entry").varName;
-    const middle = (["logic", "decision", "data", "external"] as const).map((c) => categoryToken(c).varName);
-    expect(categoryToken("output").varName).toBe(shared);
-    expect(middle).not.toContain(shared);
-    expect(new Set(middle).size).toBe(middle.length);
+    const all = (["entry", "logic", "decision", "data", "external", "output"] as const).map((c) => categoryToken(c).varName);
+    expect(new Set(all).size).toBe(all.length);
   });
 
   it("falls back to a neutral marker when category is unspecified", () => {
     const result = categoryToken(undefined);
-    expect(result.varName).toBe("--accent-cyan");
+    expect(result.varName).toBe("--cat-logic");
     expect(result.label).toBeTruthy();
   });
 });

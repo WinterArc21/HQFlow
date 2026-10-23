@@ -65,6 +65,15 @@
   --accent-orchid: #bf88cc; /* unused; kept so old mixes do not go missing */
   --focus-ring: #5b8def;
 
+  /* ---- step-card categories (semantics.ts) — each defaults to its accent, and only the card
+     reads it, so recolouring a category never repaints an edge or a badge ---- */
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+
   /* ---- technical canvas texture (very low opacity, theme-tuned) ---- */
   --grid-line: rgba(255, 255, 255, 0.035);
   --grid-line-strong: rgba(255, 255, 255, 0.07);
