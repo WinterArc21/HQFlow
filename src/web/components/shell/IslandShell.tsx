@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CaretUp, MagnifyingGlass, TreeStructure } from "@phosphor-icons/react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { CaretUp, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
 import type { CanvasChrome } from "../canvas";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
-import { CopyButton, Kbd } from "../primitives";
+import { AppearancePanel } from "../appearance";
+import { CopyButton, IconButton, Kbd } from "../primitives";
 import { DOT_ORIGIN, DOT_STEP, useDotGrid } from "./dotGrid";
 import { Island } from "./Island";
 import { StatusIndicator, type CodeHQStatus } from "./StatusIndicator";
@@ -47,6 +48,9 @@ const NARROW_IDENTITY_TOP = 3;
 export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, navigator, notice, overlays, children }: IslandShellProps) {
   const grid = useDotGrid();
   const openSearch = useCodeHQStore((state) => state.openSearch);
+  const appearanceOpen = useCodeHQStore((state) => state.appearanceOpen);
+  const setAppearanceOpen = useCodeHQStore((state) => state.setAppearanceOpen);
+  const closeAppearance = useCallback(() => setAppearanceOpen(false), [setAppearanceOpen]);
   const [titleTarget, setTitleTarget] = useState<HTMLElement | null>(null);
   const [controlsTarget, setControlsTarget] = useState<HTMLElement | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
@@ -131,6 +135,14 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
           <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} />
           <span className={styles.divider} aria-hidden="true" />
           <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
+          <span data-appearance-toggle="">
+            <IconButton
+              label="Appearance"
+              icon={<Palette size={16} />}
+              aria-expanded={appearanceOpen}
+              onClick={() => setAppearanceOpen(!appearanceOpen)}
+            />
+          </span>
           <ThemeToggle />
         </div>
       </Island>
@@ -169,6 +181,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
         </div>
       </Island>
 
+      {appearanceOpen ? <AppearancePanel onClose={closeAppearance} /> : null}
       {overlays}
     </div>
   );

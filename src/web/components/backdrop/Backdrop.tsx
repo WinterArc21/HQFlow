@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { sceneFor, type Scene } from "../../design/scenes";
-import { useCodeHQStore, type MotionLevel } from "../../store/useCodeHQStore";
+import { CATEGORY_KEYS, sceneFor, type Scene } from "../../design/scenes";
+import { useCodeHQStore, type CodeHQStore, type MotionLevel } from "../../store/useCodeHQStore";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { fragmentSource, VERTEX_SOURCE } from "./shaders";
 import { readCssColor } from "./cssColor";
@@ -22,50 +22,63 @@ export function emitScenePulse(detail: PulseDetail): void {
   window.dispatchEvent(new CustomEvent<PulseDetail>(PULSE_EVENT, { detail }));
 }
 
-/**
- * Applies the active scene to the document (`data-theme`, `data-scene`, and the appearance
- * overrides) and, for shader scenes, paints the background with WebGL2 behind every surface.
- * Without WebGL2 the scene still applies its colours over the plain dot field.
- */
-export function Backdrop() {
-  const theme = useCodeHQStore((state) => state.theme);
-  const sceneId = useCodeHQStore((state) => (state.theme === "dark" ? state.darkScene : state.lightScene));
-  const motion = useCodeHQStore((state) => state.motion);
-  const gridMode = useCodeHQStore((state) => state.gridMode);
-  const cardSurface = useCodeHQStore((state) => state.cardSurface);
-  const categoryColors = useCodeHQStore((state) => state.categoryColors);
-  const reducedMotion = usePrefersReducedMotion();
-  const scene = sceneFor(sceneId, theme);
-  const effectiveMotion: MotionLevel = reducedMotion ? "still" : motion;
-  const overrides = categoryColors[scene.id];
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", scene.base);
-    root.setAttribute("data-scene", scene.id);
-    root.setAttribute("data-motion", effectiveMotion);
-    toggleAttribute(root, "data-scene-shader", scene.shader !== null && supportsWebGL2() ? "" : null);
-    toggleAttribute(root, "data-grid", gridMode === "scene" ? null : gridMode);
-    toggleAttribute(root, "data-cards", cardSurface === "scene" ? null : cardSurface);
-    const applied: string[] = [];
-    for (const [category, color] of Object.entries(overrides ?? {})) {
-      if (color !== undefined) {
-        root.style.setProperty(`--cat-${category}`, color);
-        applied.push(`--cat-${category}`);
-      }
-    }
-    return () => applied.forEach((name) => root.style.removeProperty(name));
-  }, [cardSurface, effectiveMotion, gridMode, overrides, scene]);
-
-  return scene.shader !== null ? <ShaderCanvas key={scene.id} scene={scene} motion={effectiveMotion} /> : null;
-}
-
 function toggleAttribute(element: HTMLElement, name: string, value: string | null): void {
   if (value === null) {
     element.removeAttribute(name);
   } else {
     element.setAttribute(name, value);
   }
+}
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+  } catch {
+    return false;
+  }
+}
+
+export function activeScene(state: Pick<CodeHQStore, "theme" | "darkScene" | "lightScene">): Scene {
+  return sceneFor(state.theme === "dark" ? state.darkScene : state.lightScene, state.theme);
+}
+
+/**
+ * Writes the active scene and the appearance overrides onto `<html>`. It runs from a store
+ * subscription, not an effect, so the document already shows the new scene by the time any
+ * component re-renders and reads a colour back from it.
+ */
+function applyAppearance(state: CodeHQStore): void {
+  const root = document.documentElement;
+  const scene = activeScene(state);
+  root.setAttribute("data-theme", scene.base);
+  root.setAttribute("data-scene", scene.id);
+  root.setAttribute("data-motion", prefersReducedMotion() ? "still" : state.motion);
+  toggleAttribute(root, "data-scene-shader", scene.shader !== null && supportsWebGL2() ? "" : null);
+  toggleAttribute(root, "data-grid", state.gridMode === "scene" ? null : state.gridMode);
+  toggleAttribute(root, "data-cards", state.cardSurface === "scene" ? null : state.cardSurface);
+  const overrides = state.categoryColors[scene.id] ?? {};
+  for (const category of CATEGORY_KEYS) {
+    const color = overrides[category];
+    if (color === undefined) {
+      root.style.removeProperty(`--cat-${category}`);
+    } else {
+      root.style.setProperty(`--cat-${category}`, color);
+    }
+  }
+}
+
+/**
+ * Paints a shader scene's background with WebGL2 behind every surface. The document-level scene
+ * attributes are kept in sync by `applyAppearance` above, so without WebGL2 the scene's colours
+ * still apply over the plain dot field.
+ */
+export function Backdrop() {
+  const scene = useCodeHQStore(activeScene);
+  const motion = useCodeHQStore((state) => state.motion);
+  const reducedMotion = usePrefersReducedMotion();
+  return scene.shader !== null ? <ShaderCanvas key={scene.id} scene={scene} motion={reducedMotion ? "still" : motion} /> : null;
 }
 
 let webgl2: boolean | undefined;
@@ -232,4 +245,10 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       aria-hidden="true"
     />
   );
+}
+
+// Last, so every helper above is initialised before the first write.
+if (typeof document !== "undefined") {
+  applyAppearance(useCodeHQStore.getState());
+  useCodeHQStore.subscribe(applyAppearance);
 }

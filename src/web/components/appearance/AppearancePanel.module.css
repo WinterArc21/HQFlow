@@ -1,0 +1,270 @@
+.panel {
+  align-items: flex-start;
+  transform-origin: top right;
+  animation: panelIn var(--dur-slow) var(--ease-out-expo);
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sectionHeader .sectionLabel {
+  flex: 1;
+  margin: 0;
+}
+
+.sectionLabel {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ---- scene gallery ---- */
+.scenes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.scene {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-align: left;
+  animation: tileIn var(--dur-slow) var(--ease-out-expo) backwards;
+  animation-delay: calc(var(--i) * 22ms);
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+@keyframes tileIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.scene:hover {
+  background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+.scene[aria-checked="true"] {
+  border-color: var(--focus-ring);
+  color: var(--text-primary);
+}
+
+.scene:focus-visible,
+.segment:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* A tiny painting of the scene from its own shader colours: the tile carries
+   `data-scene-probe`, so `--scene-c*` here resolve to that scene, not the active one. */
+.swatch {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 52px;
+  padding: 6px;
+  overflow: hidden;
+  border-radius: 7px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--scene-c2) 22%, transparent) 1px, transparent 1.4px) 0 0 / 7px 7px,
+    radial-gradient(ellipse at 18% 30%, color-mix(in srgb, var(--scene-c2) 75%, transparent), transparent 55%),
+    radial-gradient(ellipse at 85% 20%, color-mix(in srgb, var(--scene-c3) 70%, transparent), transparent 55%),
+    radial-gradient(ellipse at 60% 110%, color-mix(in srgb, var(--scene-c4) 60%, transparent), transparent 60%),
+    linear-gradient(170deg, var(--scene-c1), var(--scene-c0));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 8%, transparent);
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+/* Plain scenes keep their calm: the dot field without the colour washes. */
+.scene:not([data-scene-shader]) .swatch {
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--scene-c1) 90%, var(--scene-c2)) 1px, transparent 1.4px) 0 0 / 7px 7px,
+    var(--scene-c0);
+}
+
+.scene:hover .swatch {
+  transform: scale(1.04);
+}
+
+.chip {
+  width: 30%;
+  height: 10px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--scene-c0) 55%, transparent);
+  border: 1px solid var(--scene-c2);
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.chip:nth-child(2) {
+  border-color: var(--scene-c3);
+  transition-delay: 30ms;
+}
+
+.chip:nth-child(3) {
+  border-color: var(--scene-c4);
+  transition-delay: 60ms;
+}
+
+.scene:hover .chip {
+  transform: translateY(-3px);
+}
+
+.sceneName {
+  padding: 0 2px;
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tagline {
+  margin-top: var(--space-2);
+  font-size: var(--fs-tiny);
+  color: var(--text-tertiary);
+}
+
+/* ---- segmented controls ---- */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rowLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  background-color: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+}
+
+.segment {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-tiny);
+  color: var(--text-secondary);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.segment:hover {
+  color: var(--text-primary);
+}
+
+.segment[aria-checked="true"] {
+  background-color: var(--bg-raised);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 18%, transparent);
+}
+
+/* ---- category colours ---- */
+.colors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.color {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--swatch) 45%, var(--border-subtle));
+  border-radius: 8px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--swatch) 16%, transparent), transparent 80%);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+
+.color:hover {
+  transform: translateY(-1px);
+}
+
+.color:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The native picker stays the real control (keyboard, screen readers); it just isn't painted. */
+.colorInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.colorDot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--swatch) 25%, transparent);
+}
+
+.colorLabel {
+  font-size: var(--fs-tiny);
+  color: color-mix(in srgb, var(--swatch) 70%, var(--text-primary));
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .scene {
+    animation: none;
+  }
+}
