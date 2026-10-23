@@ -439,6 +439,16 @@
   }
 }
 
+/* Under its open step card the node drops the ring and the selection glow, so nothing shows
+   around the card's edge. */
+.underCard.selected {
+  box-shadow: none;
+}
+
+.underCard.selected::before {
+  display: none;
+}
+
 :global(:root[data-motion="still"]) .selected::before {
   animation: none;
 }
