@@ -80,6 +80,8 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * component state and restore the repository-local bend for this workflow. */
   bendResetKey?: string;
   savedBend?: CanvasBend;
+  /** Set while a live build draws this edge in (live/useLiveBuild.ts). */
+  build?: { delay: number; duration: number; set: string };
   onBendChange?: (bend: CanvasBend) => void;
 }
 

@@ -302,6 +302,10 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
   const orbDuration = markerVariant === "async" ? "1.8s" : "2.4s";
   const orbPathId = `codehq-orb-path-${id}`;
+  const build = data.build;
+  const buildTiming = build !== undefined
+    ? ({ "--hq-delay": `${build.delay}ms`, "--hq-dur": `${build.duration}ms` } as CSSProperties)
+    : undefined;
 
   const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
     if (!dragging) {
@@ -335,7 +339,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         data-edge-target={target}
         data-traveling-orb={showTravelingOrb ? "true" : undefined}
         data-orb-active={showTravelingOrb && traced ? "true" : undefined}
-        className={showTravelingOrb ? styles.orbHost : undefined}
+        className={[showTravelingOrb ? styles.orbHost : "", build !== undefined ? `hq-edge-build ${build.set}` : ""].filter(Boolean).join(" ") || undefined}
+        style={buildTiming}
       >
         <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
         <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
@@ -352,6 +357,15 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
           </>
         ) : null}
       </g>
+      {build !== undefined ? (
+        <path
+          d={path}
+          pathLength={1}
+          className={`hq-edge-ink ${build.set}`}
+          data-edge-ink={id}
+          style={{ ...buildTiming, stroke: `var(${visual.varName})`, color: `var(${visual.varName})`, strokeWidth: strokeWidth + 1 }}
+        />
+      ) : null}
       {showLabel ? (
         <EdgeLabelRenderer>
           <div

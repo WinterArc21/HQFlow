@@ -17,6 +17,8 @@ export interface CanvasToolbarProps {
   collapseDisabled: boolean;
   /** When provided, an export button is shown. Omitted in the export viewer. */
   onExport?: () => void;
+  /** Redraws the map as if the agent were writing it; the live app's dock only. */
+  onReplay?: () => void;
   /** Only available for a completed workflow in the live app. */
   onDelete?: () => void;
 }

@@ -28,6 +28,8 @@ import { ExportDialog } from "./ExportDialog";
 import { useCanvasLayoutPersistence } from "./useCanvasLayoutPersistence";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
+import { AgentCursor, BuildToast } from "./live/AgentCursor";
+import { useLiveBuild } from "./live/useLiveBuild";
 import type { FitInsets } from "./fitViewport";
 import type { GridPlacement } from "../shell/dotGrid";
 import styles from "./WorkflowCanvas.module.css";
@@ -312,6 +314,10 @@ function WorkflowCanvasInner({
     });
   }, [baseEdges, layout, nodes]);
 
+  const live = useLiveBuild(canvasId, workflow, workflowRevision, layout, nodes, reducedMotion);
+  const shownNodes = useMemo(() => live.decorateNodes(nodes), [live, nodes]);
+  const shownEdges = useMemo(() => live.decorateEdges(edges), [edges, live]);
+
   const handleNodeClick: NodeMouseHandler<CanvasFlowNode> = (_event, node) => {
     handleSelectNode(node.id);
     setRovingId(node.id);
@@ -409,6 +415,7 @@ function WorkflowCanvasInner({
     onZoomOut: () => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 }),
     onResetLayout: () => resetLayout(canvasId),
     onCollapseAll: collapseAllSteps,
+    ...(exportMode === null ? { onReplay: live.replay } : {}),
     collapseDisabled: !hasExpandedSteps,
     ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
     ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
@@ -432,8 +439,8 @@ function WorkflowCanvasInner({
         <ReactFlow
           className={styles.flow}
           colorMode={theme}
-          nodes={nodes}
-          edges={edges}
+          nodes={shownNodes}
+          edges={shownEdges}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
           nodesDraggable
@@ -465,6 +472,7 @@ function WorkflowCanvasInner({
               maskStrokeColor="var(--accent-neutral)"
             />
           ) : null}
+          {live.plan !== null ? <AgentCursor key={live.plan.id} plan={live.plan} /> : null}
           {chrome !== undefined ? (
             <StepCardLayer
               workflow={workflow}
@@ -478,6 +486,7 @@ function WorkflowCanvasInner({
           ) : null}
         </ReactFlow>
         <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
+        {live.plan !== null ? <BuildToast key={live.plan.id} plan={live.plan} fileName={`${workflow.id}.json`} /> : null}
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}
         {overflowsBottom ? <CanvasOverflowIndicator direction="bottom" /> : null}
       </div>

@@ -1,0 +1,221 @@
+/*
+ * Live-update choreography (buildPlan.ts). Global, not a module: React Flow owns the node and edge
+ * wrappers, so the canvas tags them by class and passes timing in custom properties.
+ *
+ * Each build alternates between the A and B keyframe sets. A browser restarts a CSS animation only
+ * when its name changes, so a replay that re-tags cards already wearing `hq-build` swaps names.
+ *
+ *   --hq-delay   when this card's outline starts tracing
+ *   --hq-dur     how long the outline takes to close
+ *   --hq-from    the conic angle the outline starts from (where the cursor arrived)
+ *   --hq-clip    the clip the card's contents wipe in from (same side)
+ *   --hq-accent  the card's category colour
+ */
+
+@property --hq-draw {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.hq-build-a {
+  --hq-hold: hqHoldA;
+  --hq-ring: hqRingA;
+  --hq-fade: hqFadeA;
+  --hq-ink: hqInkA;
+}
+
+.hq-build-b {
+  --hq-hold: hqHoldB;
+  --hq-ring: hqRingB;
+  --hq-fade: hqFadeB;
+  --hq-ink: hqInkB;
+}
+
+/* ---- cards ---- */
+
+/* Hidden until the cursor reaches it. */
+.react-flow .react-flow__node.hq-build {
+  animation: var(--hq-hold) 1ms linear var(--hq-delay) backwards;
+}
+
+/* The outline: a glowing ring revealed by a conic sweep that starts where the cursor arrived, so
+   the line grows exactly under the cursor's tip. It fades into the card's own border once closed. */
+.react-flow .react-flow__node.hq-build::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: 4;
+  border: 2px solid var(--hq-accent);
+  border-radius: 14px;
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--hq-accent) 70%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--hq-accent) 35%, transparent);
+  pointer-events: none;
+  mask: conic-gradient(from var(--hq-from), black var(--hq-draw), transparent 0);
+  animation:
+    var(--hq-ring) var(--hq-dur) linear var(--hq-delay) both,
+    var(--hq-fade) 700ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur)) forwards;
+}
+
+/* The card itself fills in behind the pen, wiping from the side the pen started on. */
+.react-flow .react-flow__node.hq-build > * {
+  animation: var(--hq-ink) calc(var(--hq-dur) * 0.9) var(--ease-out-expo) calc(var(--hq-delay) + var(--hq-dur) * 0.25) backwards;
+}
+
+@keyframes hqHoldA {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes hqHoldB {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes hqRingA {
+  from {
+    --hq-draw: 0deg;
+    opacity: 1;
+  }
+  to {
+    --hq-draw: 360deg;
+    opacity: 1;
+  }
+}
+
+@keyframes hqRingB {
+  from {
+    --hq-draw: 0deg;
+    opacity: 1;
+  }
+  to {
+    --hq-draw: 360deg;
+    opacity: 1;
+  }
+}
+
+@keyframes hqFadeA {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hqFadeB {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hqInkA {
+  from {
+    clip-path: var(--hq-clip);
+    filter: blur(5px) saturate(1.8);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 10px);
+    filter: none;
+  }
+}
+
+@keyframes hqInkB {
+  from {
+    clip-path: var(--hq-clip);
+    filter: blur(5px) saturate(1.8);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 10px);
+    filter: none;
+  }
+}
+
+/* ---- edges ---- */
+
+/* The finished edge (casing, stroke, arrowhead, bead) appears as the ink line reaches its end. */
+.hq-edge-build {
+  animation: var(--hq-hold) 1ms linear calc(var(--hq-delay) + var(--hq-dur) * 0.9) backwards;
+}
+
+/* The ink: the same path, drawn from source to target, glowing, then dissolving into the edge. */
+.hq-edge-ink {
+  fill: none;
+  stroke-dasharray: 1 1;
+  stroke-linecap: round;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation:
+    hqEdgeDraw var(--hq-dur) var(--ease-standard) var(--hq-delay) both,
+    var(--hq-fade) 600ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur)) forwards;
+}
+
+@keyframes hqEdgeDraw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---- updated cards: a sheen sweeps across and the border glows once ---- */
+.react-flow .react-flow__node.hq-changed::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 4;
+  border-radius: 12px;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in srgb, var(--hq-accent) 38%, transparent) 46%,
+    color-mix(in srgb, var(--text-primary) 30%, transparent) 50%,
+    color-mix(in srgb, var(--hq-accent) 38%, transparent) 54%,
+    transparent 70%
+  ) no-repeat;
+  background-size: 260% 100%;
+  box-shadow: 0 0 0 2px var(--hq-accent), 0 0 26px color-mix(in srgb, var(--hq-accent) 60%, transparent);
+  mix-blend-mode: plus-lighter;
+  animation: hqSheen 1400ms var(--ease-standard) both;
+}
+
+:root[data-theme="light"] .react-flow .react-flow__node.hq-changed::after {
+  mix-blend-mode: normal;
+}
+
+@keyframes hqSheen {
+  0% {
+    background-position: 130% 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -30% 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow .react-flow__node.hq-build,
+  .react-flow .react-flow__node.hq-build::before,
+  .react-flow .react-flow__node.hq-build > *,
+  .react-flow .react-flow__node.hq-changed::after,
+  .hq-edge-build,
+  .hq-edge-ink {
+    animation: none;
+    opacity: 1;
+  }
+
+  .hq-edge-ink,
+  .react-flow .react-flow__node.hq-build::before,
+  .react-flow .react-flow__node.hq-changed::after {
+    display: none;
+  }
+}

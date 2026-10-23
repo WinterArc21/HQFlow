@@ -1,0 +1,144 @@
+/* Positioned by its Web Animation alone; the tip of the arrow is the drawing point. */
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+}
+
+.pointer {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--bg-canvas) 60%, transparent));
+}
+
+.pointer path {
+  fill: var(--focus-ring);
+  stroke: var(--bg-surface);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+/* A name tag like a collaborator's cursor in a shared doc: who is drawing, and what. */
+.label {
+  position: absolute;
+  top: 20px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px 999px 999px 4px;
+  background: var(--focus-ring);
+  color: var(--bg-canvas);
+  font: 600 var(--fs-micro) / 1.4 var(--font-ui);
+  white-space: nowrap;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--focus-ring) 45%, transparent);
+  animation: labelIn 260ms var(--ease-spring);
+}
+
+.labelDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typing 700ms ease-in-out infinite alternate;
+}
+
+@keyframes labelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.85);
+  }
+}
+
+@keyframes typing {
+  from {
+    opacity: 0.35;
+  }
+}
+
+/* ---- the toast: one line, top centre, fades out as the build settles ---- */
+.toast {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--focus-ring) 40%, var(--border-subtle));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--focus-ring) 22%, transparent);
+  font-size: var(--fs-tiny);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: toastLife linear both;
+}
+
+@keyframes toastLife {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.92);
+  }
+  6% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.98);
+  }
+}
+
+.toastPulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.toastPulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent-green);
+  animation: ping 1100ms var(--ease-out-expo) infinite;
+}
+
+@keyframes ping {
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.toastFile {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.toastText {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 685px) {
+  .toast {
+    top: auto;
+    bottom: calc(6 * 28px);
+  }
+}
