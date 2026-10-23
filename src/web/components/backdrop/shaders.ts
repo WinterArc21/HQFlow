@@ -228,6 +228,36 @@ vec3 sceneColor(vec2 css) {
   return ditherRamp(v, cell);
 }
 `,
+  tide: /* glsl */ `
+vec3 sceneColor(vec2 css) {
+  vec2 cell = cellOf(css);
+  vec2 c = cellCentre(css);
+  float aspect = u_res.x / u_res.y;
+  vec2 p = (c - vec2(u_pan.x * 0.06, 0.0)) / u_res.y;
+  float t = u_time * 0.1;
+  float horizon = 0.3;
+  vec2 moon = vec2(aspect * 0.74, 0.15);
+  float v;
+  if (p.y < horizon) {
+    // Sky: a soft gradient, the moon, and its halo.
+    float d = length(p - moon);
+    v = 0.05 + 0.14 * (p.y / horizon) + exp(-d * 9.0) * 0.32 + smoothstep(0.062, 0.056, d) * 0.9;
+    v += step(0.9975, hash(cell)) * 0.5 * (0.6 + 0.4 * sin(u_time + hash(cell + 3.0) * 30.0));
+  } else {
+    // Water: swells in perspective, so bands crowd toward the horizon, and a column of moonlight.
+    float depth = (p.y - horizon) / (1.0 - horizon);
+    float z = 1.0 / (depth + 0.06);
+    float sway = 0.35 * sin(p.x * 2.2 + t * 2.0) + 0.25 * sin(p.x * 5.3 - t * 2.7 + 1.3) + 0.6 * fbm(vec2(p.x * 1.6 * z * 0.3, t));
+    float band = 0.5 + 0.5 * sin(z * 9.0 + sway * 1.6 - t * 6.0);
+    float column = exp(-pow((p.x - moon.x) * mix(9.0, 2.6, depth), 2.0));
+    float crest = pow(band, mix(10.0, 3.0, depth));
+    v = 0.1 + 0.14 * depth + crest * (0.2 + 0.55 * column) * smoothstep(0.0, 0.04, depth);
+    v += exp(-depth * 30.0) * 0.18;
+  }
+  v += mouseGlow(c, 220.0) * 0.18 + pulseRing(c) * 0.4;
+  return ditherRamp(v, cell);
+}
+`,
   sorbet: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 uv = css / u_res.y;
