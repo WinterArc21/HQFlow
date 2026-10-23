@@ -104,6 +104,7 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
                 className={styles.scene}
                 style={{ "--i": index } as CSSProperties}
                 title={option.tagline}
+                data-scene-shader={option.shader !== null ? "" : undefined}
                 onClick={() => setScene(option.id, option.base)}
               >
                 <span className={styles.swatch} data-scene-probe={option.id} aria-hidden="true">

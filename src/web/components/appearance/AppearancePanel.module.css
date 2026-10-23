@@ -111,6 +111,13 @@
   transition: transform var(--dur-base) var(--ease-spring);
 }
 
+/* Plain scenes keep their calm: the dot field without the colour washes. */
+.scene:not([data-scene-shader]) .swatch {
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--scene-c1) 90%, var(--scene-c2)) 1px, transparent 1.4px) 0 0 / 7px 7px,
+    var(--scene-c0);
+}
+
 .scene:hover .swatch {
   transform: scale(1.04);
 }

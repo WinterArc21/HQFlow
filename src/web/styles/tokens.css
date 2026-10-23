@@ -178,6 +178,36 @@
  * Light-scene accents and card colours keep >=4.5:1 against their white surface.
  * ============================================================================================== */
 
+:root[data-scene="graphite"],
+[data-scene-probe="graphite"] {
+  --scene-c0: #0e0f11;
+  --scene-c1: #1b1e23;
+  --scene-c2: #5ec4c0;
+  --scene-c3: #d98cb4;
+  --scene-c4: #e08d55;
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+}
+
+:root[data-scene="paper"],
+[data-scene-probe="paper"] {
+  --scene-c0: #f6f4f0;
+  --scene-c1: #e9e4da;
+  --scene-c2: #0f7f7a;
+  --scene-c3: #a83a72;
+  --scene-c4: #a85718;
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+}
+
 :root[data-scene="abyss"],
 [data-scene-probe="abyss"] {
   --scene-c0: #010810;

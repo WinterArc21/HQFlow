@@ -55,7 +55,7 @@ function applyAppearance(state: CodeHQStore): void {
   root.setAttribute("data-theme", scene.base);
   root.setAttribute("data-scene", scene.id);
   root.setAttribute("data-motion", prefersReducedMotion() ? "still" : state.motion);
-  toggleAttribute(root, "data-scene-shader", supportsWebGL2() ? "" : null);
+  toggleAttribute(root, "data-scene-shader", scene.shader !== null && supportsWebGL2() ? "" : null);
 }
 
 /**
@@ -67,7 +67,7 @@ export function Backdrop() {
   const scene = useCodeHQStore(activeScene);
   const motion = useCodeHQStore((state) => state.motion);
   const reducedMotion = usePrefersReducedMotion();
-  return <ShaderCanvas key={scene.id} scene={scene} motion={reducedMotion ? "still" : motion} />;
+  return scene.shader !== null ? <ShaderCanvas key={scene.id} scene={scene} motion={reducedMotion ? "still" : motion} /> : null;
 }
 
 let webgl2: boolean | undefined;
@@ -105,7 +105,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
   useEffect(() => {
     const canvas = canvasRef.current;
     const gl = canvas?.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "low-power" }) ?? null;
-    if (canvas === null || gl === null) {
+    if (canvas === null || gl === null || scene.shader === null) {
       return;
     }
     const vs = compile(gl, gl.VERTEX_SHADER, VERTEX_SOURCE);
