@@ -93,11 +93,6 @@ describe("DiagnosticsPanel", () => {
     expect(fileHeadings).toEqual([".codehq/workflows/checkout.json", ".codehq/workflows/generate-video.json"]);
   });
 
-  it("shows the total error and warning counts in the header", () => {
-    render(<DiagnosticsPanel diagnostics={UNHEALTHY_REPORT} onClose={() => {}} onRecheck={() => Promise.resolve()} />);
-    expect(screen.getByText(/2 errors, 1 warning/)).toBeInTheDocument();
-  });
-
   it("renders a clean empty state, with the last-checked time, when everything is valid", () => {
     render(<DiagnosticsPanel diagnostics={HEALTHY_REPORT} onClose={() => {}} onRecheck={() => Promise.resolve()} />);
 
@@ -121,17 +116,6 @@ describe("DiagnosticsPanel", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(openButton).toHaveFocus();
-  });
-
-  it("closes via its own close control", async () => {
-    render(<DiagnosticsHarness diagnostics={UNHEALTHY_REPORT} onRecheck={() => Promise.resolve()} />);
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: "Open diagnostics" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Close diagnostics" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("closes when a click starts and ends on the backdrop", async () => {

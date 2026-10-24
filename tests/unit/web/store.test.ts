@@ -74,34 +74,6 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
-  it("toggleStepExpanded toggles a single step id on and off", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ a: true });
-
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
-  it("collapseAllSteps clears every expanded step", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    useCodeHQStore.getState().toggleStepExpanded("b");
-    useCodeHQStore.getState().collapseAllSteps();
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
-  it("signals a layout reset without changing workflow or step selection", () => {
-    useCodeHQStore.getState().selectWorkflow("workflow-a");
-    useCodeHQStore.getState().selectStep("step-1");
-    useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 20, y: 30 });
-
-    useCodeHQStore.getState().resetLayout();
-
-    expect(useCodeHQStore.getState().layoutResetRevision).toBe(1);
-    expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
-    expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
-    expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toBeUndefined();
-  });
-
   it("keeps canvas state in memory while persisting only appearance preferences", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });

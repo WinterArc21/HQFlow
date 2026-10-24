@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { useState } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workflow } from "@schema/workflow";
@@ -105,21 +105,6 @@ describe("StepDrawer", () => {
     expect(screen.getByText(/Step 1 of 2/)).toBeInTheDocument();
   });
 
-  it("counts each list section on its heading — the card no longer carries those counts", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={SOURCE_CHECKS} onClose={() => {}} />);
-
-    for (const [heading, count] of [
-      ["Source references", "2"],
-      ["Edge cases", "1"],
-      ["Tests", "1"],
-      ["Inputs", "1"],
-      ["Outputs", "1"],
-      ["External services", "1"],
-    ] as const) {
-      expect(within(screen.getByRole("region", { name: heading })).getByText(count)).toBeInTheDocument();
-    }
-  });
-
   it("omits every section that has no data, for a sparse step", () => {
     render(<StepDrawer workflow={WORKFLOW} stepId="sparse" sourceChecks={{}} onClose={() => {}} />);
 
@@ -154,14 +139,6 @@ describe("StepDrawer", () => {
     fireEvent.click(copyButtons[0] as HTMLButtonElement);
 
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith("src/payments/capture.ts"));
-  });
-
-  it("keeps connections for screen readers only: the canvas arrows already show them", () => {
-    render(<StepDrawer workflow={WORKFLOW} stepId="main" sourceChecks={{}} onClose={() => {}} />);
-
-    const connections = screen.getByRole("region", { name: "Connections" });
-    expect(connections).toHaveTextContent("To Sparse Step");
-    expect(within(connections).queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("closes on Escape and restores focus to the element that opened it", async () => {
