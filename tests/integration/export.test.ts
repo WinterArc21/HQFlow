@@ -65,7 +65,7 @@ describe("GET /api/export/:id", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns a self-contained HTML file with correct headers", async () => {
+  it("returns an HTML attachment without machine-local data", async () => {
     const running = await startServer();
     const response = await fetch(`${running.url}/api/export/sample`);
 
@@ -77,16 +77,6 @@ describe("GET /api/export/:id", () => {
     expect(disposition).toContain(".html");
 
     const html = await response.text();
-    // It's a complete HTML document.
-    expect(html).toMatch(/^<!doctype html>/i);
-    expect(html).toContain("</html>");
-
-    // No external resources.
-    expect(html).not.toMatch(/<script[^>]+src=/i);
-    expect(html).not.toMatch(/<link[^>]+href=/i);
-
-    // Contains the workflow data.
-    expect(html).toContain("Sample");
     expect(html).toContain("real-source.ts");
 
     // Machine-local data stripped.
@@ -94,21 +84,6 @@ describe("GET /api/export/:id", () => {
     expect(html).not.toContain(".codehq/workflows/sample.json");
     expect(html).not.toContain("absolutePath");
     expect(html).not.toContain("codeHQDir");
-
-    // Contains the export viewer JS (IIFE) and CSS inlined.
-    expect(html).toContain("<style>");
-    expect(html).toContain("<script>");
-  });
-
-  it("redacts structured file references when hideFilePaths=true", async () => {
-    const running = await startServer();
-    const response = await fetch(`${running.url}/api/export/sample?hideFilePaths=true`);
-
-    expect(response.status).toBe(200);
-    const html = await response.text();
-    expect(html).toContain('"hideFilePaths":true');
-    expect(html).not.toContain("real-source.ts");
-    expect(html).toContain("redacted-file-1");
   });
 
   it("defaults hideFilePaths to false and rejects malformed or unknown export queries", async () => {

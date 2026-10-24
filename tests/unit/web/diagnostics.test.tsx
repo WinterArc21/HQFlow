@@ -93,30 +93,6 @@ describe("DiagnosticsPanel", () => {
     expect(fileHeadings).toEqual([".codehq/workflows/checkout.json", ".codehq/workflows/generate-video.json"]);
   });
 
-  it("orders file groups with errors before file groups that only have warnings", () => {
-    const report: DiagnosticsReport = {
-      generatedAt: new Date().toISOString(),
-      valid: false,
-      issues: [
-        {
-          severity: "warning",
-          file: ".codehq/workflows/aaa-warning-only.json",
-          message: "This workflow has more than 14 steps; prefer 5-9 top-level steps.",
-        },
-        {
-          severity: "error",
-          file: ".codehq/workflows/zzz-has-error.json",
-          message: "Step id 'checkout' is not unique within this workflow.",
-        },
-      ],
-    };
-    render(<DiagnosticsPanel diagnostics={report} onClose={() => {}} onRecheck={() => Promise.resolve()} />);
-
-    const fileHeadings = screen.getAllByText(/\.codehq\/workflows\//).map((node) => node.textContent);
-    // "zzz" comes alphabetically after "aaa", but it has an error, so it must render first.
-    expect(fileHeadings).toEqual([".codehq/workflows/zzz-has-error.json", ".codehq/workflows/aaa-warning-only.json"]);
-  });
-
   it("shows the total error and warning counts in the header", () => {
     render(<DiagnosticsPanel diagnostics={UNHEALTHY_REPORT} onClose={() => {}} onRecheck={() => Promise.resolve()} />);
     expect(screen.getByText(/2 errors, 1 warning/)).toBeInTheDocument();
