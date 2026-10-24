@@ -35,36 +35,17 @@ afterAll(() => {
 });
 
 describe("resolveInsideRepository — rejects unsafe input", () => {
-  it("rejects a path with a '..' segment", () => {
-    expect(resolveInsideRepository(root, "../etc/passwd").ok).toBe(false);
-  });
-
-  it("rejects a backslash '..' traversal", () => {
-    expect(resolveInsideRepository(root, "..\\..\\x").ok).toBe(false);
-  });
-
-  it("rejects a leading-slash absolute path", () => {
-    expect(resolveInsideRepository(root, "/abs/path").ok).toBe(false);
-  });
-
-  it("rejects a Windows drive-letter path", () => {
-    expect(resolveInsideRepository(root, "C:\\Windows\\x").ok).toBe(false);
-  });
-
-  it("rejects a UNC path", () => {
-    expect(resolveInsideRepository(root, "\\\\server\\share").ok).toBe(false);
-  });
-
-  it("rejects a '..' segment buried in the middle of the path", () => {
-    expect(resolveInsideRepository(root, "foo/../../bar").ok).toBe(false);
-  });
-
-  it("rejects an empty path", () => {
-    expect(resolveInsideRepository(root, "").ok).toBe(false);
-  });
-
-  it("rejects a path containing a NUL byte", () => {
-    expect(resolveInsideRepository(root, "foo\0bar.ts").ok).toBe(false);
+  it.each([
+    ["a '..' segment", "../etc/passwd"],
+    ["a backslash '..' traversal", "..\\..\\x"],
+    ["a leading-slash absolute path", "/abs/path"],
+    ["a Windows drive-letter path", "C:\\Windows\\x"],
+    ["a UNC path", "\\\\server\\share"],
+    ["a '..' segment buried in the middle", "foo/../../bar"],
+    ["an empty path", ""],
+    ["a NUL byte", "foo\0bar.ts"],
+  ])("rejects %s", (_label, input) => {
+    expect(resolveInsideRepository(root, input).ok).toBe(false);
   });
 
   it("never uses a bare prefix check: a sibling directory sharing a name prefix is not 'inside'", () => {
@@ -78,7 +59,11 @@ describe("resolveInsideRepository — rejects unsafe input", () => {
     }
   });
 
-  it.skipIf(!canSymlink)("rejects a symlinked directory that escapes the repository root", () => {
+  it("rejects a symlinked directory that escapes the repository root", (context) => {
+    // `canSymlink` is only known after beforeAll runs, so the skip must happen inside the test.
+    if (!canSymlink) {
+      context.skip();
+    }
     const result = resolveInsideRepository(root, "escape-link/secret.ts");
     expect(result.ok).toBe(false);
   });
