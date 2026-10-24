@@ -10,16 +10,16 @@ import "./liveBuild.css";
 /** Extra time after the last stroke so the glow can fade before the decorations come off. */
 const SETTLE_MS = 1500;
 
-const CLIP_FROM: Record<number, string> = {
-  0: "inset(0 0 100% 0 round 10px)",
-  90: "inset(0 0 0 100% round 10px)",
-  180: "inset(100% 0 0 0 round 10px)",
-  270: "inset(0 100% 0 0 round 10px)",
-};
+/** A card's category colour, or its outcome tone for an outcome pill. */
+function accentOf(node: CanvasFlowNode): string {
+  return node.type === "outcome"
+    ? node.data.tone === "failure" ? "var(--accent-red)" : "var(--accent-output)"
+    : `var(${categoryToken(node.data.step.category).varName})`;
+}
 
 /**
- * Turns each valid live edit of the open workflow into a short drawing: the agent cursor inks the
- * new edges and traces the new cards, changed cards get a sheen. `replay()` redraws the whole map
+ * Turns each valid live edit of the open workflow into a short drawing: the agent cursors ink the
+ * new edges and drag and weave the new cards, changed cards get a sheen. `replay()` redraws the whole map
  * from an empty canvas. Switching workflows, reduced motion, and the "still" motion level skip
  * the drawing; the graph itself is never delayed.
  */
@@ -58,7 +58,21 @@ export function useLiveBuild(
     }
     counter.current += 1;
     const positions = new Map(nodesRef.current.map((node) => [node.id, node.position]));
-    const next = planBuild(replaying ? null : last.workflow, workflow, layout, (id) => positions.get(id), counter.current);
+    const categories = new Map(workflow.steps.map((step) => [step.id, step.category]));
+    const accents = new Map(layout.nodes.map((node) => [
+      node.id,
+      node.isOutcome
+        ? node.outcomeBand === "failure" ? "var(--accent-red)" : "var(--accent-output)"
+        : `var(${categoryToken(categories.get(node.id)).varName})`,
+    ]));
+    const next = planBuild(
+      replaying ? null : last.workflow,
+      workflow,
+      layout,
+      (id) => positions.get(id),
+      counter.current,
+      (id) => accents.get(id) ?? "var(--focus-ring)",
+    );
     if (next === null) {
       return;
     }
@@ -72,32 +86,30 @@ export function useLiveBuild(
       return list;
     }
     const set = plan.id % 2 === 0 ? "hq-build-b" : "hq-build-a";
-    const steps = new Map(workflow.steps.map((step) => [step.id, step]));
     return list.map((node) => {
       const draw = plan.nodes.get(node.id);
       const changed = plan.changed.has(node.id);
       if (draw === undefined && !changed) {
         return node;
       }
-      const accent = node.type === "outcome"
-        ? node.data.tone === "failure" ? "var(--accent-red)" : "var(--accent-output)"
-        : `var(${categoryToken(steps.get(node.id)?.category).varName})`;
       const style = {
         ...node.style,
-        "--hq-accent": accent,
+        "--hq-accent": accentOf(node),
         ...(draw !== undefined
           ? {
               "--hq-delay": `${draw.delay}ms`,
               "--hq-dur": `${draw.duration}ms`,
-              "--hq-from": `${draw.from}deg`,
-              "--hq-clip": CLIP_FROM[draw.from] ?? CLIP_FROM[270],
+              "--hq-radius": node.type === "outcome" ? "999px" : "12px",
+              // Unitless, for the marquee's live size badge.
+              "--hq-w": Math.round(node.width ?? 0),
+              "--hq-h": Math.round(node.height ?? 0),
             }
           : {}),
       } as CSSProperties;
       const className = [node.className, set, draw !== undefined ? "hq-build" : "", changed ? "hq-changed" : ""].filter(Boolean).join(" ");
       return { ...node, className, style };
     });
-  }, [plan, workflow]);
+  }, [plan]);
 
   const decorateEdges = useCallback((list: WorkflowFlowEdge[]): WorkflowFlowEdge[] => {
     if (plan === null) {

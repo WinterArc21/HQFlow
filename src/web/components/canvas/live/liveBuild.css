@@ -5,62 +5,108 @@
  * Each build alternates between the A and B keyframe sets. A browser restarts a CSS animation only
  * when its name changes, so a replay that re-tags cards already wearing `hq-build` swaps names.
  *
- *   --hq-delay   when this card's outline starts tracing
- *   --hq-dur     how long the outline takes to close
- *   --hq-from    the conic angle the outline starts from (where the cursor arrived)
- *   --hq-clip    the clip the card's contents wipe in from (same side)
+ *   --hq-delay   when this card's marquee starts
+ *   --hq-dur     how long the card takes, marquee to closed border
+ *   --hq-radius  the marquee's corners: the card's own shape
+ *   --hq-w/-h    the card's size, unitless, for the size badge
  *   --hq-accent  the card's category colour
+ *
+ * A card's phases, as shares of --hq-dur (CARD_PHASE in buildPlan.ts):
+ *   0.08 to 0.42  the marquee is dragged from the top-left to the bottom-right corner
+ *   0.46 to 0.90  the cursor weaves tiles into it (AgentCursor.tsx)
+ *   0.90 to 1     the dashes close into a solid border and the card appears
  */
 
-@property --hq-draw {
-  syntax: "<angle>";
+@property --hq-grow {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --hq-wi {
+  syntax: "<integer>";
   inherits: false;
-  initial-value: 0deg;
+  initial-value: 0;
+}
+
+@property --hq-hi {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
 }
 
 .hq-build-a {
   --hq-hold: hqHoldA;
-  --hq-ring: hqRingA;
+  --hq-drag: hqDragA;
+  --hq-badge: hqBadgeA;
+  --hq-close: hqCloseA;
   --hq-fade: hqFadeA;
-  --hq-ink: hqInkA;
+  --hq-show: hqShowA;
 }
 
 .hq-build-b {
   --hq-hold: hqHoldB;
-  --hq-ring: hqRingB;
+  --hq-drag: hqDragB;
+  --hq-badge: hqBadgeB;
+  --hq-close: hqCloseB;
   --hq-fade: hqFadeB;
-  --hq-ink: hqInkB;
+  --hq-show: hqShowB;
 }
 
 /* ---- cards ---- */
 
-/* Hidden until the cursor reaches it. */
+/* Hidden until its cursor arrives; then the marquee grows from the top-left corner. */
 .react-flow .react-flow__node.hq-build {
-  animation: var(--hq-hold) 1ms linear var(--hq-delay) backwards;
+  animation:
+    var(--hq-hold) 1ms linear var(--hq-delay) backwards,
+    var(--hq-drag) calc(var(--hq-dur) * 0.34) linear calc(var(--hq-delay) + var(--hq-dur) * 0.08) both;
 }
 
-/* The outline: a glowing ring revealed by a conic sweep that starts where the cursor arrived, so
-   the line grows exactly under the cursor's tip. It fades into the card's own border once closed. */
+/* The marquee: a dashed outline in the card's colour and shape, dragged out by the cursor. When the
+   weave is done its dashes close into a solid line, and it fades into the card's own border. */
 .react-flow .react-flow__node.hq-build::before {
   content: "";
   position: absolute;
-  inset: -4px;
+  top: -4px;
+  left: -4px;
   z-index: 4;
-  border: 2px solid var(--hq-accent);
-  border-radius: 14px;
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--hq-accent) 70%, transparent),
-    inset 0 0 10px color-mix(in srgb, var(--hq-accent) 35%, transparent);
+  box-sizing: border-box;
+  width: calc((100% + 8px) * var(--hq-grow));
+  height: calc((100% + 8px) * var(--hq-grow));
+  border: 2px dashed var(--hq-accent);
+  border-radius: var(--hq-radius);
+  background: color-mix(in srgb, var(--hq-accent) 12%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hq-accent) 50%, transparent);
   pointer-events: none;
-  mask: conic-gradient(from var(--hq-from), black var(--hq-draw), transparent 0);
   animation:
-    var(--hq-ring) var(--hq-dur) linear var(--hq-delay) both,
-    var(--hq-fade) 700ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur)) forwards;
+    var(--hq-close) calc(var(--hq-dur) * 0.1) linear calc(var(--hq-delay) + var(--hq-dur) * 0.9) both,
+    var(--hq-fade) 450ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur) + 120ms) forwards;
 }
 
-/* The card itself fills in behind the pen, wiping from the side the pen started on. */
+/* The size badge under the marquee's bottom edge, counting up while it is dragged. */
+.react-flow .react-flow__node.hq-build::after {
+  --hq-wi: calc(var(--hq-w) * var(--hq-grow));
+  --hq-hi: calc(var(--hq-h) * var(--hq-grow));
+  counter-reset: hqw var(--hq-wi) hqh var(--hq-hi);
+  content: counter(hqw) " \00d7  " counter(hqh);
+  position: absolute;
+  top: calc((100% + 8px) * var(--hq-grow) + 4px);
+  left: calc((100% + 8px) * var(--hq-grow) / 2 - 4px);
+  z-index: 5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--hq-accent);
+  color: var(--bg-canvas);
+  font: 600 var(--fs-micro) / 1.3 var(--font-mono);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: var(--hq-badge) calc(var(--hq-dur) * 0.42) linear calc(var(--hq-delay) + var(--hq-dur) * 0.08) both;
+}
+
+/* The card itself appears when the border closes. */
 .react-flow .react-flow__node.hq-build > * {
-  animation: var(--hq-ink) calc(var(--hq-dur) * 0.9) var(--ease-out-expo) calc(var(--hq-delay) + var(--hq-dur) * 0.25) backwards;
+  animation: var(--hq-show) 260ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur) * 0.9) backwards;
 }
 
 @keyframes hqHoldA {
@@ -75,25 +121,73 @@
   }
 }
 
-@keyframes hqRingA {
+@keyframes hqDragA {
   from {
-    --hq-draw: 0deg;
-    opacity: 1;
+    --hq-grow: 0;
   }
   to {
-    --hq-draw: 360deg;
-    opacity: 1;
+    --hq-grow: 1;
   }
 }
 
-@keyframes hqRingB {
+@keyframes hqDragB {
   from {
-    --hq-draw: 0deg;
-    opacity: 1;
+    --hq-grow: 0;
   }
   to {
-    --hq-draw: 360deg;
+    --hq-grow: 1;
+  }
+}
+
+@keyframes hqBadgeA {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  78% {
     opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hqBadgeB {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hqCloseA {
+  from {
+    border-style: dashed;
+  }
+  50% {
+    box-shadow: 0 0 22px color-mix(in srgb, var(--hq-accent) 80%, transparent);
+  }
+  to {
+    border-style: solid;
+    background: transparent;
+  }
+}
+
+@keyframes hqCloseB {
+  from {
+    border-style: dashed;
+  }
+  50% {
+    box-shadow: 0 0 22px color-mix(in srgb, var(--hq-accent) 80%, transparent);
+  }
+  to {
+    border-style: solid;
+    background: transparent;
   }
 }
 
@@ -109,25 +203,15 @@
   }
 }
 
-@keyframes hqInkA {
+@keyframes hqShowA {
   from {
-    clip-path: var(--hq-clip);
-    filter: blur(5px) saturate(1.8);
-  }
-  to {
-    clip-path: inset(0 0 0 0 round 10px);
-    filter: none;
+    opacity: 0;
   }
 }
 
-@keyframes hqInkB {
+@keyframes hqShowB {
   from {
-    clip-path: var(--hq-clip);
-    filter: blur(5px) saturate(1.8);
-  }
-  to {
-    clip-path: inset(0 0 0 0 round 10px);
-    filter: none;
+    opacity: 0;
   }
 }
 
@@ -138,7 +222,8 @@
   animation: var(--hq-hold) 1ms linear calc(var(--hq-delay) + var(--hq-dur) * 0.9) backwards;
 }
 
-/* The ink: the same path, drawn from source to target, glowing, then dissolving into the edge. */
+/* The ink: the same path, drawn from source to target behind a glowing drop (WorkflowEdge.tsx),
+   then dissolving into the edge. The easing matches the drop's and the riding cursor's. */
 .hq-edge-ink {
   fill: none;
   stroke-dasharray: 1 1;
@@ -146,7 +231,7 @@
   pointer-events: none;
   filter: drop-shadow(0 0 4px currentColor);
   animation:
-    hqEdgeDraw var(--hq-dur) var(--ease-standard) var(--hq-delay) both,
+    hqEdgeDraw var(--hq-dur) cubic-bezier(0.65, 0, 0.35, 1) var(--hq-delay) both,
     var(--hq-fade) 600ms var(--ease-standard) calc(var(--hq-delay) + var(--hq-dur)) forwards;
 }
 
@@ -205,6 +290,7 @@
 @media (prefers-reduced-motion: reduce) {
   .react-flow .react-flow__node.hq-build,
   .react-flow .react-flow__node.hq-build::before,
+  .react-flow .react-flow__node.hq-build::after,
   .react-flow .react-flow__node.hq-build > *,
   .react-flow .react-flow__node.hq-changed::after,
   .hq-edge-build,
@@ -215,6 +301,7 @@
 
   .hq-edge-ink,
   .react-flow .react-flow__node.hq-build::before,
+  .react-flow .react-flow__node.hq-build::after,
   .react-flow .react-flow__node.hq-changed::after {
     display: none;
   }

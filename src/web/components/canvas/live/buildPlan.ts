@@ -3,21 +3,21 @@ import type { LayoutResult } from "../layout";
 
 /**
  * The choreography for a live update: which cards and edges are new, when each one is drawn, and
- * the path the agent cursor follows while drawing them. Pure data, in milliseconds from the moment
+ * the paths the agent cursors follow while drawing them. Pure data, in milliseconds from the moment
  * the update lands, and in canvas (flow) coordinates.
  *
- * New cards are drawn in reading order (left to right, then top to bottom). Each gets a slot: the
- * cursor first inks the edge that leads into the card from something already drawn, then traces
- * the card's outline starting from where that edge arrived, and the card fills in behind it.
+ * New cards are taken in reading order and split into runs of neighbours, one run per cursor, so a
+ * big build draws in several places at once. For each card its cursor first rides the edge that
+ * leads in from a card already on the canvas (the ink drop), then drags a marquee in the card's
+ * shape and weaves the card into it. When every run is done, the cursors draw the edges that join
+ * their runs together.
  */
 
 export interface NodeDraw {
-  /** When the outline starts tracing. */
+  /** When the marquee starts. */
   delay: number;
-  /** How long the outline takes to close. */
+  /** How long the whole card takes: marquee, weave, and the border closing. */
   duration: number;
-  /** Where the outline starts, as a CSS conic angle: 0deg is up, clockwise. */
-  from: number;
 }
 
 export interface EdgeDraw {
@@ -29,6 +29,19 @@ export interface CursorKey {
   t: number;
   x: number;
   y: number;
+  /** From this key to the next one, the cursor rides this edge's drawn path. */
+  edge?: string;
+}
+
+/** What the weave needs to fly tiles into a card. */
+export interface CardDraw extends NodeDraw {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  accent: string;
+  outcome: boolean;
 }
 
 export interface BuildPlan {
@@ -36,9 +49,11 @@ export interface BuildPlan {
   nodes: Map<string, NodeDraw>;
   edges: Map<string, EdgeDraw>;
   changed: Set<string>;
-  cursor: CursorKey[];
-  labels: Array<{ t: number; text: string }>;
-  /** Centres of new cards, for the scene ripple, timed to when each one starts drawing. */
+  cards: CardDraw[];
+  /** One key path per cursor. */
+  cursors: CursorKey[][];
+  labels: Array<{ t: number; text: string; cursor: number }>;
+  /** Centres of new cards, for the scene ripple, timed to when each one appears. */
   pulses: CursorKey[];
   total: number;
   added: number;
@@ -54,16 +69,29 @@ interface Box {
 
 type Side = "left" | "right" | "top" | "bottom";
 
-const SIDE_ANGLE: Record<Side, number> = { top: 0, right: 90, bottom: 180, left: 270 };
-/** The outline is traced a few pixels outside the card, where the drawing ring sits. */
-const RING_OUTSET = 4;
-const PERIMETER_SAMPLES = 24;
-/** The whole build should land in a few seconds however many cards arrive at once. */
+/**
+ * The card's phases, as fractions of its duration. liveBuild.css repeats these numbers.
+ *   0      → MOVE   the cursor goes to the card's top-left corner
+ *   MOVE   → DRAG   it drags the marquee to the bottom-right corner
+ *   DRAG   → HOP    it hops to the right side
+ *   HOP    → WEAVE  it sweeps back to the left; tiles fly off its tip into place
+ *   WEAVE  → 1      the dashes close into the card's border and the card appears
+ */
+export const CARD_PHASE = { MOVE: 0.08, DRAG: 0.42, HOP: 0.46, WEAVE: 0.9 } as const;
+/** How far the weave sweep swings up and down, as a share of the card's height. */
+export const WEAVE_SWING = 0.32;
+const WEAVE_SAMPLES = 12;
+
+/** A full build lands in a few seconds however many cards arrive at once. */
 const BUILD_BUDGET_MS = 5600;
-const MIN_SLOT_MS = 420;
-const MAX_SLOT_MS = 1000;
-const EDGE_SHARE = 0.4;
-const TRACE_SHARE = 0.85;
+const MIN_SLOT_MS = 560;
+const MAX_SLOT_MS = 1500;
+const EDGE_SHARE = 0.3;
+/** One more cursor for every this many new cards, up to MAX_CURSORS. */
+const CARDS_PER_CURSOR = 4;
+const MAX_CURSORS = 4;
+const CURSOR_STAGGER_MS = 150;
+const JOIN_GAP_MS = 80;
 
 function connectionKey(connection: WorkflowConnection): string {
   return [connection.from, connection.to, connection.type ?? "", connection.label ?? ""].join("\u0000");
@@ -89,32 +117,32 @@ function sidePoint(box: Box, side: Side): { x: number; y: number } {
   const c = centre(box);
   switch (side) {
     case "left":
-      return { x: box.x - RING_OUTSET, y: c.y };
+      return { x: box.x, y: c.y };
     case "right":
-      return { x: box.x + box.width + RING_OUTSET, y: c.y };
+      return { x: box.x + box.width, y: c.y };
     case "top":
-      return { x: c.x, y: box.y - RING_OUTSET };
+      return { x: c.x, y: box.y };
     case "bottom":
-      return { x: c.x, y: box.y + box.height + RING_OUTSET };
+      return { x: c.x, y: box.y + box.height };
   }
 }
 
-/** Where a ray from the card's centre at `angle` (0deg up, clockwise) leaves its ring. */
-export function ringPoint(box: Box, angle: number): { x: number; y: number } {
-  const c = centre(box);
-  const radians = (angle * Math.PI) / 180;
-  const dx = Math.sin(radians);
-  const dy = -Math.cos(radians);
-  const halfW = box.width / 2 + RING_OUTSET;
-  const halfH = box.height / 2 + RING_OUTSET;
-  const reach = Math.min(Math.abs(dx) < 1e-9 ? Infinity : halfW / Math.abs(dx), Math.abs(dy) < 1e-9 ? Infinity : halfH / Math.abs(dy));
-  return { x: c.x + dx * reach, y: c.y + dy * reach };
+/** Splits `ids` into `count` runs of neighbours, as even as possible. */
+function runs(ids: string[], count: number): string[][] {
+  const result: string[][] = [];
+  let first = 0;
+  for (let i = 0; i < count; i += 1) {
+    const size = Math.ceil((ids.length - first) / (count - i));
+    result.push(ids.slice(first, first + size));
+    first += size;
+  }
+  return result.filter((run) => run.length > 0);
 }
 
 /**
  * Plans the build from `previous` to `next`. `previous === null` replays the whole map from an
  * empty canvas. Returns `null` when nothing visible changed (for example, a snapshot that only
- * re-checked source files).
+ * re-checked source files). `accentOf` gives each card's colour for its marquee and tiles.
  */
 export function planBuild(
   previous: Workflow | null,
@@ -122,9 +150,11 @@ export function planBuild(
   layout: LayoutResult,
   positionOf: (id: string) => { x: number; y: number } | undefined,
   id: number,
+  accentOf: (id: string) => string = () => "var(--focus-ring)",
 ): BuildPlan | null {
   const before = new Map(previous?.steps.map((step) => [step.id, JSON.stringify(step)]) ?? []);
   const beforeConnections = new Set(previous?.connections.map(connectionKey) ?? []);
+  const outcomes = new Set(layout.nodes.filter((node) => node.isOutcome).map((node) => node.id));
   const boxes = new Map<string, Box>(
     layout.nodes.map((node) => {
       const position = positionOf(node.id) ?? { x: node.x, y: node.y };
@@ -132,10 +162,14 @@ export function planBuild(
     }),
   );
 
+  // Reading order: Flow reads down the page, the other views across it.
+  const byRow = (a: Box, b: Box) => a.y - b.y || a.x - b.x;
+  const byColumn = (a: Box, b: Box) => a.x - b.x || a.y - b.y;
+  const order = layout.view === "line" ? byColumn : byRow;
   const added = layout.nodes
     .filter((node) => !before.has(node.id))
     .map((node) => node.id)
-    .sort((a, b) => boxes.get(a)!.x - boxes.get(b)!.x || boxes.get(a)!.y - boxes.get(b)!.y);
+    .sort((a, b) => order(boxes.get(a)!, boxes.get(b)!));
   const changed = new Set(
     next.steps.filter((step) => before.has(step.id) && before.get(step.id) !== JSON.stringify(step)).map((step) => step.id),
   );
@@ -146,70 +180,129 @@ export function planBuild(
     return null;
   }
 
-  const slot = Math.min(MAX_SLOT_MS, Math.max(MIN_SLOT_MS, BUILD_BUDGET_MS / Math.max(1, added.length)));
+  const cursorCount = Math.min(MAX_CURSORS, Math.max(1, Math.ceil(added.length / CARDS_PER_CURSOR)));
+  const lanes = runs(added, cursorCount);
+  const perLane = Math.max(1, ...lanes.map((lane) => lane.length));
+  const slot = Math.min(MAX_SLOT_MS, Math.max(MIN_SLOT_MS, BUILD_BUDGET_MS / perLane));
   const edgePhase = slot * EDGE_SHARE;
-  const tracePhase = (slot - edgePhase) * TRACE_SHARE;
-  const order = new Map(added.map((nodeId, index) => [nodeId, index]));
-  const slotOf = (nodeId: string) => order.get(nodeId) ?? -1;
+  const cardPhase = slot - edgePhase;
+
+  const laneOf = new Map<string, number>();
+  const slotStart = new Map<string, number>();
+  lanes.forEach((lane, laneIndex) => lane.forEach((nodeId, index) => {
+    laneOf.set(nodeId, laneIndex);
+    slotStart.set(nodeId, laneIndex * CURSOR_STAGGER_MS + index * slot);
+  }));
+  const cardStart = (nodeId: string) => slotStart.get(nodeId)! + edgePhase;
+  /** When a card is on the canvas: at once for old cards, when the border closes for new ones. */
+  const readyAt = (nodeId: string) => (slotStart.has(nodeId) ? cardStart(nodeId) + cardPhase * CARD_PHASE.WEAVE : 0);
+  const laneEnd = Math.max(0, ...lanes.map((lane, laneIndex) => laneIndex * CURSOR_STAGGER_MS + lane.length * slot));
+
+  // The edge each new card's cursor rides in on: one from an old card, or from an earlier card in
+  // the same run.
+  const ridden = new Map<string, string>();
+  for (const nodeId of added) {
+    const incoming = layout.edges.find((edge) => {
+      if (edge.target !== nodeId || edge.source === nodeId || !newEdges.includes(edge)) {
+        return false;
+      }
+      const sourceLane = laneOf.get(edge.source);
+      return sourceLane === undefined || (sourceLane === laneOf.get(nodeId) && slotStart.get(edge.source)! < slotStart.get(nodeId)!);
+    });
+    if (incoming !== undefined) {
+      ridden.set(nodeId, incoming.id);
+    }
+  }
+  const riddenIds = new Set(ridden.values());
 
   const edges = new Map<string, EdgeDraw>();
+  // Edges that link two runs are drawn last, by the cursor whose run they leave from.
+  const joins: Array<Array<(typeof layout.edges)[number]>> = lanes.map(() => []);
   for (const edge of newEdges) {
-    const later = Math.max(slotOf(edge.source), slotOf(edge.target));
-    // New links between cards that were already there are drawn after every new card.
-    const start = later < 0
-      ? added.length * slot
-      : slotOf(edge.target) >= slotOf(edge.source) && edge.source !== edge.target
-        ? later * slot
-        : later * slot + edgePhase + tracePhase;
-    edges.set(edge.id, { delay: start, duration: edgePhase });
+    const sourceLane = laneOf.get(edge.source);
+    const targetLane = laneOf.get(edge.target);
+    if (riddenIds.has(edge.id)) {
+      edges.set(edge.id, { delay: slotStart.get(edge.target)!, duration: edgePhase });
+    } else if (sourceLane !== undefined && targetLane !== undefined && sourceLane !== targetLane && edge.source !== edge.target) {
+      joins[sourceLane]!.push(edge);
+    } else if (sourceLane === undefined && targetLane === undefined) {
+      // A new link between two old cards: drawn once the runs are done.
+      edges.set(edge.id, { delay: laneEnd, duration: edgePhase });
+    } else {
+      // Fan-ins, outcomes, retries: drawn on their own once both ends are on the canvas.
+      edges.set(edge.id, { delay: Math.max(readyAt(edge.source), readyAt(edge.target)), duration: edgePhase });
+    }
   }
 
-  const nodes = new Map<string, NodeDraw>();
-  const cursor: CursorKey[] = [];
+  const cursors: CursorKey[][] = lanes.map(() => []);
   const labels: BuildPlan["labels"] = [];
   const pulses: CursorKey[] = [];
+  const cards: CardDraw[] = [];
+  const nodes = new Map<string, NodeDraw>();
   const stepName = new Map(next.steps.map((step) => [step.id, step.name]));
-  const push = (t: number, point: { x: number; y: number }) => {
-    const last = cursor[cursor.length - 1];
-    cursor.push({ t: last !== undefined ? Math.max(t, last.t + 1) : t, ...point });
+  const push = (lane: number, key: CursorKey) => {
+    const keys = cursors[lane]!;
+    const last = keys[keys.length - 1];
+    keys.push({ ...key, t: last !== undefined ? Math.max(key.t, last.t + 1) : key.t });
+  };
+  const rideEdge = (lane: number, edgeId: string, source: string, target: string, delay: number, duration: number) => {
+    const [leave, enter] = facingSides(boxes.get(source)!, boxes.get(target)!);
+    push(lane, { t: delay, ...sidePoint(boxes.get(source)!, leave), edge: edgeId });
+    push(lane, { t: delay + duration, ...sidePoint(boxes.get(target)!, enter) });
   };
 
-  added.forEach((nodeId, index) => {
-    const box = boxes.get(nodeId)!;
-    const start = index * slot;
-    // The edge the cursor draws into this card: one from a card that is already on the canvas.
-    const incoming = layout.edges.find(
-      (edge) => edge.target === nodeId && edge.source !== nodeId && slotOf(edge.source) < index && edges.has(edge.id),
-    );
-    let arrival: Side = "left";
-    if (incoming !== undefined) {
-      const sourceBox = boxes.get(incoming.source)!;
-      const [leave, enter] = facingSides(sourceBox, box);
-      arrival = enter;
-      push(start, sidePoint(sourceBox, leave));
+  lanes.forEach((lane, laneIndex) => {
+    for (const nodeId of lane) {
+      const box = boxes.get(nodeId)!;
+      const start = slotStart.get(nodeId)!;
+      const edgeId = ridden.get(nodeId);
+      if (edgeId !== undefined) {
+        const edge = layout.edges.find((candidate) => candidate.id === edgeId)!;
+        rideEdge(laneIndex, edgeId, edge.source, nodeId, start, edgePhase);
+      }
+      const delay = cardStart(nodeId);
+      const at = (share: number) => delay + cardPhase * share;
+      const middle = box.y + box.height / 2;
+      push(laneIndex, { t: at(CARD_PHASE.MOVE), x: box.x, y: box.y });
+      push(laneIndex, { t: at(CARD_PHASE.DRAG), x: box.x + box.width, y: box.y + box.height });
+      push(laneIndex, { t: at(CARD_PHASE.HOP), x: box.x + box.width, y: middle });
+      for (let k = 1; k <= WEAVE_SAMPLES; k += 1) {
+        const u = k / WEAVE_SAMPLES;
+        push(laneIndex, {
+          t: at(CARD_PHASE.HOP + (CARD_PHASE.WEAVE - CARD_PHASE.HOP) * u),
+          x: box.x + box.width * (1 - u),
+          y: middle + Math.sin(u * Math.PI * 3) * box.height * WEAVE_SWING,
+        });
+      }
+      nodes.set(nodeId, { delay, duration: cardPhase });
+      cards.push({ id: nodeId, ...box, delay, duration: cardPhase, accent: accentOf(nodeId), outcome: outcomes.has(nodeId) });
+      labels.push({ t: start, text: stepName.get(nodeId) ?? nodeId, cursor: laneIndex });
+      pulses.push({ t: at(CARD_PHASE.WEAVE), ...centre(box) });
     }
-    const from = SIDE_ANGLE[arrival];
-    const traceStart = start + edgePhase;
-    push(traceStart, sidePoint(box, arrival));
-    for (let k = 1; k <= PERIMETER_SAMPLES; k += 1) {
-      push(traceStart + (tracePhase * k) / PERIMETER_SAMPLES, ringPoint(box, from + (360 * k) / PERIMETER_SAMPLES));
-    }
-    nodes.set(nodeId, { delay: traceStart, duration: tracePhase, from });
-    labels.push({ t: start, text: stepName.get(nodeId) ?? nodeId });
-    pulses.push({ t: traceStart, ...centre(box) });
+  });
+
+  joins.forEach((list, laneIndex) => {
+    list.forEach((edge, index) => {
+      const delay = laneEnd + index * (edgePhase + JOIN_GAP_MS);
+      edges.set(edge.id, { delay, duration: edgePhase });
+      if (index === 0) {
+        labels.push({ t: delay, text: "Connecting", cursor: laneIndex });
+      }
+      rideEdge(laneIndex, edge.id, edge.source, edge.target, delay, edgePhase);
+    });
   });
 
   const lastEdge = Math.max(0, ...[...edges.values()].map((edge) => edge.delay + edge.duration));
-  const lastNode = added.length * slot;
   return {
     id,
     nodes,
     edges,
     changed,
-    cursor,
+    cards,
+    cursors: cursors.filter((keys) => keys.length > 0),
     labels,
     pulses,
-    total: Math.max(lastEdge, lastNode, changed.size > 0 ? 1200 : 0),
+    total: Math.max(lastEdge, laneEnd, changed.size > 0 ? 1200 : 0),
     added: next.steps.filter((step) => !before.has(step.id)).length,
     connections: newEdges.length,
   };

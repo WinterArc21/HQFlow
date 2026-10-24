@@ -58,6 +58,36 @@ describe("planBuild", () => {
   it("replays the whole map from an empty canvas", () => {
     const result = plan(null, base)!;
     expect([...result.nodes.keys()]).toEqual(["start", "price"]);
-    expect(result.cursor.length).toBeGreaterThan(0);
+    expect(result.cursors).toHaveLength(1);
+    expect(result.cursors[0]!.length).toBeGreaterThan(0);
+  });
+
+  it("splits a big build between several cursors that join their runs at the end", () => {
+    const ids = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+    const chain = {
+      ...base,
+      steps: ids.map((id) => ({ id, name: id.toUpperCase(), purpose: `Step ${id}.`, category: "logic" })),
+      connections: ids.slice(1).map((id, index) => ({ from: ids[index]!, to: id })),
+    } as Workflow;
+    const result = plan(null, chain)!;
+    const layout = computeLayout(chain, { expandedStepIds: {} });
+
+    expect(result.cursors).toHaveLength(3);
+    // Drawn at once, it lands in about the time one cursor takes for three cards, not nine.
+    expect(result.total).toBeLessThan(6000);
+    for (const edge of layout.edges) {
+      const draw = result.edges.get(edge.id)!;
+      const target = result.nodes.get(edge.target)!;
+      const source = result.nodes.get(edge.source)!;
+      // Either the cursor inks it on the way into its target, or both cards are already there.
+      const ridesIn = draw.delay + draw.duration <= target.delay;
+      const joinsLater = draw.delay >= source.delay + source.duration * 0.9 && draw.delay >= target.delay + target.duration * 0.9;
+      expect(ridesIn || joinsLater, edge.id).toBe(true);
+    }
+    // Two of the eight links cross between runs; each cursor's key times never go backwards.
+    expect([...result.edges.values()].filter((draw) => draw.delay >= Math.max(...[...result.nodes.values()].map((node) => node.delay)))).toHaveLength(2);
+    for (const keys of result.cursors) {
+      keys.slice(1).forEach((key, index) => expect(key.t).toBeGreaterThan(keys[index]!.t));
+    }
   });
 });

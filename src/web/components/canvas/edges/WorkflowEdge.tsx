@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
@@ -59,6 +59,51 @@ function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Excl
     point,
     path: `M${source.point.x},${source.point.y} L${sourceLead.x},${sourceLead.y} L${point.x},${point.y} L${targetLead.x},${targetLead.y} L${target.point.x},${target.point.y}`,
   };
+}
+
+/** The live build's ink easing (liveBuild.css `hqEdgeDraw`); the riding cursor uses it too. */
+export const INK_EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
+const INK_DROP_SAMPLES = 24;
+
+/**
+ * The ink drop: a glowing bead that runs along the edge while its ink line draws in behind it,
+ * swelling mid-way like a drop of ink. Timed from when it mounts, like the CSS that draws the line.
+ */
+function InkDrop({ path, delay, duration, color }: { path: string; delay: number; duration: number; color: string }) {
+  const trackRef = useRef<SVGPathElement>(null);
+  const dropRef = useRef<SVGCircleElement>(null);
+  const mountedAt = useRef(0);
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    const drop = dropRef.current;
+    if (track === null || drop === null || typeof drop.animate !== "function" || typeof track.getTotalLength !== "function") {
+      return;
+    }
+    if (mountedAt.current === 0) {
+      mountedAt.current = performance.now();
+    }
+    const length = track.getTotalLength();
+    const frames: Keyframe[] = [];
+    for (let k = 0; k <= INK_DROP_SAMPLES; k += 1) {
+      const share = k / INK_DROP_SAMPLES;
+      const point = track.getPointAtLength(length * share);
+      frames.push({
+        offset: share,
+        transform: `translate(${point.x}px, ${point.y}px) scale(${0.65 + 0.55 * Math.sin(share * Math.PI)})`,
+        opacity: k === INK_DROP_SAMPLES ? 0 : 1,
+      });
+    }
+    const animation = drop.animate(frames, { duration, delay, easing: INK_EASING, fill: "forwards" });
+    // A re-render with a new path keeps the drop where it was in time instead of restarting it.
+    animation.currentTime = performance.now() - mountedAt.current;
+    return () => animation.cancel();
+  }, [delay, duration, path]);
+  return (
+    <g pointerEvents="none" aria-hidden="true">
+      <path ref={trackRef} d={path} fill="none" stroke="none" />
+      <circle ref={dropRef} r={4.5} style={{ fill: color, opacity: 0, filter: `drop-shadow(0 0 6px ${color})` }} />
+    </g>
+  );
 }
 
 /** A polyline through `points` with each corner rounded off. */
@@ -403,6 +448,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
           style={{ ...buildTiming, stroke: `var(${visual.varName})`, color: `var(${visual.varName})`, strokeWidth: strokeWidth + 1 }}
         />
       ) : null}
+      {build !== undefined ? <InkDrop path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
       {showLabel ? (
         <EdgeLabelRenderer>
           <div

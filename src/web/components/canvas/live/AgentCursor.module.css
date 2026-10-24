@@ -9,44 +9,50 @@
   will-change: transform;
 }
 
+/* A dark arrow with a white keyline, like a person's cursor in a shared doc: it reads on every
+   scene, light or dark. The tip is the drawing point. */
 .pointer {
   position: absolute;
-  top: -2px;
-  left: -2px;
+  top: -3px;
+  left: -3.6px;
+  width: 22px;
+  min-width: 22px;
+  height: 24px;
   overflow: visible;
-  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--bg-canvas) 60%, transparent));
+  filter: drop-shadow(0 1px 1px var(--agent-cursor-shadow)) drop-shadow(0 4px 8px var(--agent-cursor-shadow));
 }
 
 .pointer path {
-  fill: var(--focus-ring);
-  stroke: var(--bg-surface);
+  fill: var(--agent-cursor-fill);
+  stroke: var(--agent-cursor-line);
   stroke-width: 1.6;
   stroke-linejoin: round;
 }
 
-/* A name tag like a collaborator's cursor in a shared doc: who is drawing, and what. */
+/* A name tag like a collaborator's cursor: who is drawing, and what. The dot tells pens apart. */
 .label {
   position: absolute;
-  top: 20px;
-  left: 14px;
+  top: 19px;
+  left: 15px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 9px 3px 7px;
+  border: 1.5px solid var(--agent-cursor-line);
   border-radius: 999px 999px 999px 4px;
-  background: var(--focus-ring);
-  color: var(--bg-canvas);
+  background: var(--agent-cursor-fill);
+  color: var(--agent-cursor-line);
   font: 600 var(--fs-micro) / 1.4 var(--font-ui);
   white-space: nowrap;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--focus-ring) 45%, transparent);
+  box-shadow: 0 4px 14px var(--agent-cursor-shadow);
   animation: labelIn 260ms var(--ease-spring);
 }
 
 .labelDot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--pen-color);
   animation: typing 700ms ease-in-out infinite alternate;
 }
 
@@ -60,6 +66,44 @@
 @keyframes typing {
   from {
     opacity: 0.35;
+  }
+}
+
+/* ---- the weave: tiles fly off the pen's tip into the marquee, then clear for the card ---- */
+.tiles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.tile {
+  position: absolute;
+  opacity: 0;
+  transform-origin: 0 0;
+  animation:
+    tileFly var(--tile-fly) cubic-bezier(0.16, 1, 0.3, 1) var(--tile-at) both,
+    tileOut 260ms var(--ease-standard) var(--tile-out) forwards;
+}
+
+@keyframes tileFly {
+  from {
+    opacity: 0;
+    transform: translate(var(--tile-dx), var(--tile-dy)) rotate(var(--tile-rot)) scale(0.2);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tileOut {
+  to {
+    opacity: 0;
   }
 }
 
