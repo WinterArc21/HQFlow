@@ -15,6 +15,7 @@ const bendSchema = z.object({
 export const workflowCanvasLayoutSchema: z.ZodType<WorkflowCanvasLayout> = z.object({
   nodePositions: z.record(z.string(), pointSchema),
   edgeBends: z.record(z.string(), bendSchema),
+  view: z.enum(["flow", "wrap", "line"]).exactOptional(),
 }).strict();
 
 const layoutFileSchema = z.object({

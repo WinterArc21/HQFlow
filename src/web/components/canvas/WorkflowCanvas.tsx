@@ -8,7 +8,7 @@ import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
-import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
+import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
 import { CanvasLegend } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
@@ -17,7 +17,8 @@ import { StepCardLayer } from "./StepCardLayer";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
 import { computeBackEdgeIds, computeTracePath } from "./graph";
-import { computeLayout } from "./layout";
+import { chooseCanvasView, computeLayout, type CanvasView } from "./layout";
+import { CanvasViewHint } from "./CanvasViewHint";
 import { OutcomeNode } from "./nodes/OutcomeNode";
 import { StepNode } from "./nodes/StepNode";
 import type { CanvasFlowNode, WorkflowFlowEdge } from "./types";
@@ -47,6 +48,8 @@ const MINIMAP_MIN_FEATURE_DIVISOR = 100;
 /** Above this, only on-screen nodes and edges mount; image export turns it off to capture the whole graph. */
 const VIRTUALIZE_NODE_THRESHOLD = 60;
 const IMAGE_PADDING = 120;
+/** How long cards take to glide into a newly picked view. */
+const VIEW_GLIDE_MS = 600;
 const MIN_IMAGE_SIZE = 800;
 const MAX_IMAGE_SIZE = 4096;
 
@@ -132,8 +135,27 @@ function WorkflowCanvasInner({
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const stepPanRequest = useCodeHQStore((state) => state.stepPanRequest);
   const selectStep = useCodeHQStore((state) => state.selectStep);
+  const setCanvasView = useCodeHQStore((state) => state.setCanvasView);
 
-  const layout = useMemo(() => computeLayout(workflow, { expandedStepIds }), [workflow, expandedStepIds]);
+  // The view is picked from the map's shape when it opens and then stays put: a live edit that
+  // turns a chain into a branching map only offers the better view, it never moves the map itself.
+  const [opened, setOpened] = useState(() => ({ canvasId, view: chooseCanvasView(workflow) }));
+  if (opened.canvasId !== canvasId) {
+    setOpened({ canvasId, view: chooseCanvasView(workflow) });
+  }
+  const openedView = opened.canvasId === canvasId ? opened.view : chooseCanvasView(workflow);
+  const view: CanvasView = canvasLayout?.view ?? openedView;
+  const suggestedView = useMemo(() => chooseCanvasView(workflow), [workflow]);
+  const [dismissedHint, setDismissedHint] = useState<{ canvasId: string; view: CanvasView } | null>(null);
+  const showViewHint = suggestedView !== view && suggestedView !== openedView
+    && !(dismissedHint?.canvasId === canvasId && dismissedHint.view === suggestedView);
+  const changeView = useCallback((next: CanvasView) => {
+    if (next !== view) {
+      setCanvasView(canvasId, next);
+    }
+  }, [canvasId, setCanvasView, view]);
+
+  const layout = useMemo(() => computeLayout(workflow, { expandedStepIds, view }), [workflow, expandedStepIds, view]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
   const bendResetKey = useMemo(
     () => `${layoutResetRevision}:${JSON.stringify(layout.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })))}`,
@@ -234,17 +256,23 @@ function WorkflowCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>(initialNodes);
   const previousWorkflowId = useRef(canvasId);
   const previousRevision = useRef(workflowRevision);
+  const previousView = useRef(view);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
     const reset = previousWorkflowId.current !== canvasId;
     // A new revision of the same workflow re-flows every card the user has not dragged: keeping
     // their old positions would stack them on the cards the new layout placed around them.
     // Expanding a card keeps positions, so the rest of the map holds still.
-    const reflow = reset || previousRevision.current !== workflowRevision;
+    // Switching views re-flows every card too, and the cards glide to their new places.
+    const viewChanged = previousView.current !== view;
+    const reflow = reset || viewChanged || previousRevision.current !== workflowRevision;
     previousWorkflowId.current = canvasId;
     previousRevision.current = workflowRevision;
+    previousView.current = view;
+    const from = new Map<string, { x: number; y: number }>();
     setNodes((current) => {
       const positions = new Map(current.map((node) => [node.id, node.position]));
+      positions.forEach((position, id) => from.set(id, position));
       return generatedNodes.map((node) => ({
         ...node,
         position: reflow
@@ -252,7 +280,43 @@ function WorkflowCanvasInner({
           : positions.get(node.id) ?? canvasLayout?.nodePositions[node.id] ?? node.position,
       }));
     });
-  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, setNodes, workflowRevision]);
+    if (!viewChanged || reset || reducedMotion) {
+      return;
+    }
+    const to = new Map(generatedNodes.map((node) => [node.id, canvasLayout?.nodePositions[node.id] ?? node.position]));
+    const at = (id: string, t: number) => {
+      const start = from.get(id);
+      const end = to.get(id);
+      return start === undefined || end === undefined
+        ? end
+        : { x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t };
+    };
+    const startedAt = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - startedAt) / VIEW_GLIDE_MS);
+      const t = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      setNodes((current) => current.map((node) => ({ ...node, position: at(node.id, t) ?? node.position })));
+      if (p < 1) {
+        frame = requestAnimationFrame(step);
+      }
+    };
+    setNodes((current) => current.map((node) => ({ ...node, position: at(node.id, 0) ?? node.position })));
+    frame = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(frame);
+      setNodes((current) => current.map((node) => ({ ...node, position: to.get(node.id) ?? node.position })));
+    };
+  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, reducedMotion, setNodes, view, workflowRevision]);
+  // A new view has new bounds: frame it while the cards glide.
+  const framedView = useRef(view);
+  useLayoutEffect(() => {
+    if (framedView.current === view) {
+      return;
+    }
+    framedView.current = view;
+    fitToViewport(reducedMotion ? 0 : VIEW_GLIDE_MS);
+  }, [fitToViewport, reducedMotion, view]);
   useLayoutEffect(() => {
     if (handledLayoutResetRevision.current === layoutResetRevision) {
       return;
@@ -300,13 +364,20 @@ function WorkflowCanvasInner({
       }
       const sourceInitial = initialPositions.get(edge.source);
       const targetInitial = initialPositions.get(edge.target);
-      const outcomeAtRest = edge.data?.branch === true && sourceInitial !== undefined && targetInitial !== undefined
+      const atRest = sourceInitial !== undefined && targetInitial !== undefined
         && source.x === sourceInitial.x && source.y === sourceInitial.y
         && target.x === targetInitial.x && target.y === targetInitial.y;
-      if (outcomeAtRest) {
+      const routed = edge.data?.branch === true || edge.data?.turnY !== undefined;
+      if (atRest && routed) {
         return edge;
       }
-      const handles = chooseCardinalHandles(source, target);
+      const handles = chooseViewHandles(layout.view, source, target, edge.data?.branch === true);
+      if (edge.data?.turnY !== undefined) {
+        // A dragged card leaves its row, so its row-turn route no longer fits.
+        const data = { ...edge.data };
+        delete data.turnY;
+        return { ...edge, ...handles, data };
+      }
       return edge.sourceHandle === handles.sourceHandle && edge.targetHandle === handles.targetHandle
         ? edge
         : { ...edge, ...handles };
@@ -416,6 +487,7 @@ function WorkflowCanvasInner({
     onCollapseAll: collapseAllSteps,
     ...(exportMode === null ? { onReplay: live.replay } : {}),
     collapseDisabled: !hasExpandedSteps,
+    viewSwitch: { view, autoView: suggestedView, onViewChange: changeView },
     ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
     ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
       ? { onDelete: () => setDeleteDialogOpen(true) }
@@ -485,6 +557,15 @@ function WorkflowCanvasInner({
           ) : null}
         </ReactFlow>
         <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
+        {showViewHint ? (
+          <CanvasViewHint
+            view={view}
+            suggestedView={suggestedView}
+            onSwitch={() => changeView(suggestedView)}
+            onDismiss={() => setDismissedHint({ canvasId, view: suggestedView })}
+            {...(chrome !== undefined ? { bottomInset: chrome.fitInsets.bottom } : {})}
+          />
+        ) : null}
         {live.plan !== null ? <BuildToast key={live.plan.id} plan={live.plan} fileName={`${workflow.id}.json`} /> : null}
         {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}
         {overflowsBottom ? <CanvasOverflowIndicator direction="bottom" /> : null}

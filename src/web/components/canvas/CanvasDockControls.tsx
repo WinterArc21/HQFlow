@@ -2,6 +2,7 @@ import { ArrowCounterClockwise, ArrowsInLineVertical, DownloadSimple, Minus, Pen
 import { useStore } from "@xyflow/react";
 import { IconButton, Tooltip } from "../primitives";
 import type { CanvasToolbarProps } from "./CanvasToolbar";
+import { CanvasViewSwitch } from "./CanvasViewSwitch";
 import styles from "./CanvasDockControls.module.css";
 
 /**
@@ -9,10 +10,16 @@ import styles from "./CanvasDockControls.module.css";
  * level readout, then the layout actions. Same handlers and accessible names as `CanvasToolbar`,
  * which remains the title-strip version for the export viewer and landing demo.
  */
-export function CanvasDockControls({ onZoomIn, onZoomOut, onResetLayout, onCollapseAll, collapseDisabled, onReplay, onExport, onDelete }: CanvasToolbarProps) {
+export function CanvasDockControls({ onZoomIn, onZoomOut, onResetLayout, onCollapseAll, collapseDisabled, onReplay, onExport, onDelete, viewSwitch }: CanvasToolbarProps) {
   const zoom = useStore((state) => state.transform[2]);
   return (
     <div className={styles.controls}>
+      {viewSwitch !== undefined ? (
+        <>
+          <CanvasViewSwitch {...viewSwitch} />
+          <span className={styles.divider} aria-hidden="true" />
+        </>
+      ) : null}
       <div className={styles.zoomGroup}>
         <Tooltip content="Zoom out">
           <IconButton label="Zoom out" icon={<Minus size={14} weight="bold" />} size="sm" onClick={onZoomOut} />

@@ -71,6 +71,7 @@ function makeData(overrides: Partial<WorkflowEdgeData> = {}): WorkflowEdgeData {
 
 function makeLayout(): LayoutResult {
   return {
+    view: "line",
     nodes: [
       { id: "a", x: 0, y: 0, width: 100, height: 80, index: 0, isOutcome: false },
       { id: "ordinary", x: 200, y: 0, width: 100, height: 80, index: 1, isOutcome: false },

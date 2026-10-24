@@ -61,6 +61,25 @@ function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Excl
   };
 }
 
+/** A polyline through `points` with each corner rounded off. */
+export function roundedPolylinePath(points: Array<{ x: number; y: number }>, radius = EDGE_BORDER_RADIUS): string {
+  let path = `M${points[0]!.x},${points[0]!.y}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const c = points[i + 1]!;
+    const l1 = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const l2 = Math.hypot(c.x - b.x, c.y - b.y) || 1;
+    const r = Math.min(radius, l1 / 2, l2 / 2);
+    path += ` L${b.x + ((a.x - b.x) / l1) * r},${b.y + ((a.y - b.y) / l1) * r} Q${b.x},${b.y} ${b.x + ((c.x - b.x) / l2) * r},${b.y + ((c.y - b.y) / l2) * r}`;
+  }
+  const last = points[points.length - 1]!;
+  return `${path} L${last.x},${last.y}`;
+}
+
+/** Wrap view: how far a row-turn edge runs out of its source and in front of its target. */
+const TURN_LEAD = 24;
+
 /** React Flow's bezier, ending on a straight `ARROW_LEAD` run so the arrowhead always sits on its own line. */
 export function arrowSafeBezierPath(
   source: { x: number; y: number },
@@ -180,7 +199,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       ? null
       : { ...data.savedBend, resetKey: data.bendResetKey };
   const dragging = draggingForKey === data.bendResetKey;
-  const bendable = !retry && !returnEdge && !branch;
+  const { turnY, returnX } = data;
+  const bendable = !retry && !returnEdge && !branch && turnY === undefined;
   const isRetryLoop = retry;
   const visual = isRetryLoop
     ? RETRY_EDGE_VISUAL
@@ -207,13 +227,30 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     const cardHeight = Math.abs(sourceY - targetY) / (RETRY_OUT_FRACTION - RETRY_IN_FRACTION);
     labelX = Math.max(sourceX, targetX) - RETRY_LABEL_INSET;
     labelY = Math.min(sourceY, targetY) - cardHeight * RETRY_IN_FRACTION - RETRY_LABEL_LIFT;
+  } else if (returnEdge && returnX !== undefined) {
+    path = roundedPolylinePath([{ x: sourceX, y: sourceY }, { x: returnX, y: sourceY }, { x: returnX, y: targetY }, { x: targetX, y: targetY }]);
+    labelX = returnX;
+    labelY = (sourceY + targetY) / 2;
+  } else if (turnY !== undefined) {
+    const outX = sourceX + TURN_LEAD;
+    const inX = targetX - TURN_LEAD;
+    path = roundedPolylinePath([
+      { x: sourceX, y: sourceY },
+      { x: outX, y: sourceY },
+      { x: outX, y: turnY },
+      { x: inX, y: turnY },
+      { x: inX, y: targetY },
+      { x: targetX, y: targetY },
+    ]);
+    labelX = (outX + inX) / 2;
+    labelY = turnY;
   } else if (returnEdge) {
     const liftY = Math.min(sourceY, targetY) - RETURN_EDGE_LIFT;
     path = `M${sourceX},${sourceY} C${sourceX},${liftY} ${targetX},${liftY} ${targetX},${targetY}`;
     labelX = (sourceX + targetX) / 2;
     labelY = liftY;
   } else {
-    const geometry = branch
+    const geometry = branch || data.routing === "step"
       ? getSmoothStepPath({
           sourceX,
           sourceY,

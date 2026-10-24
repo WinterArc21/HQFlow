@@ -65,6 +65,13 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * a successful terminal is dashed green while an ordinary success connection stays neutral
    * solid. */
   outcomeBand?: OutcomeBand;
+  /** Flow and wrap views draw ordinary connections as rounded right-angle lines. */
+  routing?: "step";
+  /** Wrap view: a connection into a later row runs right, down to this y under its row, back
+   * left past the start of the next row, then into the target's left side. */
+  turnY?: number;
+  /** Flow and wrap views: a return edge runs up the right side of the map at this x. */
+  returnX?: number;
   /** Path tracing: true whenever a trace is active and this edge is not an outgoing edge from the
    * anchor. */
   dimmed: boolean;

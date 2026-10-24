@@ -59,6 +59,8 @@ export interface CanvasBend {
 export interface WorkflowCanvasLayout {
   nodePositions: Record<string, CanvasPoint>;
   edgeBends: Record<string, CanvasBend>;
+  /** The view the user picked; absent means the canvas picks one from the map's shape. */
+  view?: "flow" | "wrap" | "line";
 }
 
 /** `GET /api/source` response shape. It contains metadata only, never file contents. */

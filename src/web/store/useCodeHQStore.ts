@@ -61,6 +61,9 @@ interface CodeHQUiActions {
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
   reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
   resetLayout: (workflowId?: string) => void;
+  /** Picks a view for one workflow. Dragged positions and bends belong to the old view's
+   * geometry, so they are cleared. */
+  setCanvasView: (workflowId: string, view: NonNullable<WorkflowCanvasLayout["view"]>) => void;
   setSearchQuery: (query: string) => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -237,7 +240,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           expandedStepIds,
           canvasLayouts: {
             ...state.canvasLayouts,
-            [workflowId]: { nodePositions, edgeBends },
+            [workflowId]: { ...layout, nodePositions, edgeBends },
           },
         };
       }),
@@ -248,9 +251,19 @@ export const useCodeHQStore = create<CodeHQStore>()(
           return state;
         }
         const canvasLayouts = { ...state.canvasLayouts };
-        delete canvasLayouts[workflowId];
+        // Reset clears what the user dragged; the view they picked stays.
+        const view = canvasLayouts[workflowId]?.view;
+        if (view === undefined) {
+          delete canvasLayouts[workflowId];
+        } else {
+          canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, view };
+        }
         return { canvasLayouts, expandedStepIds: {}, layoutResetRevision: state.layoutResetRevision + 1 };
       }),
+
+      setCanvasView: (workflowId, view) => set((state) => ({
+        canvasLayouts: { ...state.canvasLayouts, [workflowId]: { nodePositions: {}, edgeBends: {}, view } },
+      })),
 
       setSearchQuery: (searchQuery) => set({ searchQuery }),
 
