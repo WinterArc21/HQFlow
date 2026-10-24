@@ -62,6 +62,7 @@
   },
   "dependencies": {
     "@fastify/static": "^10.1.2",
+    "@supabase/supabase-js": "^2.118.0",
     "chokidar": "^5.0.0",
     "commander": "^15.0.0",
     "fastify": "^5.10.0",

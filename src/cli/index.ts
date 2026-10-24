@@ -7,7 +7,9 @@
 
 import { Command, InvalidArgumentError } from "commander";
 import { printInitResult, runInit } from "./commands/init";
+import { runLogin, runLogout, runWhoami } from "./commands/account";
 import { runOpen } from "./commands/open";
+import { runSync } from "./commands/sync";
 import { printValidateResult, runValidate } from "./commands/validate";
 import { red } from "./output";
 import { resolveCliVersion } from "./version";
@@ -81,6 +83,42 @@ function buildProgram(): Command {
         ...(options.json !== undefined ? { json: options.json } : {}),
       });
       printValidateResult(result, options.json === true);
+      process.exitCode = result.exitCode;
+    });
+
+  program
+    .command("login")
+    .description("Log in to an optional HQFlow account (needed only for cloud sync)")
+    .option("--create", "Create a new account")
+    .action(async (options: { create?: boolean }) => {
+      const result = await runLogin(options.create !== undefined ? { create: options.create } : {});
+      process.exitCode = result.exitCode;
+    });
+
+  program
+    .command("logout")
+    .description("Log out of HQFlow on this machine")
+    .action(async () => {
+      process.exitCode = (await runLogout()).exitCode;
+    });
+
+  program
+    .command("whoami")
+    .description("Print the HQFlow account this machine is logged in to")
+    .action(async () => {
+      process.exitCode = (await runWhoami()).exitCode;
+    });
+
+  program
+    .command("sync")
+    .description("Sync .codehq workflows and layouts with your HQFlow account (never source code)")
+    .option("--root <path>", "Repository root (defaults to autodetection from the current directory)")
+    .option("--off", "Turn cloud sync off for this repository")
+    .action(async (options: { root?: string; off?: boolean }) => {
+      const result = await runSync({
+        ...(options.root !== undefined ? { root: options.root } : {}),
+        ...(options.off !== undefined ? { off: options.off } : {}),
+      });
       process.exitCode = result.exitCode;
     });
 

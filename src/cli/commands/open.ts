@@ -6,7 +6,9 @@
  */
 
 import { spawn } from "node:child_process";
+import { createCloudClient } from "@core/cloud";
 import { pathExists } from "@core/fs-utils";
+import { isSyncEnabled, startAutoSync } from "@core/sync";
 import { codeHQPaths, repositoryName } from "@core/repository";
 import { createCodeHQServer, type CodeHQServer } from "@server/app";
 import { resolveCliRoot } from "../resolve-root";
@@ -54,7 +56,7 @@ function openBrowser(url: string): Promise<void> {
   });
 }
 
-function waitForStopSignal(server: CodeHQServer): Promise<OpenResult> {
+function waitForStopSignal(server: CodeHQServer, stopSync: () => void): Promise<OpenResult> {
   return new Promise((resolve) => {
     let settled = false;
     const shutdown = (): void => {
@@ -62,6 +64,7 @@ function waitForStopSignal(server: CodeHQServer): Promise<OpenResult> {
         return;
       }
       settled = true;
+      stopSync();
       process.off("SIGINT", shutdown);
       process.off("SIGTERM", shutdown);
       void server.close().then(() => {
@@ -101,6 +104,12 @@ export async function runOpen(options: OpenOptions): Promise<OpenResult> {
   console.log(`URL: ${displayUrl}${portNote}`);
   console.log("Watching: .codehq/");
 
+  let stopSync = (): void => undefined;
+  if (await isSyncEnabled(root)) {
+    console.log("Cloud sync: on");
+    stopSync = startAutoSync(root, server.store, createCloudClient(), (line) => console.log(line));
+  }
+
   if (shouldOpenBrowser) {
     try {
       await openBrowser(displayUrl);
@@ -109,5 +118,5 @@ export async function runOpen(options: OpenOptions): Promise<OpenResult> {
     }
   }
 
-  return waitForStopSignal(server);
+  return waitForStopSignal(server, stopSync);
 }

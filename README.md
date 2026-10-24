@@ -23,6 +23,7 @@ The image follows your light or dark system theme.
 - Runs entirely on your machine (`localhost`)
 - Never uploads repository source to a remote service
 - Contains no built-in LLM — your existing coding agent authors the `.codehq` files
+- Accounts and cloud sync are optional and off by default. See [Accounts and sync](#accounts-and-sync).
 
 See [SECURITY.md](./SECURITY.md) to report vulnerabilities privately.
 
@@ -99,6 +100,36 @@ layout.
 
 Also available: `--help`, `--version`, `--debug` (or `HQFLOW_DEBUG=1`) for full stack
 traces on error.
+
+## Accounts and sync
+
+HQFlow works fully without an account. Make a free account only if you want your workflows on
+other computers or on your phone.
+
+```sh
+hqflow login --create   # first time; confirm the email, then run `hqflow login`
+hqflow sync             # in a repository: turns sync on and syncs now
+hqflow open             # while sync is on, keeps syncing in the background
+```
+
+- `hqflow login [--create]`, `hqflow logout`, `hqflow whoami` — manage the login on this
+  machine. The session is stored in `~/.hqflow/credentials.json`.
+- `hqflow sync [--off] [--root <path>]` — sync this repository with your account. Run it in
+  every repository you want under the same account. `--off` stops syncing this repository and
+  does not delete its cloud copy.
+- The hosted viewer at `/app` on the HQFlow site shows all your synced projects. It is
+  read-only and works on a phone. You can also delete a project's cloud copy or your account there.
+
+**What syncs:** `project.json`, `workflows/*.json`, saved canvas layouts, and the found/missing
+status of source references. **What never syncs:** your source code, `SKILL.md`,
+`diagnostics.json`, and absolute paths. Workflow files still contain repository-relative file
+paths, symbol names, and descriptions of how your code works, so sync only repositories where
+that is acceptable.
+
+**Edits on two devices:** each sync copies only the side that changed since the last sync. If
+the same workflow changed on both sides, the local copy wins and the cloud copy is saved to
+`.codehq/.runtime/conflicts/<id>.cloud.json`. A file that is invalid locally is skipped and
+never overwritten.
 
 ## The `.codehq` format
 
