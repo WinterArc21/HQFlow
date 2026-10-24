@@ -51,6 +51,7 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
   const grid = useDotGrid();
   const panelRef = useRef<HTMLDivElement>(null);
   const scene = useCodeHQStore(activeScene);
+  const theme = useCodeHQStore((state) => state.theme);
   const motion = useCodeHQStore((state) => state.motion);
   const setScene = useCodeHQStore((state) => state.setScene);
   const setMotion = useCodeHQStore((state) => state.setMotion);
@@ -105,7 +106,7 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
                 style={{ "--i": index } as CSSProperties}
                 title={option.tagline}
                 data-scene-shader={option.shader !== null ? "" : undefined}
-                onClick={() => setScene(option.id, option.base)}
+                onClick={() => setScene(option.id, option.base === "both" ? theme : option.base)}
               >
                 <span className={styles.swatch} data-scene-probe={option.id} aria-hidden="true">
                   <span className={styles.chip} />

@@ -12,7 +12,7 @@ export interface Scene {
   id: string;
   name: string;
   /** The light/dark family; drives `data-theme`, so every base token and React Flow follow it. */
-  base: Theme;
+  base: Theme | "both";
   /** `null` keeps the CSS dot field: the original, calmest look. */
   shader: ShaderId | null;
   /** One line for the picker. */
@@ -20,11 +20,9 @@ export interface Scene {
 }
 
 export const SCENES: readonly Scene[] = [
-  { id: "graphite", name: "Graphite", base: "dark", shader: null, tagline: "The quiet original. Dots on charcoal." },
+  { id: "plain", name: "Plain", base: "both", shader: null, tagline: "A clean dot grid. Follows the light and dark button." },
   { id: "abyss-mesh", name: "Abyss Mesh", base: "dark", shader: "mesh", tagline: "Deep teal and pink, blended soft with film grain." },
-  { id: "silk-mesh", name: "Silk Mesh", base: "dark", shader: "mesh", tagline: "Violet, rose and peach, blended soft with film grain." },
-  { id: "tide-mesh", name: "Tide Mesh", base: "dark", shader: "mesh", tagline: "Navy and ice blue, blended soft with film grain." },
-  { id: "paper", name: "Paper", base: "light", shader: null, tagline: "Warm paper and a quiet dot grid." },
+  { id: "seafoam", name: "Seafoam", base: "light", shader: "mesh", tagline: "Mint, sky and lilac, blended soft with film grain." },
   { id: "sorbet", name: "Sorbet", base: "light", shader: "mesh", tagline: "A soft pastel mesh with film grain." },
 ];
 
@@ -37,5 +35,5 @@ export function findScene(id: string | undefined): Scene | undefined {
 /** A known scene of the given family, falling back to that family's default. */
 export function sceneFor(id: string | undefined, base: Theme): Scene {
   const scene = findScene(id);
-  return scene !== undefined && scene.base === base ? scene : findScene(DEFAULT_SCENE[base])!;
+  return scene !== undefined && (scene.base === base || scene.base === "both") ? scene : findScene(DEFAULT_SCENE[base])!;
 }

@@ -52,7 +52,7 @@ export function activeScene(state: Pick<CodeHQStore, "theme" | "darkScene" | "li
 function applyAppearance(state: CodeHQStore): void {
   const root = document.documentElement;
   const scene = activeScene(state);
-  root.setAttribute("data-theme", scene.base);
+  root.setAttribute("data-theme", state.theme);
   root.setAttribute("data-scene", scene.id);
   root.setAttribute("data-motion", prefersReducedMotion() ? "still" : state.motion);
   toggleAttribute(root, "data-scene-shader", scene.shader !== null && supportsWebGL2() ? "" : null);

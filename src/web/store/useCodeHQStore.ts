@@ -1,3 +1,4 @@
+import { findScene } from "../design/scenes";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type {
@@ -281,7 +282,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setTheme: (theme) => set({ theme }),
 
-      setScene: (sceneId, base) => set(base === "dark" ? { theme: base, darkScene: sceneId } : { theme: base, lightScene: sceneId }),
+      setScene: (sceneId, base) => set(findScene(sceneId)?.base === "both" ? { theme: base, darkScene: sceneId, lightScene: sceneId } : base === "dark" ? { theme: base, darkScene: sceneId } : { theme: base, lightScene: sceneId }),
 
       setMotion: (motion) => set({ motion }),
 

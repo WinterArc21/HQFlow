@@ -182,8 +182,8 @@
  * Light-scene accents and card colours keep >=4.5:1 against their white surface.
  * ============================================================================================== */
 
-:root[data-scene="graphite"],
-[data-scene-probe="graphite"] {
+:root[data-scene="plain"][data-theme="dark"],
+:root[data-theme="dark"] [data-scene-probe="plain"] {
   --scene-c0: #0e0f11;
   --scene-c1: #1b1e23;
   --scene-c2: #5ec4c0;
@@ -197,8 +197,8 @@
   --cat-output: var(--accent-output);
 }
 
-:root[data-scene="paper"],
-[data-scene-probe="paper"] {
+:root[data-scene="plain"][data-theme="light"],
+:root[data-theme="light"] [data-scene-probe="plain"] {
   --scene-c0: #f6f4f0;
   --scene-c1: #e9e4da;
   --scene-c2: #0f7f7a;
@@ -288,80 +288,42 @@
   --grid-dot: rgba(42, 31, 45, 0.1);
 }
 
-:root[data-scene="silk-mesh"],
-[data-scene-probe="silk-mesh"] {
-  --scene-c0: #07060d;
-  --scene-c1: #1b1030;
-  --scene-c2: #4a1c66;
-  --scene-c3: #b8417e;
-  --scene-c4: #ffb48c;
-  --bg-canvas: #08060e;
-  --bg-surface: #120d1e;
-  --bg-raised: #181227;
-  --bg-inset: #05040a;
-  --border-subtle: #261b3a;
-  --border-strong: #3a2a56;
-  --text-primary: #f6eeff;
-  --text-secondary: #b9a9cf;
-  --text-tertiary: #7f7096;
-  --accent-blue: #7aa2ff;
-  --accent-green: #5ee0a0;
-  --accent-amber: #f6c35b;
-  --accent-red: #ff7a85;
-  --accent-violet: #c4a5ff;
-  --accent-neutral: #7f7096;
-  --accent-cyan: #67e8f9;
-  --accent-ice: #ffe3d3;
-  --accent-output: #86efac;
-  --accent-rose: #ff9fc8;
-  --accent-orange: #ffb48c;
+:root[data-scene="seafoam"],
+[data-scene-probe="seafoam"] {
+  --scene-c0: #f0fbf6;
+  --scene-c1: #b9ecd6;
+  --scene-c2: #b6d8ff;
+  --scene-c3: #e3cdff;
+  --scene-c4: #ffe3b8;
+  --bg-canvas: #f3fbf8;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-inset: #e7f5ef;
+  --border-subtle: #d5e9e0;
+  --border-strong: #bcd8cb;
+  --text-primary: #16282a;
+  --text-secondary: #4d6466;
+  --text-tertiary: #7d9496;
+  --accent-blue: #3b5bdb;
+  --accent-green: #2b8a3e;
+  --accent-amber: #a85400;
+  --accent-red: #c92a2a;
+  --accent-violet: #6741d9;
+  --accent-neutral: #6b5a6e;
+  --accent-cyan: #0b7285;
+  --accent-ice: #1c4f8f;
+  --accent-output: #2b8a3e;
+  --accent-rose: #c2255c;
+  --accent-orange: #c4420c;
   /* card colours, curated for this scene */
-  --cat-entry: #ffd9a8;
-  --cat-logic: #a8b8ff;
-  --cat-decision: #ff8fbf;
-  --cat-data: #ff9e7a;
-  --cat-external: #d6a0ff;
-  --cat-output: #ffd9a8;
-  --focus-ring: #ff9fc8;
-  --grid-dot: rgba(255, 180, 140, 0.12);
-}
-
-:root[data-scene="tide-mesh"],
-[data-scene-probe="tide-mesh"] {
-  --scene-c0: #02070d;
-  --scene-c1: #071d2e;
-  --scene-c2: #0f4a66;
-  --scene-c3: #3aa8c2;
-  --scene-c4: #d8fbff;
-  --bg-canvas: #030a10;
-  --bg-surface: #08151f;
-  --bg-raised: #0c1c29;
-  --bg-inset: #02060a;
-  --border-subtle: #12293a;
-  --border-strong: #1c3c52;
-  --text-primary: #e9f8ff;
-  --text-secondary: #9ebccc;
-  --text-tertiary: #678596;
-  --accent-blue: #7ab8ff;
-  --accent-green: #5ee0a0;
-  --accent-amber: #f6c35b;
-  --accent-red: #ff7a85;
-  --accent-violet: #c4a5ff;
-  --accent-neutral: #678596;
-  --accent-cyan: #5fd3ee;
-  --accent-ice: #d8fbff;
-  --accent-output: #86efac;
-  --accent-rose: #f9a8d4;
-  --accent-orange: #fdba74;
-  /* card colours, curated for this scene */
-  --cat-entry: #8cf0c6;
-  --cat-logic: #6fcfff;
-  --cat-decision: #ff9ec8;
-  --cat-data: #ffd08a;
-  --cat-external: #b0a4ff;
-  --cat-output: #8cf0c6;
-  --focus-ring: #5fd3ee;
-  --grid-dot: rgba(216, 251, 255, 0.12);
+  --cat-entry: #1e7a5a;
+  --cat-logic: #2f62c9;
+  --cat-decision: #c2306f;
+  --cat-data: #bd4b17;
+  --cat-external: #6b45c9;
+  --cat-output: #1e7a5a;
+  --focus-ring: #3b5bdb;
+  --grid-dot: rgba(22, 40, 42, 0.1);
 }
 
 /* A shader scene paints its own background, so the stage turns transparent and the chrome turns
