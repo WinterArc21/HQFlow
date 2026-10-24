@@ -133,7 +133,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       res: uniform("u_res"),
       buf: uniform("u_buf"),
       scale: uniform("u_scale"),
-      px: uniform("u_px"),
       time: uniform("u_time"),
       mouse: uniform("u_mouse"),
       pan: uniform("u_pan"),
@@ -172,10 +171,9 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
     window.addEventListener(PULSE_EVENT, onPulse);
 
     const resize = () => {
-      // A dither scene renders one shader pixel per dither cell and lets the browser scale it up
-      // crisply; smooth scenes render below device resolution.
+      // Scenes render below device resolution; they are soft, so it is not visible.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const scale = scene.pixel !== undefined ? 1 / scene.pixel : SMOOTH_SCALE * dpr;
+      const scale = SMOOTH_SCALE * dpr;
       canvas.width = Math.max(1, Math.ceil(window.innerWidth * scale));
       canvas.height = Math.max(1, Math.ceil(window.innerHeight * scale));
       canvas.style.width = `${canvas.width / scale}px`;
@@ -184,7 +182,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       gl.uniform2f(u.res, window.innerWidth, window.innerHeight);
       gl.uniform2f(u.buf, canvas.width, canvas.height);
       gl.uniform1f(u.scale, scale);
-      gl.uniform1f(u.px, scene.pixel ?? 1);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -236,7 +233,7 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
   return (
     <canvas
       ref={canvasRef}
-      className={`${styles.canvas} ${scene.pixel !== undefined ? styles.crisp : ""}`}
+      className={`${styles.canvas}`}
       data-scene-canvas={scene.id}
       aria-hidden="true"
     />

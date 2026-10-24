@@ -212,8 +212,8 @@
   --cat-output: var(--accent-output);
 }
 
-:root[data-scene="abyss"],
-[data-scene-probe="abyss"] {
+:root[data-scene="abyss-mesh"],
+[data-scene-probe="abyss-mesh"] {
   --scene-c0: #010810;
   --scene-c1: #04324a;
   --scene-c2: #4fe3d0;
@@ -288,46 +288,8 @@
   --grid-dot: rgba(42, 31, 45, 0.1);
 }
 
-:root[data-scene="dawn"],
-[data-scene-probe="dawn"] {
-  --scene-c0: #fdf3e7;
-  --scene-c1: #ffd3b8;
-  --scene-c2: #f6a5c0;
-  --scene-c3: #a7c4ff;
-  --scene-c4: #e4dcff;
-  --bg-canvas: #fdf6ee;
-  --bg-surface: #ffffff;
-  --bg-raised: #ffffff;
-  --bg-inset: #f7ece4;
-  --border-subtle: #efdfd6;
-  --border-strong: #dfc6bb;
-  --text-primary: #2b2140;
-  --text-secondary: #665a7d;
-  --text-tertiary: #958aa8;
-  --accent-blue: #3d5bd9;
-  --accent-green: #2f8050;
-  --accent-amber: #a35a05;
-  --accent-red: #c13a4a;
-  --accent-violet: #6d48c7;
-  --accent-neutral: #665a7d;
-  --accent-cyan: #127a8a;
-  --accent-ice: #2e4fae;
-  --accent-output: #2f8050;
-  --accent-rose: #b8336a;
-  --accent-orange: #b84c18;
-  /* card colours, curated for this scene */
-  --cat-entry: #2b7864;
-  --cat-logic: #4352c4;
-  --cat-decision: #b3326e;
-  --cat-data: #ad5418;
-  --cat-external: #7a42bd;
-  --cat-output: #2b7864;
-  --focus-ring: #3d5bd9;
-  --grid-dot: rgba(43, 33, 64, 0.1);
-}
-
-:root[data-scene="silk"],
-[data-scene-probe="silk"] {
+:root[data-scene="silk-mesh"],
+[data-scene-probe="silk-mesh"] {
   --scene-c0: #07060d;
   --scene-c1: #1b1030;
   --scene-c2: #4a1c66;
@@ -364,8 +326,8 @@
   --grid-dot: rgba(255, 180, 140, 0.12);
 }
 
-:root[data-scene="tide"],
-[data-scene-probe="tide"] {
+:root[data-scene="tide-mesh"],
+[data-scene-probe="tide-mesh"] {
   --scene-c0: #02070d;
   --scene-c1: #071d2e;
   --scene-c2: #0f4a66;

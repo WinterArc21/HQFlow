@@ -12,7 +12,6 @@ import type { ShaderId } from "../../design/scenes";
  *   u_mouse  pointer in CSS pixels, or negative when the pointer is away
  *   u_pan    canvas pan in CSS pixels, for a little parallax
  *   u_pulse  xy = where a live update landed (CSS px), z = its age in seconds (< 0 = none)
- *   u_px     CSS pixels per dither cell (1 for smooth scenes)
  */
 const PRELUDE = /* glsl */ `#version 300 es
 precision highp float;
@@ -24,7 +23,6 @@ uniform vec2 u_mouse;
 uniform vec2 u_pan;
 uniform vec3 u_pulse;
 uniform vec3 u_c[5];
-uniform float u_px;
 out vec4 outColor;
 
 float hash(vec2 p) {
@@ -53,35 +51,6 @@ float fbm(vec2 p) {
   return v;
 }
 
-float bayer2(vec2 a) {
-  a = floor(a);
-  return fract(dot(a, vec2(0.5, a.y * 0.75)));
-}
-float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
-float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
-
-/** The dither cell a pixel belongs to, and that cell's centre in CSS pixels. */
-vec2 cellOf(vec2 css) { return floor(css / u_px); }
-vec2 cellCentre(vec2 css) { return (floor(css / u_px) + 0.5) * u_px; }
-
-/**
- * Maps 0..1 onto the five scene colours, ordered-dithering between the two neighbours a value
- * falls between. Only adjacent colours ever mix, so a smooth field reads as a smooth gradient
- * with the dither grain on top, never as noise.
- */
-vec3 ditherRamp(float v, vec2 cell) {
-  float level = clamp(v, 0.0, 1.0) * 3.999;
-  float base = floor(level);
-  int i = int(base + step(bayer8(cell), level - base));
-  return u_c[i];
-}
-
-float mouseGlow(vec2 css, float radius) {
-  if (u_mouse.x < 0.0) return 0.0;
-  vec2 d = css - u_mouse;
-  return exp(-dot(d, d) / (radius * radius));
-}
-
 /** A ring that spreads from where a live update landed, fading as it grows. */
 float pulseRing(vec2 css) {
   float age = u_pulse.z;
@@ -100,94 +69,7 @@ void main() {
 `;
 
 const SCENES: Record<ShaderId, string> = {
-  abyss: /* glsl */ `
-float caustic(vec2 uv, float t) {
-  vec2 p = mod(uv * 6.2831, 6.2831) - 250.0;
-  vec2 i = p;
-  float c = 1.0;
-  float inten = 0.005;
-  for (int n = 0; n < 4; n++) {
-    float tt = t * (1.0 - (3.5 / float(n + 1)));
-    i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));
-    c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));
-  }
-  c /= 4.0;
-  c = 1.17 - pow(c, 1.4);
-  return pow(abs(c), 8.0);
-}
-
-vec3 sceneColor(vec2 css) {
-  vec2 uv = css / u_res;
-  vec2 p = (css - u_pan * 0.2) / 900.0;
-  float depth = uv.y;
-  vec3 col = mix(u_c[1], u_c[0], smoothstep(0.0, 1.0, depth));
-  float c = caustic(p, u_time * 0.35 + 23.0);
-  col += u_c[2] * c * 0.32 * (1.15 - depth);
-  float rays = fbm(vec2(css.x / 140.0 + css.y / 600.0, u_time * 0.05));
-  col += u_c[3] * pow(rays, 3.0) * 0.16 * (1.0 - depth);
-  vec2 g = floor(css / 90.0);
-  vec2 f = fract(css / 90.0) - 0.5;
-  float h = hash(g);
-  vec2 drift = vec2(sin(u_time * 0.3 + h * 6.0), cos(u_time * 0.23 + h * 9.0)) * 0.25;
-  float spark = exp(-dot(f - drift, f - drift) * 900.0) * step(0.86, h);
-  col += u_c[4] * spark * (0.5 + 0.5 * sin(u_time * 1.4 + h * 30.0));
-  col += u_c[3] * mouseGlow(css, 240.0) * 0.14;
-  col += u_c[2] * pulseRing(css) * 0.5;
-  return col;
-}
-`,
-  silk: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 cell = cellOf(css);
-  vec2 c = cellCentre(css);
-  vec2 p = (c - u_pan * 0.08) / u_res.y;
-  float t = u_time * 0.07;
-  // Layered sine warps fold the plane like cloth; low frequencies keep every fold soft.
-  vec2 q = p * 2.4;
-  for (int i = 1; i < 6; i++) {
-    float fi = float(i);
-    q += (0.42 / fi) * vec2(sin(fi * q.y * 1.15 + t * 1.3 + fi * 1.7), cos(fi * q.x * 0.95 - t * 1.1 + fi * 2.3));
-  }
-  float sheen = 0.5 + 0.5 * sin(q.x * 2.2 + q.y * 1.4 + t * 0.8);
-  // Body of the fold plus a narrow specular ridge along each crest, like light on satin.
-  float v = 0.06 + sheen * 0.56 + pow(sheen, 10.0) * 0.22;
-  vec2 v2 = c / u_res - 0.5;
-  v *= 1.0 - dot(v2, v2) * 0.5;
-  v += mouseGlow(c, 240.0) * 0.22 + pulseRing(c) * 0.4;
-  return ditherRamp(v, cell);
-}
-`,
-  tide: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  vec2 cell = cellOf(css);
-  vec2 c = cellCentre(css);
-  float aspect = u_res.x / u_res.y;
-  vec2 p = (c - vec2(u_pan.x * 0.06, 0.0)) / u_res.y;
-  float t = u_time * 0.1;
-  float horizon = 0.3;
-  vec2 moon = vec2(aspect * 0.74, 0.15);
-  float v;
-  if (p.y < horizon) {
-    // Sky: a soft gradient, the moon, and its halo.
-    float d = length(p - moon);
-    v = 0.05 + 0.14 * (p.y / horizon) + exp(-d * 9.0) * 0.32 + smoothstep(0.062, 0.056, d) * 0.9;
-    v += step(0.9975, hash(cell)) * 0.5 * (0.6 + 0.4 * sin(u_time + hash(cell + 3.0) * 30.0));
-  } else {
-    // Water: swells in perspective, so bands crowd toward the horizon, and a column of moonlight.
-    float depth = (p.y - horizon) / (1.0 - horizon);
-    float z = 1.0 / (depth + 0.06);
-    float sway = 0.35 * sin(p.x * 2.2 + t * 2.0) + 0.25 * sin(p.x * 5.3 - t * 2.7 + 1.3) + 0.6 * fbm(vec2(p.x * 1.6 * z * 0.3, t));
-    float band = 0.5 + 0.5 * sin(z * 9.0 + sway * 1.6 - t * 6.0);
-    float column = exp(-pow((p.x - moon.x) * mix(9.0, 2.6, depth), 2.0));
-    float crest = pow(band, mix(10.0, 3.0, depth));
-    v = 0.1 + 0.14 * depth + crest * (0.2 + 0.55 * column) * smoothstep(0.0, 0.04, depth);
-    v += exp(-depth * 30.0) * 0.18;
-  }
-  v += mouseGlow(c, 220.0) * 0.18 + pulseRing(c) * 0.4;
-  return ditherRamp(v, cell);
-}
-`,
-  sorbet: /* glsl */ `
+  mesh: /* glsl */ `
 vec3 sceneColor(vec2 css) {
   vec2 uv = css / u_res.y;
   float t = u_time * 0.06;
@@ -211,26 +93,6 @@ vec3 sceneColor(vec2 css) {
   col += (u_c[1] - u_c[0]) * pulseRing(css) * 0.4;
   col += (hash(css) - 0.5) * 0.04;
   return col;
-}
-`,
-  dawn: /* glsl */ `
-vec3 sceneColor(vec2 css) {
-  float px = 4.0;
-  vec2 cell = floor(css / px);
-  vec2 cp = cell * px;
-  vec2 uv = cp / u_res;
-  float t = u_time * 0.02;
-  float cloud = fbm(vec2(cp.x / 360.0 + t, cp.y / 160.0));
-  float v = uv.y * 0.9 + (cloud - 0.5) * 0.45 + mouseGlow(cp, 220.0) * 0.18 - pulseRing(cp) * 0.25;
-  float level = clamp(v, 0.0, 0.999) * 5.0 + (bayer8(cell) - 0.5) * 0.9;
-  int idx = int(clamp(floor(level), 0.0, 4.0));
-  vec3 ramp[5];
-  ramp[0] = u_c[3];
-  ramp[1] = u_c[4];
-  ramp[2] = u_c[0];
-  ramp[3] = u_c[1];
-  ramp[4] = u_c[2];
-  return ramp[idx];
 }
 `,
 };

@@ -10,10 +10,6 @@
   animation-duration: 600ms;
 }
 
-.crisp {
-  image-rendering: pixelated;
-}
-
 @keyframes sceneIn {
   from {
     opacity: 0;

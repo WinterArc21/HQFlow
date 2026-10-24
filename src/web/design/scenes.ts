@@ -6,7 +6,7 @@
  */
 import type { Theme } from "../store/useCodeHQStore";
 
-export type ShaderId = "abyss" | "silk" | "tide" | "sorbet" | "dawn";
+export type ShaderId = "mesh";
 
 export interface Scene {
   id: string;
@@ -17,21 +17,18 @@ export interface Scene {
   shader: ShaderId | null;
   /** One line for the picker. */
   tagline: string;
-  /** Dither scenes: CSS pixels per dither cell. The shader renders exactly one pixel per cell. */
-  pixel?: number;
 }
 
 export const SCENES: readonly Scene[] = [
   { id: "graphite", name: "Graphite", base: "dark", shader: null, tagline: "The quiet original. Dots on charcoal." },
-  { id: "abyss", name: "Abyss", base: "dark", shader: "abyss", tagline: "Caustic light on a deep ocean floor." },
-  { id: "silk", name: "Silk", base: "dark", shader: "silk", tagline: "Dithered satin folding over itself.", pixel: 2 },
-  { id: "tide", name: "Tide", base: "dark", shader: "tide", tagline: "Moonlit swells rolling under the map.", pixel: 2 },
+  { id: "abyss-mesh", name: "Abyss Mesh", base: "dark", shader: "mesh", tagline: "Deep teal and pink, blended soft with film grain." },
+  { id: "silk-mesh", name: "Silk Mesh", base: "dark", shader: "mesh", tagline: "Violet, rose and peach, blended soft with film grain." },
+  { id: "tide-mesh", name: "Tide Mesh", base: "dark", shader: "mesh", tagline: "Navy and ice blue, blended soft with film grain." },
   { id: "paper", name: "Paper", base: "light", shader: null, tagline: "Warm paper and a quiet dot grid." },
-  { id: "sorbet", name: "Sorbet", base: "light", shader: "sorbet", tagline: "A soft pastel mesh with film grain." },
-  { id: "dawn", name: "Pixel Dawn", base: "light", shader: "dawn", tagline: "A dithered pastel sky at first light.", pixel: 4 },
+  { id: "sorbet", name: "Sorbet", base: "light", shader: "mesh", tagline: "A soft pastel mesh with film grain." },
 ];
 
-export const DEFAULT_SCENE: Record<Theme, string> = { dark: "abyss", light: "sorbet" };
+export const DEFAULT_SCENE: Record<Theme, string> = { dark: "abyss-mesh", light: "sorbet" };
 
 export function findScene(id: string | undefined): Scene | undefined {
   return SCENES.find((scene) => scene.id === id);

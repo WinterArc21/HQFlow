@@ -132,7 +132,7 @@ const INITIAL_STATE: CodeHQUiState = {
   searchOpen: false,
   diagnosticsOpen: false,
   theme: getInitialTheme(),
-  darkScene: "abyss",
+  darkScene: "abyss-mesh",
   lightScene: "sorbet",
   motion: "full",
   appearanceOpen: false,
