@@ -514,7 +514,8 @@ function WorkflowCanvasInner({
           edges={shownEdges}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
-          nodesDraggable
+          // Cards hold still while a live build draws them in.
+          nodesDraggable={live.plan === null}
           nodesConnectable={false}
           nodesFocusable={false}
           elementsSelectable={false}
