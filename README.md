@@ -12,13 +12,10 @@ on `localhost`.
 
 ## See HQFlow in action
 
-The image follows your light or dark system theme.
+An agent writes a checkout workflow, and HQFlow draws each step as the file changes. The
+recording uses the Flow view and the Sorbet scene.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/hqflow-canvas-dark.webp">
-  <source media="(prefers-color-scheme: light)" srcset="./docs/assets/hqflow-canvas-light.webp">
-  <img alt="HQFlow canvas showing the Generate Video Prompt workflow, including validation and quota failure branches" src="./docs/assets/hqflow-canvas-light.webp" width="1440" height="900">
-</picture>
+<img alt="HQFlow drawing a branching checkout workflow live, step by step, in the Flow view on the Sorbet scene" src="./docs/assets/hqflow-drawing.gif" width="720">
 
 ## What you get
 
