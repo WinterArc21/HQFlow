@@ -16,7 +16,7 @@ const base: Workflow = {
 } as Workflow;
 
 function plan(previous: Workflow | null, next: Workflow) {
-  const layout = computeLayout(next, { expandedStepIds: {} });
+  const layout = computeLayout(next, {});
   return planBuild(previous, next, layout, () => undefined, 1);
 }
 
@@ -36,7 +36,7 @@ describe("planBuild", () => {
 
     expect([...result.nodes.keys()]).toEqual(["pay", "ship"]);
     expect(result.nodes.has("price")).toBe(false);
-    const layout = computeLayout(next, { expandedStepIds: {} });
+    const layout = computeLayout(next, {});
     const edgeInto = (target: string) => result.edges.get(layout.edges.find((edge) => edge.target === target)!.id)!;
     for (const id of ["pay", "ship"]) {
       const edge = edgeInto(id);
@@ -70,7 +70,7 @@ describe("planBuild", () => {
       connections: ids.slice(1).map((id, index) => ({ from: ids[index]!, to: id })),
     } as Workflow;
     const result = plan(null, chain)!;
-    const layout = computeLayout(chain, { expandedStepIds: {} });
+    const layout = computeLayout(chain, {});
 
     expect(result.cursors).toHaveLength(3);
     // Drawn at once, it lands in about the time one cursor takes for three cards, not nine.

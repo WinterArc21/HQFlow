@@ -124,8 +124,6 @@ function WorkflowCanvasInner({
 
   const theme = useCodeHQStore((state) => state.theme);
   const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
-  const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
-  const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
   const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
   const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
@@ -154,7 +152,7 @@ function WorkflowCanvasInner({
     }
   }, [canvasId, setCanvasView, view]);
 
-  const layout = useMemo(() => computeLayout(workflow, { expandedStepIds, view }), [workflow, expandedStepIds, view]);
+  const layout = useMemo(() => computeLayout(workflow, { view }), [workflow, view]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
   const bendResetKey = useMemo(
     () => `${layoutResetRevision}:${JSON.stringify(layout.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })))}`,
@@ -219,12 +217,10 @@ function WorkflowCanvasInner({
         workflow,
         layout,
         backEdgeIds,
-        expandedStepIds,
         sourceChecks,
         selectedStepId: visualSelectedStepId,
         traceStepIds: tracePath?.stepIds ?? null,
         getTabIndex,
-        onToggleExpand: toggleStepExpanded,
         onNodeKeyDown: handleNodeKeyDown,
         onHoverStart,
         onHoverEnd,
@@ -234,12 +230,10 @@ function WorkflowCanvasInner({
       workflow,
       layout,
       backEdgeIds,
-      expandedStepIds,
       sourceChecks,
       visualSelectedStepId,
       tracePath,
       getTabIndex,
-      toggleStepExpanded,
       handleNodeKeyDown,
       onHoverStart,
       onHoverEnd,

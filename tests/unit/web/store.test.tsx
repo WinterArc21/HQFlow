@@ -61,24 +61,10 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().stepPanRequest).toBeNull();
   });
 
-  it("clears temporary expansion when the selected workflow changes", () => {
-    useCodeHQStore.getState().selectStep("step-1");
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
-    expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
-
-    useCodeHQStore.getState().selectWorkflow("workflow-a");
-
-    expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
-    expect(useCodeHQStore.getState().selectedStepId).toBeNull();
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
   it("keeps canvas state in memory while persisting only appearance preferences", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
     expect(raw).not.toBeNull();
@@ -92,7 +78,6 @@ describe("useCodeHQStore", () => {
         edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
       },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
     expect(Object.keys(parsed.state).sort()).toEqual(
       ["darkScene", "lightScene", "motion", "theme"],
     );
@@ -100,7 +85,6 @@ describe("useCodeHQStore", () => {
 
   it("hydrates repository-local canvas state for the selected workflow", () => {
     useCodeHQStore.getState().selectWorkflow("workflow-a");
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
     useCodeHQStore.getState().hydrateCanvasLayout("workflow-a", {
       nodePositions: { "step-1": { x: 12, y: 34 } },
       edgeBends: {},
@@ -109,7 +93,6 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]?.nodePositions).toEqual({
       "step-1": { x: 12, y: 34 },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
   });
 
   it("prunes visual state for removed nodes and edges without touching known entries", () => {
@@ -117,7 +100,6 @@ describe("useCodeHQStore", () => {
     useCodeHQStore.getState().saveNodePosition("workflow-a", "removed", { x: 3, y: 4 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "known-edge", { point: { x: 5, y: 6 }, snap: "source-x" });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "removed-edge", { point: { x: 7, y: 8 }, snap: null });
-    useCodeHQStore.getState().toggleStepExpanded("removed");
 
     useCodeHQStore.getState().reconcileCanvasLayout(
       "workflow-a",
@@ -129,7 +111,6 @@ describe("useCodeHQStore", () => {
       nodePositions: { known: { x: 1, y: 2 } },
       edgeBends: { "known-edge": { point: { x: 5, y: 6 }, snap: "source-x" } },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {
@@ -175,12 +156,4 @@ describe("useCodeHQStore", () => {
     expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
   });
 
-  it("expands one step at a time", () => {
-    const store = useCodeHQStore.getState();
-    store.toggleStepExpanded("a");
-    store.toggleStepExpanded("b");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ b: true });
-    store.toggleStepExpanded("b");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
 });

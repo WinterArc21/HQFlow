@@ -3,7 +3,7 @@
 import type { Workflow, WorkflowConnection } from "@schema/workflow";
 import { outcomeTone } from "../../design/semantics";
 import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } from "./graph";
-import { computeNodeHeight, computeOutcomeNodeWidth, effectiveDepthForStep, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
+import { computeNodeHeight, computeOutcomeNodeWidth, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
 
 export const LAYOUT_RANK_SEP = 132;
 export const LAYOUT_MARGIN_X = 48;
@@ -58,7 +58,6 @@ export interface LayoutBounds {
   height: number;
 }
 export interface ComputeLayoutOptions {
-  expandedStepIds: ReadonlySet<string> | Record<string, true>;
   /** Defaults to `line`. */
   view?: CanvasView;
 }
@@ -103,7 +102,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
   const heights = new Map(
     workIds.map((id) => {
       const step = byId.get(id)!.step;
-      return [id, computeNodeHeight(step, effectiveDepthForStep(step, opts.expandedStepIds))] as const;
+      return [id, computeNodeHeight(step)] as const;
     }),
   );
   const backEdgeIds = computeBackEdgeIds(workflow);
@@ -272,7 +271,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     const isOutcome = outcomes.has(step.id);
     const height = isOutcome
       ? OUTCOME_NODE_HEIGHT
-      : (heights.get(step.id) ?? computeNodeHeight(step, effectiveDepthForStep(step, opts.expandedStepIds)));
+      : (heights.get(step.id) ?? computeNodeHeight(step));
     const point = positioned.get(step.id) ?? {
       x: LAYOUT_MARGIN_X + index * (NODE_WIDTH + LAYOUT_RANK_SEP),
       y: fallbackY - height / 2,

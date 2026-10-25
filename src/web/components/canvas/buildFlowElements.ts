@@ -7,7 +7,7 @@ import type { SourceStatus } from "../../api/types";
 import { outcomeTone } from "../../design/semantics";
 import { computeIncomingTypes } from "./graph";
 import { WRAP_ROW_GAP, type CanvasView, type LayoutResult } from "./layout";
-import { effectiveDepthForStep, stepHasMissingSource } from "./nodeContent";
+import { stepHasMissingSource } from "./nodeContent";
 import type { OutcomeFlowNode, StepFlowNode, WorkflowFlowEdge } from "./types";
 import type { CanvasBend } from "../../store/useCodeHQStore";
 
@@ -16,10 +16,6 @@ export function restoreGeneratedNodePositions<
 >(nodes: NodeType[], generatedNodes: NodeType[]): NodeType[] {
   const generatedPositions = new Map(generatedNodes.map((node) => [node.id, node.position]));
   return nodes.map((node) => ({ ...node, position: generatedPositions.get(node.id) ?? node.position }));
-}
-
-function isStepExpanded(expandedStepIds: Record<string, true>, stepId: string): boolean {
-  return expandedStepIds[stepId] === true;
 }
 
 /** Rendered size of the visible geometric ports in both node stylesheets. */
@@ -142,7 +138,6 @@ export interface BuildFlowNodesParams extends TraceHandlers {
   workflow: Workflow;
   layout: LayoutResult;
   backEdgeIds: ReadonlySet<string>;
-  expandedStepIds: Record<string, true>;
   sourceChecks: Record<string, SourceStatus>;
   selectedStepId: string | null;
   /** The active trace's one-hop step set (anchor + immediate upstream/downstream), or `null` when
@@ -150,7 +145,6 @@ export interface BuildFlowNodesParams extends TraceHandlers {
    * contain it. */
   traceStepIds: ReadonlySet<string> | null;
   getTabIndex: (stepId: string) => 0 | -1;
-  onToggleExpand: (stepId: string) => void;
   onNodeKeyDown: (event: ReactKeyboardEvent<HTMLElement>, stepId: string) => void;
 }
 
@@ -273,8 +267,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
       data: {
         step,
         index: layoutNode.index,
-        effectiveDepth: effectiveDepthForStep(step, params.expandedStepIds),
-        expanded: isStepExpanded(params.expandedStepIds, step.id),
         selected: step.id === params.selectedStepId,
         hasMissingSource: stepHasMissingSource(step, params.sourceChecks),
         hasFailureOutcome,
@@ -284,7 +276,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
         hasReturnOut,
         dimmed,
         tabIndex: params.getTabIndex(step.id),
-        onToggleExpand: () => params.onToggleExpand(step.id),
         onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => params.onNodeKeyDown(event, step.id),
         ...traceHandlers,
       },

@@ -1,11 +1,10 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
-import { Badge, IconButton } from "../../primitives";
-import { formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
+import { Badge } from "../../primitives";
+import { purposeLineCount } from "../nodeContent";
 import type { StepFlowNode } from "../types";
-import { StepNodeDetail } from "./StepNodeDetail";
 import styles from "./StepNode.module.css";
 
 /**
@@ -33,8 +32,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
   const {
     step,
     index,
-    effectiveDepth,
-    expanded,
     selected,
     hasMissingSource,
     hasFailureOutcome,
@@ -44,16 +41,11 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     hasReturnOut,
     dimmed,
     tabIndex,
-    onToggleExpand,
     onKeyDown,
     onHoverStart,
     onHoverEnd,
   } = data;
   const category = categoryToken(step.category);
-  const io = stepIoSummary(step);
-  const inSummary = formatDataReferenceNames(io.inputs);
-  const outSummary = formatDataReferenceNames(io.outputs);
-  const showIo = showsIoOnCard(effectiveDepth) && (inSummary.length > 0 || outSummary.length > 0);
   const sourceConnections = useNodeConnections({ id, handleType: "source" });
   const activeSourceHandles = new Set(sourceConnections.map((connection) => connection.sourceHandle));
   const sourceHandleClassName = (handleId: string) =>
@@ -120,50 +112,15 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
           <span className={styles.name}>{step.name}</span>
           {selected ? <Check size={14} weight="bold" className={styles.selectedIcon} aria-hidden="true" /> : null}
           {hasMissingSource ? <Badge tone="red">Missing sources</Badge> : null}
-          {/* Quiet until wanted: the toggle only paints once the card is hovered or holds focus
-              (or is already expanded, so the control that undoes that never vanishes out from
-              under the pointer). It keeps its box at all times — `opacity`, never `display` — so
-              revealing it can't reflow the header, and it stays reachable and hit-testable for
-              keyboard and assistive tech regardless of what the mouse is doing. */}
-          <span className={`${styles.expandToggle} ${expanded ? styles.expandTogglePinned : ""} nodrag`}>
-            <IconButton
-              label={expanded ? `Collapse ${step.name}` : `Expand ${step.name} to show code details`}
-              icon={expanded ? <CaretUp size={12} /> : <CaretDown size={12} />}
-              size="sm"
-              tabIndex={-1}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleExpand();
-              }}
-            />
-          </span>
         </div>
 
         <p className={purposeClassName}>{step.purpose}</p>
-
-        <StepNodeDetail step={step} depth={effectiveDepth} />
 
         <div className={styles.footer}>
           {/* No inline colour: the label derives its own from `--node-accent` in CSS, nudged toward
               the text colour for contrast against the tinted footer. An inline style here would
               win the cascade and put it back under AA. */}
           <span className={styles.categoryLabel}>{category.label}</span>
-          {showIo ? (
-            <span className={styles.factsIo}>
-              {inSummary.length > 0 ? (
-                <span className={styles.ioTag} title={`Input: ${inSummary}`}>
-                  <span className={styles.ioLabel}>in</span>
-                  <span className={styles.ioValue}>{inSummary}</span>
-                </span>
-              ) : null}
-              {outSummary.length > 0 ? (
-                <span className={styles.ioTag} title={`Output: ${outSummary}`}>
-                  <span className={styles.ioLabel}>out</span>
-                  <span className={styles.ioValue}>{outSummary}</span>
-                </span>
-              ) : null}
-            </span>
-          ) : null}
         </div>
       </div>
     </div>

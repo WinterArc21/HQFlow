@@ -3,15 +3,12 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
-import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
 import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
   index: number;
-  effectiveDepth: Depth;
-  expanded: boolean;
   selected: boolean;
   hasMissingSource: boolean;
   hasFailureOutcome?: boolean;
@@ -23,7 +20,6 @@ export interface StepNodeData extends Record<string, unknown> {
    * upstream/downstream neighborhood. */
   dimmed: boolean;
   tabIndex: 0 | -1;
-  onToggleExpand: () => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onHoverStart: () => void;
   onHoverEnd: () => void;

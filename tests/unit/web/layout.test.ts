@@ -17,7 +17,7 @@ function makeWorkflow(steps: WorkflowStep[], connections: Workflow["connections"
   };
 }
 
-const BASE_OPTS = { expandedStepIds: {} };
+const BASE_OPTS = {};
 
 function overlaps(a: { x: number; y: number; width: number; height: number }, b: typeof a): boolean {
   const separatedX = a.x + a.width <= b.x || b.x + b.width <= a.x;
@@ -147,24 +147,6 @@ describe("computeLayout", () => {
     expect(result.nodes[0]!.x).toBeLessThan(result.nodes[1]!.x);
     expect(result.nodes[1]!.x).toBeLessThan(result.nodes[2]!.x);
     expectNoOverlap(result.nodes);
-  });
-
-  it("grows detailed cards without moving them off the horizontal centerline", () => {
-    const workflow = makeWorkflow(
-      [
-        makeStep("a", { sources: [{ file: "src/a.ts", symbol: "a" }] }),
-        makeStep("b", { sources: [{ file: "src/b.ts", symbol: "b" }] }),
-      ],
-      [{ from: "a", to: "b" }],
-    );
-    const collapsed = computeLayout(workflow, { expandedStepIds: {} });
-    const expanded = computeLayout(workflow, { expandedStepIds: { a: true } });
-    const a = expanded.nodes.find((node) => node.id === "a")!;
-    const b = expanded.nodes.find((node) => node.id === "b")!;
-
-    expect(a.height).toBeGreaterThan(collapsed.nodes.find((node) => node.id === "a")!.height);
-    expect(a.y + a.height / 2).toBe(b.y + b.height / 2);
-    expectNoOverlap(expanded.nodes);
   });
 
   it("keeps a primary fork on the centerline and places its parallel sibling in a lower lane", () => {

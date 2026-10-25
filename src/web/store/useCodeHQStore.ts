@@ -32,7 +32,6 @@ interface CodeHQUiState {
   /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
   stepPanRequest: StepPanRequest | null;
   /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
-  expandedStepIds: Record<string, true>;
   /** In-memory visual state loaded from the active repository's local server. */
   canvasLayouts: Record<string, WorkflowCanvasLayout>;
   /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
@@ -52,7 +51,6 @@ interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
-  toggleStepExpanded: (stepId: string) => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
@@ -121,7 +119,6 @@ const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
   selectedStepId: null,
   stepPanRequest: null,
-  expandedStepIds: {},
   canvasLayouts: {},
   layoutResetRevision: 0,
   searchQuery: "",
@@ -144,8 +141,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           selectedWorkflowId: workflowId,
           selectedStepId: null,
           stepPanRequest: null,
-          expandedStepIds: {},
-        }),
+                }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes
@@ -164,10 +160,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
           stepPanRequest: { workflowId, stepId },
           diagnosticsOpen: false,
         }),
-
-      toggleStepExpanded: (stepId) =>
-        // One card is expanded at a time: expanding another collapses the first.
-        set((state) => ({ expandedStepIds: state.expandedStepIds[stepId] ? {} : { [stepId]: true } })),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
         const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
@@ -200,26 +192,19 @@ export const useCodeHQStore = create<CodeHQStore>()(
       }),
 
       reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
-        const expandedStepIds = Object.fromEntries(
-          Object.entries(state.expandedStepIds).filter(([id]) => nodeIds.has(id)),
-        ) as Record<string, true>;
         const layout = state.canvasLayouts[workflowId];
         if (layout === undefined) {
-          return Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
-            ? state
-            : { expandedStepIds };
+          return state;
         }
         const nodePositions = Object.fromEntries(Object.entries(layout.nodePositions).filter(([id]) => nodeIds.has(id)));
         const edgeBends = Object.fromEntries(Object.entries(layout.edgeBends).filter(([id]) => edgeIds.has(id)));
         if (
           Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length
           && Object.keys(edgeBends).length === Object.keys(layout.edgeBends).length
-          && Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
         ) {
           return state;
         }
         return {
-          expandedStepIds,
           canvasLayouts: {
             ...state.canvasLayouts,
             [workflowId]: { ...layout, nodePositions, edgeBends },
@@ -241,7 +226,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
         } else {
           canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, view, ...(otherViews !== undefined ? { otherViews } : {}) };
         }
-        return { canvasLayouts, expandedStepIds: {}, layoutResetRevision: state.layoutResetRevision + 1 };
+        return { canvasLayouts, layoutResetRevision: state.layoutResetRevision + 1 };
       }),
 
       setCanvasView: (workflowId, view, from) => set((state) => {

@@ -19,7 +19,7 @@ function LandingDemo() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
-    useCodeHQStore.setState({ theme: "light", selectedStepId: null, expandedStepIds: {} });
+    useCodeHQStore.setState({ theme: "light", selectedStepId: null });
   }, []);
 
   return (

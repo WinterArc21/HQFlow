@@ -1,7 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ReactFlowProvider, type NodeProps } from "@xyflow/react";
 import type { Workflow, WorkflowStep } from "@schema/workflow";
 import { buildFlowEdges, buildFlowNodes, chooseCardinalHandles, restoreGeneratedNodePositions } from "@web/components/canvas/buildFlowElements";
@@ -39,13 +38,10 @@ function makeData(overrides: Partial<StepNodeData> = {}): StepNodeData {
   return {
     step: makeStep(),
     index: 2,
-    effectiveDepth: "workflow",
-    expanded: false,
     selected: false,
     hasMissingSource: false,
     dimmed: false,
     tabIndex: -1,
-    onToggleExpand: () => {},
     onKeyDown: () => {},
     onHoverStart: () => {},
     onHoverEnd: () => {},
@@ -89,43 +85,6 @@ describe("restoreGeneratedNodePositions", () => {
 });
 
 describe("StepNode", () => {
-  it("surfaces inputs, outputs, and symbols on an expanded card", () => {
-    const data = makeData({
-      effectiveDepth: "symbols",
-      expanded: true,
-      step: makeStep({
-        inputs: [{ name: "ScrapedWebsite" }],
-        outputs: [{ name: "ProductContext" }],
-        sources: [
-          { file: "lib/scraper.ts", symbol: "scrapeWebsite" },
-          { file: "lib/validation.ts" },
-        ],
-      }),
-    });
-    renderStepNode(makeProps(data));
-    expect(screen.getByText("ScrapedWebsite")).toBeInTheDocument();
-    expect(screen.getByText("ProductContext")).toBeInTheDocument();
-    expect(screen.getByText("in")).toBeInTheDocument();
-    expect(screen.getByText("out")).toBeInTheDocument();
-    expect(screen.getByText("Symbols")).toBeInTheDocument();
-    expect(screen.getByText("scraper.ts")).toBeInTheDocument();
-    expect(screen.getByText("validation.ts")).toBeInTheDocument();
-  });
-
-  it("has a real, accessible expand control that toggles", async () => {
-    const onToggleExpand = vi.fn();
-    renderStepNode(makeProps(makeData({ onToggleExpand })));
-    const user = userEvent.setup();
-    const button = screen.getByRole("button", { name: /expand scrape website/i });
-    await user.click(button);
-    expect(onToggleExpand).toHaveBeenCalledTimes(1);
-  });
-
-  it("exposes a 'collapse' accessible name once expanded", () => {
-    renderStepNode(makeProps(makeData({ expanded: true })));
-    expect(screen.getByRole("button", { name: /collapse scrape website/i })).toBeInTheDocument();
-  });
-
   it("shows the missing-source affordance only when needed", () => {
     const { unmount } = renderStepNode(makeProps(makeData({ hasMissingSource: true })));
     expect(screen.getByText("Missing sources")).toBeInTheDocument();
@@ -177,19 +136,17 @@ describe("buildFlowElements", () => {
         { id: "failure", from: "source", to: "failure-outcome", type: "failure" },
       ],
     };
-    const layout = computeLayout(workflow, { expandedStepIds: {} });
+    const layout = computeLayout(workflow, {});
     const backEdgeIds = computeBackEdgeIds(workflow);
     const nodes = buildFlowNodes({
       workflow,
       layout,
       backEdgeIds,
-      expandedStepIds: {},
       sourceChecks: {},
       selectedStepId: null,
       traceStepIds: null,
       getTabIndex: () => -1,
-      onToggleExpand: () => {},
-      onNodeKeyDown: () => {},
+        onNodeKeyDown: () => {},
       onHoverStart: () => {},
       onHoverEnd: () => {},
     });
@@ -226,7 +183,7 @@ describe("buildFlowElements", () => {
       steps: [makeStep({ id: "source" }), makeStep({ id: "done", category: "output" })],
       connections: [{ from: "source", to: "done", type: "success" as const }],
     };
-    const layout = computeLayout(workflow, { expandedStepIds: {} });
+    const layout = computeLayout(workflow, {});
     const [edge] = buildFlowEdges(layout, new Set<string>(), null);
 
     expect(edge).toMatchObject({
@@ -249,7 +206,7 @@ describe("buildFlowElements", () => {
         { from: "a", to: "b", label: "three" },
       ],
     };
-    const layout = computeLayout(workflow, { expandedStepIds: {} });
+    const layout = computeLayout(workflow, {});
 
     const edges = buildFlowEdges(layout, new Set<string>(), null);
 
