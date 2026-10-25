@@ -1,6 +1,5 @@
 import {
   ArrowCounterClockwise,
-  ArrowsInLineVertical,
   DownloadSimple,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
@@ -14,8 +13,6 @@ export interface CanvasToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetLayout: () => void;
-  onCollapseAll: () => void;
-  collapseDisabled: boolean;
   /** When provided, an export button is shown. Omitted in the export viewer. */
   onExport?: () => void;
   /** Redraws the map as if the agent were writing it; the live app's dock only. */
@@ -26,13 +23,11 @@ export interface CanvasToolbarProps {
   viewSwitch?: CanvasViewSwitchProps;
 }
 
-/** The canvas's own chrome: zoom, collapse-all, and (when available) export/delete. */
+/** The canvas's own chrome: zoom, reset, and (when available) export/delete. */
 export function CanvasToolbar({
   onZoomIn,
   onZoomOut,
   onResetLayout,
-  onCollapseAll,
-  collapseDisabled,
   onExport,
   onDelete,
   viewSwitch,
@@ -55,14 +50,6 @@ export function CanvasToolbar({
           onClick={onResetLayout}
         />
       </div>
-      <div className={styles.divider} aria-hidden="true" />
-      <IconButton
-        label="Collapse all expanded steps"
-        icon={<ArrowsInLineVertical size={16} />}
-        size="sm"
-        onClick={onCollapseAll}
-        disabled={collapseDisabled}
-      />
       {onExport !== undefined ? (
         <>
           <div className={styles.divider} aria-hidden="true" />

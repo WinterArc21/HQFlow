@@ -31,8 +31,6 @@ interface CodeHQUiState {
   selectedStepId: string | null;
   /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
   stepPanRequest: StepPanRequest | null;
-  /** Whether the selected step shows its full side panel instead of the in-place step card. */
-  stepDetailFull: boolean;
   /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
   expandedStepIds: Record<string, true>;
   /** In-memory visual state loaded from the active repository's local server. */
@@ -54,9 +52,7 @@ interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
-  openStepDetailFull: () => void;
   toggleStepExpanded: (stepId: string) => void;
-  collapseAllSteps: () => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
@@ -125,7 +121,6 @@ const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
   selectedStepId: null,
   stepPanRequest: null,
-  stepDetailFull: false,
   expandedStepIds: {},
   canvasLayouts: {},
   layoutResetRevision: 0,
@@ -149,7 +144,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
           selectedWorkflowId: workflowId,
           selectedStepId: null,
           stepPanRequest: null,
-          stepDetailFull: false,
           expandedStepIds: {},
         }),
 
@@ -161,7 +155,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
         set((state) => ({
           selectedStepId: stepId,
           stepPanRequest: null,
-          stepDetailFull: false,
           diagnosticsOpen: stepId !== null ? false : state.diagnosticsOpen,
         })),
 
@@ -169,24 +162,12 @@ export const useCodeHQStore = create<CodeHQStore>()(
         set({
           selectedStepId: stepId,
           stepPanRequest: { workflowId, stepId },
-          stepDetailFull: false,
           diagnosticsOpen: false,
         }),
 
-      openStepDetailFull: () => set({ stepDetailFull: true }),
-
       toggleStepExpanded: (stepId) =>
-        set((state) => {
-          const next = { ...state.expandedStepIds };
-          if (next[stepId]) {
-            delete next[stepId];
-          } else {
-            next[stepId] = true;
-          }
-          return { expandedStepIds: next };
-        }),
-
-      collapseAllSteps: () => set({ expandedStepIds: {} }),
+        // One card is expanded at a time: expanding another collapses the first.
+        set((state) => ({ expandedStepIds: state.expandedStepIds[stepId] ? {} : { [stepId]: true } })),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
         const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };

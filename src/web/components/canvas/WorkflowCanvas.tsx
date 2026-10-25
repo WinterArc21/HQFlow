@@ -126,7 +126,6 @@ function WorkflowCanvasInner({
   const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
   const expandedStepIds = useCodeHQStore((state) => state.expandedStepIds);
   const toggleStepExpanded = useCodeHQStore((state) => state.toggleStepExpanded);
-  const collapseAllSteps = useCodeHQStore((state) => state.collapseAllSteps);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
   const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
   const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
@@ -470,7 +469,6 @@ function WorkflowCanvasInner({
     await downloadExport(hideFilePaths);
   }, [downloadExport, workflow.id, workflow.name]);
 
-  const hasExpandedSteps = Object.keys(expandedStepIds).length > 0;
   const stepNodeCount = nodes.filter((node) => node.type === "step").length;
   const showMinimap = stepNodeCount > MINIMAP_NODE_THRESHOLD;
   const minimapStrokeWidth = Math.max(2, Math.max(layout.bounds.width, layout.bounds.height) / MINIMAP_MIN_FEATURE_DIVISOR);
@@ -484,9 +482,7 @@ function WorkflowCanvasInner({
     onZoomIn: () => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 }),
     onZoomOut: () => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 }),
     onResetLayout: () => resetLayout(canvasId),
-    onCollapseAll: collapseAllSteps,
     ...(exportMode === null ? { onReplay: live.replay } : {}),
-    collapseDisabled: !hasExpandedSteps,
     viewSwitch: { view, autoView: suggestedView, onViewChange: changeView },
     ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
     ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"

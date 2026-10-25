@@ -2,7 +2,6 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
-import { useCodeHQStore } from "../../../store/useCodeHQStore";
 import { Badge, IconButton } from "../../primitives";
 import { formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
 import type { StepFlowNode } from "../types";
@@ -61,7 +60,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     activeSourceHandles.has(handleId) ? styles.handle : styles.handleHidden;
 
   // The open step card sits on this node's corner; the selection ring would peek out around it.
-  const underCard = useCodeHQStore((state) => selected && !state.stepDetailFull);
+  const underCard = selected;
   const cardClassName = [styles.card, selected ? styles.selected : "", underCard ? styles.underCard : "", dimmed ? styles.dimmed : ""]
     .filter(Boolean)
     .join(" ");

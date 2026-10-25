@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowsOutSimple, X } from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react";
 import type { Workflow, WorkflowStep } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
 import { categoryToken } from "../../design/semantics";
@@ -32,7 +32,6 @@ export interface StepCardProps {
   /** Grows from the node's right edge toward the left, when the node is at the board's edge. */
   growsLeft: boolean;
   onClose: () => void;
-  onOpenFull: () => void;
   onWalk: (direction: -1 | 1) => void;
 }
 
@@ -43,7 +42,7 @@ export interface StepCardProps {
  * that scroll inside the card. ← → walks the flow with the current tab kept; the ↗ button hands
  * a long step to the full side panel.
  */
-export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose, onOpenFull, onWalk }: StepCardProps) {
+export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose, onWalk }: StepCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLCanvasElement>(null);
   const closingRef = useRef(false);
@@ -127,7 +126,6 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
       <header className={styles.header}>
         <span className={styles.chip} aria-hidden="true">{String(stepNumber).padStart(2, "0")}</span>
         <h2 id={titleId} className={styles.title}>{step.name}</h2>
-        <IconButton label="Open full step details" icon={<ArrowsOutSimple size={15} />} size="sm" onClick={onOpenFull} />
         <IconButton label="Close step details" icon={<X size={15} />} size="sm" onClick={close} />
       </header>
 

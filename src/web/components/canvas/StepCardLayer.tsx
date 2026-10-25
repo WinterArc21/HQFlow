@@ -29,14 +29,12 @@ export interface StepCardLayerProps {
 /**
  * Opens the selected step as a `StepCard` over its own node. The card grows toward free space
  * (leftward when the node is at the board's right edge), and the viewport pans so the whole card
- * sits between the title island and the dock. The full side panel takes over once requested.
+ * sits between the title island and the dock.
  */
 export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, containerRef, reducedMotion }: StepCardLayerProps) {
   const reactFlow = useReactFlow();
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
-  const stepDetailFull = useCodeHQStore((state) => state.stepDetailFull);
   const selectStep = useCodeHQStore((state) => state.selectStep);
-  const openStepDetailFull = useCodeHQStore((state) => state.openStepDetailFull);
 
   // ← → walks the work steps in story order; terminal outcomes are endpoints, not stops.
   const walk = useMemo(() => {
@@ -53,7 +51,7 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
   // Pan once per opened step (not on every node drag) so the card lands clear of the chrome.
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (origin === null || stepDetailFull || container === null) {
+    if (origin === null || container === null) {
       return;
     }
     const rect = container.getBoundingClientRect();
@@ -68,9 +66,9 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
       { duration: reducedMotion ? 0 : 300 },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStepId, stepDetailFull]);
+  }, [selectedStepId]);
 
-  if (step === undefined || origin === null || stepDetailFull) {
+  if (step === undefined || origin === null) {
     return null;
   }
 
@@ -97,7 +95,6 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
         origin={origin}
         growsLeft={growsLeft}
         onClose={close}
-        onOpenFull={openStepDetailFull}
         onWalk={walkTo}
       />
     </ViewportPortal>

@@ -174,4 +174,13 @@ describe("useCodeHQStore", () => {
     expect(reset?.nodePositions).toEqual({});
     expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
   });
+
+  it("expands one step at a time", () => {
+    const store = useCodeHQStore.getState();
+    store.toggleStepExpanded("a");
+    store.toggleStepExpanded("b");
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ b: true });
+    store.toggleStepExpanded("b");
+    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
+  });
 });

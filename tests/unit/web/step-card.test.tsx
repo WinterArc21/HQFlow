@@ -38,7 +38,6 @@ function renderCard(overrides: Partial<StepCardProps> = {}) {
     origin: { x: 0, y: 0 },
     growsLeft: false,
     onClose: vi.fn(),
-    onOpenFull: vi.fn(),
     onWalk: vi.fn(),
     ...overrides,
   };
@@ -89,12 +88,6 @@ describe("StepCard", () => {
     expect(props.onWalk).toHaveBeenNthCalledWith(2, -1);
     fireEvent.keyDown(card, { key: "Escape" });
     expect(props.onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("hands a long step to the full side panel", async () => {
-    const props = renderCard();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Open full step details" }));
-    expect(props.onOpenFull).toHaveBeenCalledTimes(1);
   });
 
   it("says so when a step has no source or edge cases mapped", async () => {

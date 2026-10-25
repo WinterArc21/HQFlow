@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, ArrowsInLineVertical, DownloadSimple, Minus, PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, DownloadSimple, Minus, PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
 import { useStore } from "@xyflow/react";
 import { IconButton, Tooltip } from "../primitives";
 import type { CanvasToolbarProps } from "./CanvasToolbar";
@@ -10,7 +10,7 @@ import styles from "./CanvasDockControls.module.css";
  * level readout, then the layout actions. Same handlers and accessible names as `CanvasToolbar`,
  * which remains the title-strip version for the export viewer and landing demo.
  */
-export function CanvasDockControls({ onZoomIn, onZoomOut, onResetLayout, onCollapseAll, collapseDisabled, onReplay, onExport, onDelete, viewSwitch }: CanvasToolbarProps) {
+export function CanvasDockControls({ onZoomIn, onZoomOut, onResetLayout, onReplay, onExport, onDelete, viewSwitch }: CanvasToolbarProps) {
   const zoom = useStore((state) => state.transform[2]);
   return (
     <div className={styles.controls}>
@@ -32,9 +32,6 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onResetLayout, onColla
       <span className={styles.divider} aria-hidden="true" />
       <Tooltip content="Reset layout">
         <IconButton label="Reset layout" icon={<ArrowCounterClockwise size={16} />} size="sm" onClick={onResetLayout} />
-      </Tooltip>
-      <Tooltip content="Collapse all">
-        <IconButton label="Collapse all expanded steps" icon={<ArrowsInLineVertical size={16} />} size="sm" onClick={onCollapseAll} disabled={collapseDisabled} />
       </Tooltip>
       {onReplay !== undefined ? (
         <Tooltip content="Replay the build">
