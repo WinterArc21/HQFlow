@@ -96,11 +96,11 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
-    legendPlacement: narrow ? { l: 0, b: DOCK_HEIGHT + 1 } : { l: 0, b: 0 },
+    legendPlacement: { l: 0, b: 0 },
     fitInsets: {
-      top: DOT_ORIGIN + (identityTop + 4) * DOT_STEP,
+      top: DOT_ORIGIN + (identityTop + (narrow ? 5 : 4)) * DOT_STEP,
       right: DOT_ORIGIN,
-      bottom: DOT_ORIGIN + (DOCK_HEIGHT + 1) * DOT_STEP,
+      bottom: DOT_ORIGIN + (DOCK_HEIGHT + (narrow ? 3 : 1)) * DOT_STEP,
       left: DOT_ORIGIN,
     },
   }), [controlsTarget, identityTop, narrow, titleTarget]);

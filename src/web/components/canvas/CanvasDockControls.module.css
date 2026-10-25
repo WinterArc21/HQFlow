@@ -5,6 +5,15 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 685px) {
+  .controls {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: var(--space-1);
+  }
+}
+
 /* Zoom reads as one inset segment: out, level, in. */
 .zoomGroup {
   display: inline-flex;

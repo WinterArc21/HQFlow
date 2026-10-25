@@ -6,12 +6,14 @@ import { useCodeHQStore } from "../../store/useCodeHQStore";
 import type { FitInsets } from "./fitViewport";
 import { computeOutcomeStepIds } from "./graph";
 import type { LayoutBounds } from "./layout";
-import { StepCard, STEP_CARD_WIDTH } from "./StepCard";
+import { StepCard, STEP_CARD_HEIGHT, STEP_CARD_WIDTH } from "./StepCard";
 import type { CanvasFlowNode } from "./types";
 
 /** The card never opens smaller than this, so it is always readable, nor larger than this. */
 const CARD_MIN_ZOOM = 0.9;
 const CARD_MAX_ZOOM = 1.1;
+/** On a small screen the card shrinks to fit between the chrome, down to this floor. */
+const CARD_FLOOR_ZOOM = 0.5;
 /** Breathing room between the card and the chrome it is fitted between. */
 const CARD_MARGIN = 8;
 
@@ -55,8 +57,11 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
       return;
     }
     const rect = container.getBoundingClientRect();
-    const zoom = Math.min(Math.max(reactFlow.getZoom(), CARD_MIN_ZOOM), CARD_MAX_ZOOM);
     const freeWidth = rect.width - insets.left - insets.right;
+    const freeHeight = rect.height - insets.top - insets.bottom;
+    const fitsZoom = Math.min((freeWidth - CARD_MARGIN * 2) / STEP_CARD_WIDTH, (freeHeight - CARD_MARGIN * 2) / STEP_CARD_HEIGHT);
+    const minZoom = Math.max(CARD_FLOOR_ZOOM, Math.min(CARD_MIN_ZOOM, fitsZoom));
+    const zoom = Math.min(Math.max(reactFlow.getZoom(), minZoom), CARD_MAX_ZOOM, Math.max(fitsZoom, minZoom));
     void reactFlow.setViewport(
       {
         x: insets.left + freeWidth / 2 - (origin.x + STEP_CARD_WIDTH / 2) * zoom,

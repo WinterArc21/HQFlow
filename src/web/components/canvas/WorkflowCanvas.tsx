@@ -182,8 +182,28 @@ function WorkflowCanvasInner({
     onNodeActivate?.(nodeId);
   }, [onNodeActivate, selectStep]);
 
+  // Cards the user dragged count toward the fit, or a card parked far away opens off screen.
+  const fitBounds = useMemo(() => {
+    const saved = canvasLayout?.nodePositions;
+    if (saved === undefined || layout.nodes.length === 0) {
+      return layout.bounds;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const node of layout.nodes) {
+      const { x, y } = saved[node.id] ?? node;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + node.width);
+      maxY = Math.max(maxY, y + node.height);
+    }
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+  }, [canvasLayout?.nodePositions, layout]);
+
   const { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow } = useCanvasFit({
-    layoutBounds: layout.bounds,
+    layoutBounds: fitBounds,
     workflowId: canvasId,
     workflowRevision,
     reactFlowInstance,

@@ -190,6 +190,20 @@
   margin-left: auto;
 }
 
+/* On a phone the controls would run past the dock's edge; let them drop to their own line. */
+@media (max-width: 685px) {
+  .dockRow {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+
+  .controls {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
 /* ---- workflow tree: the dock grows upward to hold it, one surface with the search bar ---- */
 .tree {
   overflow-y: auto;

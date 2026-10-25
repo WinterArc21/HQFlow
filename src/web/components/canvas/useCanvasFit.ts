@@ -18,6 +18,9 @@ const FIT_VIEW_PADDING = 0.06;
  * scale and relies on panning instead of shrinking into illegibility (contract §1: "clamp the
  * minimum default zoom to something legible"). */
 const FIT_VIEW_MIN_ZOOM = 0.78;
+/** On a phone-width stage the legible floor would show one card at a time; fit lower instead. */
+const NARROW_FIT_WIDTH = 700;
+const NARROW_FIT_MIN_ZOOM = 0.5;
 /** A small workflow should not zoom in past "designed", pixel-doubled scale. */
 const FIT_VIEW_MAX_ZOOM = 1.1;
 export interface UseCanvasFitParams {
@@ -79,7 +82,7 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
         containerWidth: rect.width,
         containerHeight: rect.height,
         bounds: layoutBounds,
-        minZoom: FIT_VIEW_MIN_ZOOM,
+        minZoom: rect.width < NARROW_FIT_WIDTH ? NARROW_FIT_MIN_ZOOM : FIT_VIEW_MIN_ZOOM,
         maxZoom: FIT_VIEW_MAX_ZOOM,
         paddingRatio: FIT_VIEW_PADDING,
         ...(insets !== undefined ? { insets } : {}),

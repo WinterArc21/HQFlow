@@ -17,7 +17,7 @@ import styles from "./StepCard.module.css";
 
 /** The card's fixed size in flow units: it never grows with its content, which scrolls instead. */
 export const STEP_CARD_WIDTH = 404;
-const STEP_CARD_HEIGHT = 300;
+export const STEP_CARD_HEIGHT = 300;
 
 type Tab = "overview" | "source" | "edges" | "tests";
 

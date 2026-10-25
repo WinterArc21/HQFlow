@@ -58,3 +58,10 @@
   height: 0;
   flex: none;
 }
+
+/* On a phone the key would sit on the map; the dock needs the room. */
+@media (max-width: 685px) {
+  .onGrid {
+    display: none;
+  }
+}
