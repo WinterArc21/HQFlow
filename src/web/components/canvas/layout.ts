@@ -2,6 +2,7 @@
  * occupy semantic bands above (failure) or below (success) the vertically-centred mainline. */
 import type { Workflow, WorkflowConnection } from "@schema/workflow";
 import { outcomeTone } from "../../design/semantics";
+import { connectionLabelText, estimateEdgeLabelWidth } from "./edgeLabel";
 import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } from "./graph";
 import { computeNodeHeight, computeOutcomeNodeWidth, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
 
@@ -18,6 +19,8 @@ const RETURN_EDGE_TOP_RESERVE = 112;
 const FLOW_ROW_GAP = 96;
 const FLOW_COLUMN_GAP = 52;
 const FLOW_OUTCOME_GAP = 44;
+/** Space kept clear on each side of a label that sits in the gap beside a card. */
+const FLOW_LABEL_CLEARANCE = 12;
 /** Wrap: the gap between rows (the row-turn edge runs through its middle) and above an outcome band. */
 export const WRAP_ROW_GAP = 104;
 const WRAP_BAND_GAP = 52;
@@ -186,6 +189,12 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     .map(({ connection }) => connection.from)
     .sort((a, b) => (rankById.get(b) ?? 0) - (rankById.get(a) ?? 0) || (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0))[0];
   const outcomeWidth = (id: string): number => computeOutcomeNodeWidth(byId.get(id)!.step);
+  const outcomeLabelWidth = (id: string): number => {
+    const source = outcomeSource(id);
+    const connection = valid.find(({ connection }) => connection.from === source && connection.to === id)?.connection;
+    const text = connection === undefined ? undefined : connectionLabelText(connection);
+    return text === undefined ? 0 : estimateEdgeLabelWidth(text);
+  };
   const failureIds = outcomeIds.filter((id) => bandForOutcome(id) === "failure");
   const successIds = outcomeIds.filter((id) => bandForOutcome(id) === "success");
   const hasReturnEdge = valid.some(({ connection, id }) => backEdgeIds.has(id) && connection.from !== connection.to);
@@ -194,9 +203,9 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
   const view = opts.view ?? "line";
   let wrapRowBottoms: number[] | undefined;
   if (view === "flow") {
-    placeFlow({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, positioned, band: bandForOutcome });
+    placeFlow({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, positioned, band: bandForOutcome });
   } else if (view === "wrap") {
-    wrapRowBottoms = placeWrap({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, positioned, band: bandForOutcome });
+    wrapRowBottoms = placeWrap({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, positioned, band: bandForOutcome });
   } else {
     const failureY = LAYOUT_MARGIN_Y;
     const mainTopY = failureIds.length > 0
@@ -349,6 +358,8 @@ interface PlaceParams {
   outcomeIds: string[];
   sourceOf: (id: string) => string | undefined;
   widthOf: (id: string) => number;
+  /** Width of the label on the connection into an outcome, or 0 when it has none. */
+  labelWidthOf: (id: string) => number;
   positioned: Map<string, Placed>;
   band: (id: string) => OutcomeBand;
 }
@@ -422,9 +433,11 @@ function placeFlow(p: PlaceParams): void {
       let outcomeY = side === "below" ? y + height + OUTCOME_GAP : y + Math.max(0, (height - stackHeight) / 2);
       for (const outcome of mine) {
         const width = p.widthOf(outcome);
+        // A side outcome's label sits in the gap, so the gap grows to fit it.
+        const gap = Math.max(FLOW_OUTCOME_GAP, p.labelWidthOf(outcome) + 2 * FLOW_LABEL_CLEARANCE);
         const outcomeX = side === "right"
-          ? x + NODE_WIDTH + FLOW_OUTCOME_GAP
-          : side === "left" ? x - FLOW_OUTCOME_GAP - width : x + (NODE_WIDTH - width) / 2;
+          ? x + NODE_WIDTH + gap
+          : side === "left" ? x - gap - width : x + (NODE_WIDTH - width) / 2;
         p.positioned.set(outcome, { x: outcomeX, y: outcomeY, band: p.band(outcome) });
         outcomeY += OUTCOME_NODE_HEIGHT + OUTCOME_GAP;
       }
