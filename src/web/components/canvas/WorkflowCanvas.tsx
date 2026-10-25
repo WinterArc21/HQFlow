@@ -151,7 +151,7 @@ function WorkflowCanvasInner({
     && !(dismissedHint?.canvasId === canvasId && dismissedHint.view === suggestedView);
   const changeView = useCallback((next: CanvasView) => {
     if (next !== view) {
-      setCanvasView(canvasId, next);
+      setCanvasView(canvasId, next, view);
     }
   }, [canvasId, setCanvasView, view]);
 

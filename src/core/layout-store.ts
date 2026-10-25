@@ -12,10 +12,17 @@ const bendSchema = z.object({
   snap: z.enum(["source-x", "target-x"]).nullable(),
 }).strict();
 
+const viewEnum = z.enum(["flow", "wrap", "line"]);
+const viewGeometrySchema = z.object({
+  nodePositions: z.record(z.string(), pointSchema),
+  edgeBends: z.record(z.string(), bendSchema),
+}).strict();
+
 export const workflowCanvasLayoutSchema: z.ZodType<WorkflowCanvasLayout> = z.object({
   nodePositions: z.record(z.string(), pointSchema),
   edgeBends: z.record(z.string(), bendSchema),
-  view: z.enum(["flow", "wrap", "line"]).exactOptional(),
+  view: viewEnum.exactOptional(),
+  otherViews: z.partialRecord(viewEnum, viewGeometrySchema).exactOptional(),
 }).strict();
 
 const layoutFileSchema = z.object({

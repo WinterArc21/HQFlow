@@ -155,4 +155,18 @@ describe("useCodeHQStore", () => {
       window.localStorage.getItem = originalGetItem;
     }
   });
+
+  it("restores dragged positions and bends when switching back to a view", () => {
+    const store = useCodeHQStore.getState();
+    store.saveNodePosition("wf", "a", { x: 10, y: 20 });
+    store.saveEdgeBend("wf", "e", { point: { x: 1, y: 2 }, snap: null });
+    store.setCanvasView("wf", "wrap", "flow");
+    expect(useCodeHQStore.getState().canvasLayouts.wf?.nodePositions).toEqual({});
+    store.saveNodePosition("wf", "a", { x: 99, y: 99 });
+    store.setCanvasView("wf", "flow", "wrap");
+    const layout = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
+    expect(layout?.edgeBends).toEqual({ e: { point: { x: 1, y: 2 }, snap: null } });
+    expect(layout?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
+  });
 });

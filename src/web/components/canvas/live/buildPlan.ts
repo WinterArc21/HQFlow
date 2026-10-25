@@ -54,7 +54,6 @@ export interface BuildPlan {
   cursors: CursorKey[][];
   labels: Array<{ t: number; text: string; cursor: number }>;
   /** Centres of new cards, for the scene ripple, timed to when each one appears. */
-  pulses: CursorKey[];
   total: number;
   added: number;
   connections: number;
@@ -236,7 +235,6 @@ export function planBuild(
 
   const cursors: CursorKey[][] = lanes.map(() => []);
   const labels: BuildPlan["labels"] = [];
-  const pulses: CursorKey[] = [];
   const cards: CardDraw[] = [];
   const nodes = new Map<string, NodeDraw>();
   const stepName = new Map(next.steps.map((step) => [step.id, step.name]));
@@ -277,7 +275,6 @@ export function planBuild(
       nodes.set(nodeId, { delay, duration: cardPhase });
       cards.push({ id: nodeId, ...box, delay, duration: cardPhase, accent: accentOf(nodeId), outcome: outcomes.has(nodeId) });
       labels.push({ t: start, text: stepName.get(nodeId) ?? nodeId, cursor: laneIndex });
-      pulses.push({ t: at(CARD_PHASE.WEAVE), ...centre(box) });
     }
   });
 
@@ -301,7 +298,6 @@ export function planBuild(
     cards,
     cursors: cursors.filter((keys) => keys.length > 0),
     labels,
-    pulses,
     total: Math.max(lastEdge, laneEnd, changed.size > 0 ? 1200 : 0),
     added: next.steps.filter((step) => !before.has(step.id)).length,
     connections: newEdges.length,

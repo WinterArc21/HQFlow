@@ -9,19 +9,6 @@ import styles from "./Backdrop.module.css";
 /** Smooth scenes render below device resolution: the art is soft, and this keeps it cheap. */
 const SMOOTH_SCALE = 0.5;
 const TIME_SCALE: Record<MotionLevel, number> = { full: 1, calm: 0.35, still: 0 };
-/** The live-update ripple the shaders draw; see `pulseRing` in shaders.ts. */
-export const PULSE_EVENT = "hqflow:pulse";
-
-export interface PulseDetail {
-  x: number;
-  y: number;
-}
-
-/** Sends a ripple through the scene background from a point in window CSS pixels. */
-export function emitScenePulse(detail: PulseDetail): void {
-  window.dispatchEvent(new CustomEvent<PulseDetail>(PULSE_EVENT, { detail }));
-}
-
 function toggleAttribute(element: HTMLElement, name: string, value: string | null): void {
   if (value === null) {
     element.removeAttribute(name);
@@ -136,7 +123,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       time: uniform("u_time"),
       mouse: uniform("u_mouse"),
       pan: uniform("u_pan"),
-      pulse: uniform("u_pulse"),
       colors: uniform("u_c"),
     };
 
@@ -149,7 +135,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
     gl.uniform3fv(u.colors, colors);
 
     const mouse = { x: -1, y: -1, tx: -1, ty: -1 };
-    let pulse = { x: 0, y: 0, start: -1 };
     let pan = { x: 0, y: 0 };
     const onPointerMove = (event: PointerEvent) => {
       mouse.tx = event.clientX;
@@ -162,13 +147,8 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
     const onPointerLeave = () => {
       mouse.x = mouse.y = mouse.tx = mouse.ty = -1;
     };
-    const onPulse = (event: Event) => {
-      const { x, y } = (event as CustomEvent<PulseDetail>).detail;
-      pulse = { x, y, start: performance.now() };
-    };
     window.addEventListener("pointermove", onPointerMove);
     document.documentElement.addEventListener("pointerleave", onPointerLeave);
-    window.addEventListener(PULSE_EVENT, onPulse);
 
     const resize = () => {
       // Scenes render below device resolution; they are soft, so it is not visible.
@@ -212,7 +192,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       gl.uniform1f(u.time, sceneTime + 40);
       gl.uniform2f(u.mouse, mouse.x, mouse.y);
       gl.uniform2f(u.pan, pan.x, pan.y);
-      gl.uniform3f(u.pulse, pulse.x, pulse.y, pulse.start < 0 ? -1 : (now - pulse.start) / 1000);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
     frame = requestAnimationFrame(draw);
@@ -221,7 +200,6 @@ function ShaderCanvas({ scene, motion }: { scene: Scene; motion: MotionLevel }) 
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onPointerMove);
       document.documentElement.removeEventListener("pointerleave", onPointerLeave);
-      window.removeEventListener(PULSE_EVENT, onPulse);
       window.removeEventListener("resize", resize);
       gl.deleteProgram(program);
       gl.deleteShader(vs);

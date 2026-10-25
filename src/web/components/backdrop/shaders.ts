@@ -11,7 +11,6 @@ import type { ShaderId } from "../../design/scenes";
  *   u_time   scene clock in seconds (slowed by the "calm" motion level, frozen by "still")
  *   u_mouse  pointer in CSS pixels, or negative when the pointer is away
  *   u_pan    canvas pan in CSS pixels, for a little parallax
- *   u_pulse  xy = where a live update landed (CSS px), z = its age in seconds (< 0 = none)
  */
 const PRELUDE = /* glsl */ `#version 300 es
 precision highp float;
@@ -21,7 +20,6 @@ uniform float u_scale;
 uniform float u_time;
 uniform vec2 u_mouse;
 uniform vec2 u_pan;
-uniform vec3 u_pulse;
 uniform vec3 u_c[5];
 out vec4 outColor;
 
@@ -49,15 +47,6 @@ float fbm(vec2 p) {
     a *= 0.5;
   }
   return v;
-}
-
-/** A ring that spreads from where a live update landed, fading as it grows. */
-float pulseRing(vec2 css) {
-  float age = u_pulse.z;
-  if (age < 0.0 || age > 2.6) return 0.0;
-  float r = age * 480.0;
-  float d = abs(length(css - u_pulse.xy) - r);
-  return exp(-d * d / 900.0) * (1.0 - age / 2.6);
 }
 
 vec3 sceneColor(vec2 css);
@@ -90,7 +79,6 @@ vec3 sceneColor(vec2 css) {
     total += w;
   }
   col /= total;
-  col += (u_c[1] - u_c[0]) * pulseRing(css) * 0.4;
   col += (hash(css) - 0.5) * 0.04;
   return col;
 }

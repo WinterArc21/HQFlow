@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { useReactFlow, ViewportPortal } from "@xyflow/react";
-import { emitScenePulse } from "../../backdrop";
+import { ViewportPortal } from "@xyflow/react";
 import { countLabel } from "../../../lib/pluralize";
 import { CARD_PHASE, WEAVE_SWING, type BuildPlan, type CardDraw, type CursorKey } from "./buildPlan";
 import styles from "./AgentCursor.module.css";
@@ -65,7 +64,6 @@ function penFrames(keys: CursorKey[], total: number): Keyframe[] {
 export function AgentCursor({ plan }: { plan: BuildPlan }) {
   const penRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [labels, setLabels] = useState<Array<string | null>>(() => plan.cursors.map(() => null));
-  const { flowToScreenPosition } = useReactFlow();
 
   useLayoutEffect(() => {
     // The CSS that draws the cards starts now; the pens start from the same moment. They wait two
@@ -97,11 +95,10 @@ export function AgentCursor({ plan }: { plan: BuildPlan }) {
       setLabels((current) => current.map((label, index) => (index === cursor ? text : label)));
     const timers = [
       ...plan.labels.map(({ t, text, cursor }) => window.setTimeout(() => say(cursor, text), t)),
-      ...plan.pulses.map(({ t, x, y }) => window.setTimeout(() => emitScenePulse(flowToScreenPosition({ x, y })), t)),
       window.setTimeout(() => setLabels(plan.cursors.map(() => null)), plan.total + 300),
     ];
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [flowToScreenPosition, plan]);
+  }, [plan]);
 
   if (plan.cursors.length === 0) {
     return null;

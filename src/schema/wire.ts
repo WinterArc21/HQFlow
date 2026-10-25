@@ -61,6 +61,8 @@ export interface WorkflowCanvasLayout {
   edgeBends: Record<string, CanvasBend>;
   /** The view the user picked; absent means the canvas picks one from the map's shape. */
   view?: "flow" | "wrap" | "line";
+  /** Positions and bends the user set in the views they have left, so coming back restores them. */
+  otherViews?: Partial<Record<"flow" | "wrap" | "line", { nodePositions: Record<string, CanvasPoint>; edgeBends: Record<string, CanvasBend> }>>;
 }
 
 /** `GET /api/source` response shape. It contains metadata only, never file contents. */
