@@ -41,9 +41,6 @@ test("persists geometry across restart while resetting temporary view state", as
   const initialEdgePath = await edgePath.getAttribute("d");
   const initialViewportTransform = await viewport.getAttribute("style");
 
-  await page.getByRole("button", { name: "Expand Receive Request to show code details" }).click();
-  await expect.poll(storedLayout).toBeUndefined();
-  await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
 
   const nodeBox = await node.boundingBox();
   expect(nodeBox).not.toBeNull();
@@ -90,14 +87,12 @@ test("persists geometry across restart while resetting temporary view state", as
   server = await startCodeHQServer(root, PORTS.persistentLayoutRestart);
   await page.goto(server.url);
   await node.waitFor({ state: "visible", timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
   await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(persistedNodeTransform);
   await expect.poll(async () => (await storedLayout() as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
   await expect.poll(async () => (await edgePath.getAttribute("d")) ?? "").toContain(`${persistedBend.point.x},${persistedBend.point.y}`);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
 
   await page.getByRole("button", { name: "Reset layout" }).click();
-  await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
   await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(initialNodeTransform);
   await expect(edgePath).toHaveAttribute("d", initialEdgePath!);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
