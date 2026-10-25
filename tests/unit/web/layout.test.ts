@@ -149,26 +149,34 @@ describe("computeLayout", () => {
     expectNoOverlap(result.nodes);
   });
 
-  it("keeps a primary fork on the centerline and places its parallel sibling in a lower lane", () => {
+  it.each([
+    { branches: ["video", "audio"], offsets: [-1, 1] },
+    { branches: ["video", "audio", "captions"], offsets: [-1, 0, 1] },
+  ])("spreads $branches.length parallel branches evenly above and below the centerline", ({ branches, offsets }) => {
     const workflow = makeWorkflow(
-      [makeStep("start"), makeStep("fork"), makeStep("video"), makeStep("audio"), makeStep("join"), makeStep("done")],
+      [makeStep("start"), makeStep("fork"), ...branches.map((id) => makeStep(id)), makeStep("join"), makeStep("done")],
       [
         { from: "start", to: "fork" },
-        { from: "fork", to: "video", type: "success" },
-        { from: "fork", to: "audio", type: "success" },
-        { from: "video", to: "join", type: "success" },
-        { from: "audio", to: "join", type: "success" },
+        ...branches.flatMap((id) => [
+          { from: "fork", to: id, type: "success" as const },
+          { from: id, to: "join", type: "success" as const },
+        ]),
         { from: "join", to: "done" },
       ],
     );
     const nodes = computeLayout(workflow, BASE_OPTS).nodes;
     const byId = new Map(nodes.map((node) => [node.id, node] as const));
-    const center = byId.get("start")!.y + byId.get("start")!.height / 2;
+    const centerOf = (id: string) => byId.get(id)!.y + byId.get(id)!.height / 2;
+    const center = centerOf("start");
 
-    expect(byId.get("video")!.x).toBe(byId.get("audio")!.x);
-    expect(byId.get("video")!.y + byId.get("video")!.height / 2).toBe(center);
-    expect(byId.get("audio")!.y).toBeGreaterThan(byId.get("video")!.y + byId.get("video")!.height);
-    expect(byId.get("join")!.y + byId.get("join")!.height / 2).toBe(center);
+    // The fork and the join stay on one straight row.
+    expect(centerOf("fork")).toBe(center);
+    expect(centerOf("join")).toBe(center);
+    // Branches share a column, read top to bottom in declaration order, and mirror around the line.
+    const distances = branches.map((id) => centerOf(id) - center);
+    expect(new Set(branches.map((id) => byId.get(id)!.x)).size).toBe(1);
+    expect(distances.map(Math.sign)).toEqual(offsets);
+    expect(distances[0]).toBeCloseTo(-distances[distances.length - 1]!);
     expectNoOverlap(nodes);
   });
 

@@ -212,15 +212,12 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
       ? failureY + OUTCOME_NODE_HEIGHT + FAILURE_TO_WORK_GAP
       : LAYOUT_MARGIN_Y + (hasReturnEdge ? RETURN_EDGE_TOP_RESERVE : 0);
     const maxMainlineHeight = Math.max(0, ...workIds.filter((id) => mainline.has(id)).map((id) => heights.get(id) ?? 0));
-    const mainCenterY = mainTopY + maxMainlineHeight / 2;
 
     const maxRank = Math.max(-1, ...rankById.values());
-    const columnOf = (rank: number): string[] => {
-      const ids = workIds
-        .filter((id) => rankById.get(id) === rank)
-        .sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0));
-      return [...ids.filter((id) => mainline.has(id)), ...ids.filter((id) => !mainline.has(id))];
-    };
+    /** A stage's cards top to bottom, in declaration order. */
+    const columnOf = (rank: number): string[] => workIds
+      .filter((id) => rankById.get(id) === rank)
+      .sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0));
     // An outcome whose band lies past another card in its step's column would draw its line under
     // that card, so it hangs directly below its step instead.
     const hungBySource = new Map<string, string[]>();
@@ -249,20 +246,37 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
       xByRank.set(rank, rankCursorX);
       rankCursorX += NODE_WIDTH + LAYOUT_RANK_SEP;
     }
+    // Each stage's cards spread evenly above and below the main line: an odd count centres its
+    // middle card on the line, an even count leaves a wider empty lane on it. Tops are first
+    // measured from the line, then the line moves down until the highest card clears the band.
+    const blockHeight = (id: string): number =>
+      (heights.get(id) ?? 0) + (hungBySource.get(id)?.length ?? 0) * (OUTCOME_GAP + OUTCOME_NODE_HEIGHT);
+    const columnTops = new Map<number, number[]>();
+    for (let rank = 0; rank <= maxRank; rank += 1) {
+      const column = columnOf(rank);
+      const tops: number[] = [];
+      let cursor = 0;
+      column.forEach((id, index) => {
+        if (index > 0) cursor += column.length % 2 === 0 && index === column.length / 2 ? WORK_LANE_GAP : WORK_NODE_GAP;
+        tops.push(cursor);
+        cursor += blockHeight(id);
+      });
+      const middle = Math.floor(column.length / 2);
+      const shift = column.length % 2 === 1
+        ? tops[middle]! + (heights.get(column[middle]!) ?? 0) / 2
+        : tops[middle]! - WORK_LANE_GAP / 2;
+      columnTops.set(rank, tops.map((top) => top - shift));
+    }
+    const highest = Math.min(-maxMainlineHeight / 2, ...[...columnTops.values()].flat());
+    const lineY = mainTopY - highest;
     for (let rank = 0; rank <= maxRank; rank += 1) {
       const x = xByRank.get(rank) ?? LAYOUT_MARGIN_X;
-      const column = columnOf(rank);
-      let mainBottom = mainCenterY + maxMainlineHeight / 2;
-      for (const id of column.filter((id) => mainline.has(id))) {
-        const y = mainCenterY - (heights.get(id) ?? 0) / 2;
+      const tops = columnTops.get(rank) ?? [];
+      columnOf(rank).forEach((id, index) => {
+        const y = lineY + tops[index]!;
         positioned.set(id, { x, y });
-        mainBottom = Math.max(mainBottom, hangOutcomes(id, x, y + (heights.get(id) ?? 0)));
-      }
-      let laneY = mainBottom + WORK_LANE_GAP;
-      for (const id of column.filter((id) => !mainline.has(id))) {
-        positioned.set(id, { x, y: laneY });
-        laneY = hangOutcomes(id, x, laneY + (heights.get(id) ?? 0)) + WORK_NODE_GAP;
-      }
+        hangOutcomes(id, x, y + (heights.get(id) ?? 0));
+      });
     }
 
     const workBottom = Math.max(mainTopY, ...workIds.map((id) => {
@@ -298,7 +312,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     };
     placeOutcomeBand(failureIds.filter((id) => !hungIds.has(id)), "failure", failureY);
     placeOutcomeBand(successIds.filter((id) => !hungIds.has(id)), "success", workBottom + WORK_TO_SUCCESS_GAP);
-    fallbackY = mainCenterY;
+    fallbackY = lineY;
   }
 
   const nodes = workflow.steps.map((step, index): LayoutNode => {
