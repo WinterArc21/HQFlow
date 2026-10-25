@@ -6,7 +6,7 @@ import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
 import { outcomeTone } from "../../design/semantics";
 import { computeIncomingTypes } from "./graph";
-import { WRAP_ROW_GAP, type CanvasView, type LayoutResult } from "./layout";
+import { WRAP_ROW_GAP, type CanvasView, type LayoutResult, type OutcomeBand } from "./layout";
 import { stepHasMissingSource } from "./nodeContent";
 import type { OutcomeFlowNode, StepFlowNode, WorkflowFlowEdge } from "./types";
 import type { CanvasBend } from "../../store/useCodeHQStore";
@@ -103,6 +103,12 @@ export function chooseCardinalHandles(
 
 type Box = { x: number; y: number; width: number; height: number };
 
+/** Line view: whether an outcome sits in its band past its step (above for failure, below for
+ * success) and so uses the step's band port. An outcome hung under its step does not. */
+function inBandBeyond(source: Box, target: Box, band: OutcomeBand | undefined): boolean {
+  return band === "failure" ? target.y + target.height <= source.y : band === "success" && target.y >= source.y + source.height;
+}
+
 /**
  * The handle pair for a connection in a given view. Flow prefers a straight drop from the bottom
  * of one card into the top of the next; the other views use the facing sides.
@@ -124,6 +130,11 @@ export function chooseViewHandles(
     if (target.y >= source.y + source.height) {
       return { sourceHandle: "out-bottom", targetHandle: "in-top" };
     }
+  }
+  // Line reads left to right: a card in another column connects side to side, however far down
+  // it sits, so the line never drops through the cards stacked between them.
+  if (view === "line" && !targetIsOutcome && target.x !== source.x) {
+    return target.x > source.x ? { sourceHandle: "out", targetHandle: "in" } : { sourceHandle: "out-left", targetHandle: "in-right" };
   }
   return chooseCardinalHandles(source, target);
 }
@@ -174,7 +185,11 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
     const targetFlags = flagsByStepId.get(edge.to);
     // Outside the line view, outcome and return edges use the ordinary side ports.
     const lineView = params.layout.view === "line";
-    const outcomeBand = lineView ? outcomeNodeById.get(edge.to)?.outcomeBand : undefined;
+    const outcomeNode = lineView ? outcomeNodeById.get(edge.to) : undefined;
+    const sourceNode = params.layout.nodes.find((node) => node.id === edge.from);
+    const outcomeBand = outcomeNode !== undefined && sourceNode !== undefined && inBandBeyond(sourceNode, outcomeNode, outcomeNode.outcomeBand)
+      ? outcomeNode.outcomeBand
+      : undefined;
     if (sourceFlags !== undefined && outcomeBand === "failure") {
       sourceFlags.hasFailureOutcome = true;
     }
@@ -324,7 +339,8 @@ export function buildFlowEdges(
     const sideReturnX = !lineView && isReturnEdge ? layout.bounds.maxX + 56 : undefined;
     const cardinalHandles = turnY !== undefined || sideReturnX !== undefined
       ? { sourceHandle: "out", targetHandle: turnY !== undefined ? "in" : "in-right" }
-      : !isRetryLoop && !isReturnEdge && (targetNode?.isOutcome !== true || !lineView) && sourceNode !== undefined && targetNode !== undefined
+      : !isRetryLoop && !isReturnEdge && sourceNode !== undefined && targetNode !== undefined
+        && (targetNode.isOutcome !== true || !lineView || !inBandBeyond(sourceNode, targetNode, targetNode.outcomeBand))
         ? chooseViewHandles(layout.view, sourceNode, targetNode, targetNode.isOutcome)
         : undefined;
     // `computeTracePath` supplies only the anchor's outgoing edge ids. All other edges remain in

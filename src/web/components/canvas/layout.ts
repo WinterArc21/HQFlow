@@ -215,6 +215,34 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     const mainCenterY = mainTopY + maxMainlineHeight / 2;
 
     const maxRank = Math.max(-1, ...rankById.values());
+    const columnOf = (rank: number): string[] => {
+      const ids = workIds
+        .filter((id) => rankById.get(id) === rank)
+        .sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0));
+      return [...ids.filter((id) => mainline.has(id)), ...ids.filter((id) => !mainline.has(id))];
+    };
+    // An outcome whose band lies past another card in its step's column would draw its line under
+    // that card, so it hangs directly below its step instead.
+    const hungBySource = new Map<string, string[]>();
+    for (const id of outcomeIds) {
+      const source = outcomeSource(id);
+      if (source === undefined) continue;
+      const column = columnOf(rankById.get(source) ?? 0);
+      const index = column.indexOf(source);
+      if (bandForOutcome(id) === "failure" ? index > 0 : index < column.length - 1) {
+        hungBySource.set(source, [...(hungBySource.get(source) ?? []), id]);
+      }
+    }
+    const hungIds = new Set([...hungBySource.values()].flat());
+    /** Places a step's hung outcomes below it and returns the bottom of the last one. */
+    const hangOutcomes = (source: string, x: number, bottom: number): number => {
+      for (const id of hungBySource.get(source) ?? []) {
+        bottom += OUTCOME_GAP;
+        positioned.set(id, { x: x + (NODE_WIDTH - outcomeWidth(id)) / 2, y: bottom, band: bandForOutcome(id) });
+        bottom += OUTCOME_NODE_HEIGHT;
+      }
+      return bottom;
+    };
     const xByRank = new Map<number, number>();
     let rankCursorX = LAYOUT_MARGIN_X;
     for (let rank = 0; rank <= maxRank; rank += 1) {
@@ -222,28 +250,25 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
       rankCursorX += NODE_WIDTH + LAYOUT_RANK_SEP;
     }
     for (let rank = 0; rank <= maxRank; rank += 1) {
-      const idsAtRank = workIds
-        .filter((id) => rankById.get(id) === rank)
-        .sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0));
-      const onMainline = idsAtRank.filter((id) => mainline.has(id));
-      const offMainline = idsAtRank.filter((id) => !mainline.has(id));
-      for (const id of onMainline) {
-        positioned.set(id, {
-          x: xByRank.get(rank) ?? LAYOUT_MARGIN_X,
-          y: mainCenterY - (heights.get(id) ?? 0) / 2,
-        });
+      const x = xByRank.get(rank) ?? LAYOUT_MARGIN_X;
+      const column = columnOf(rank);
+      let mainBottom = mainCenterY + maxMainlineHeight / 2;
+      for (const id of column.filter((id) => mainline.has(id))) {
+        const y = mainCenterY - (heights.get(id) ?? 0) / 2;
+        positioned.set(id, { x, y });
+        mainBottom = Math.max(mainBottom, hangOutcomes(id, x, y + (heights.get(id) ?? 0)));
       }
-      let laneY = mainCenterY + maxMainlineHeight / 2 + WORK_LANE_GAP;
-      for (const id of offMainline) {
-        positioned.set(id, { x: xByRank.get(rank) ?? LAYOUT_MARGIN_X, y: laneY });
-        laneY += (heights.get(id) ?? 0) + WORK_NODE_GAP;
+      let laneY = mainBottom + WORK_LANE_GAP;
+      for (const id of column.filter((id) => !mainline.has(id))) {
+        positioned.set(id, { x, y: laneY });
+        laneY = hangOutcomes(id, x, laneY + (heights.get(id) ?? 0)) + WORK_NODE_GAP;
       }
     }
 
     const workBottom = Math.max(mainTopY, ...workIds.map((id) => {
       const point = positioned.get(id);
       return (point?.y ?? mainTopY) + (heights.get(id) ?? 0);
-    }));
+    }), ...[...hungIds].map((id) => (positioned.get(id)?.y ?? 0) + OUTCOME_NODE_HEIGHT));
 
     const sourceAnchorX = (outcomeId: string): number => {
       const sourceCenters = valid
@@ -271,8 +296,8 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
         cursor = x + width + OUTCOME_GAP;
       }
     };
-    placeOutcomeBand(failureIds, "failure", failureY);
-    placeOutcomeBand(successIds, "success", workBottom + WORK_TO_SUCCESS_GAP);
+    placeOutcomeBand(failureIds.filter((id) => !hungIds.has(id)), "failure", failureY);
+    placeOutcomeBand(successIds.filter((id) => !hungIds.has(id)), "success", workBottom + WORK_TO_SUCCESS_GAP);
     fallbackY = mainCenterY;
   }
 

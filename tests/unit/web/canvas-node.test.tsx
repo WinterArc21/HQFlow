@@ -193,6 +193,45 @@ describe("buildFlowElements", () => {
     });
   });
 
+  it("hangs a line-view outcome under its card when another card is in the way", () => {
+    const workflow = {
+      schemaVersion: "0.1" as const,
+      id: "stacked",
+      name: "Stacked",
+      purpose: "Tests outcomes from a stacked column.",
+      steps: [
+        makeStep({ id: "split", category: "entry" }),
+        makeStep({ id: "upper" }),
+        makeStep({ id: "lower" }),
+        makeStep({ id: "upper-failed", category: "output" }),
+        makeStep({ id: "lower-failed", category: "output" }),
+      ],
+      connections: [
+        { from: "split", to: "upper" },
+        { from: "split", to: "lower" },
+        { from: "upper", to: "upper-failed", type: "failure" as const, label: "timeout" },
+        { from: "lower", to: "lower-failed", type: "failure" as const, label: "declined" },
+      ],
+    };
+    const layout = computeLayout(workflow, { view: "line" });
+    const node = (id: string) => layout.nodes.find((candidate) => candidate.id === id)!;
+    const upper = node("upper");
+    const lower = node("lower");
+    expect(upper.x).toBe(lower.x);
+    expect(upper.y).toBeLessThan(lower.y);
+
+    // The top card's failure stays in the band above; the stacked card's hangs right under it.
+    expect(node("upper-failed").y + node("upper-failed").height).toBeLessThanOrEqual(upper.y);
+    expect(node("lower-failed").y).toBeGreaterThan(lower.y + lower.height);
+
+    const edges = buildFlowEdges(layout, new Set<string>(), null);
+    const edgeTo = (target: string) => edges.find((edge) => edge.target === target)!;
+    expect(edgeTo("upper-failed")).toMatchObject({ sourceHandle: "failure", targetHandle: "outcome-in" });
+    expect(edgeTo("lower-failed")).toMatchObject({ sourceHandle: "out-bottom", targetHandle: "in-top" });
+    // The lower branch still connects side to side from the split, not down through "upper".
+    expect(edgeTo("lower")).toMatchObject({ sourceHandle: "out", targetHandle: "in" });
+  });
+
   it("fans out connections that share a source and target", () => {
     const workflow = {
       schemaVersion: "0.1" as const,
