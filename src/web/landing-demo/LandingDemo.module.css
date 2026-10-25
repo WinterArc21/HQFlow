@@ -12,3 +12,22 @@
   flex: 1;
   min-height: 0;
 }
+
+/* The fitted map ends in the lower left, so the key sits in the empty lower right. */
+.canvas :global([class^="_legend_"]) {
+  right: var(--space-2);
+  left: auto;
+}
+
+/* The reel only draws; the key and the change toast would cover the cards it draws in. */
+.app[data-live] :global([class^="_legend_"]),
+.app[data-live] :global([class^="_toast_"]) {
+  display: none;
+}
+
+/* Phone screens have no free corner for the key; the app hides it there too. */
+@media (max-width: 600px) {
+  .canvas :global([class^="_legend_"]) {
+    display: none;
+  }
+}
