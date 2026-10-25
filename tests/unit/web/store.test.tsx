@@ -168,5 +168,10 @@ describe("useCodeHQStore", () => {
     expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
     expect(layout?.edgeBends).toEqual({ e: { point: { x: 1, y: 2 }, snap: null } });
     expect(layout?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
+
+    store.resetLayout("wf");
+    const reset = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(reset?.nodePositions).toEqual({});
+    expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
   });
 });

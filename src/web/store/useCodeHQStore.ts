@@ -252,12 +252,13 @@ export const useCodeHQStore = create<CodeHQStore>()(
           return state;
         }
         const canvasLayouts = { ...state.canvasLayouts };
-        // Reset clears what the user dragged; the view they picked stays.
-        const view = canvasLayouts[workflowId]?.view;
+        // Reset clears what the user dragged in the current view; the view they picked and
+        // the positions they set in other views stay.
+        const { view, otherViews } = canvasLayouts[workflowId] ?? {};
         if (view === undefined) {
           delete canvasLayouts[workflowId];
         } else {
-          canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, view };
+          canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, view, ...(otherViews !== undefined ? { otherViews } : {}) };
         }
         return { canvasLayouts, expandedStepIds: {}, layoutResetRevision: state.layoutResetRevision + 1 };
       }),
