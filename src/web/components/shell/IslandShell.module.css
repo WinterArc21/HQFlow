@@ -190,6 +190,18 @@
   margin-left: auto;
 }
 
+/* On a phone the status island is wider than the screen; tighten it so the theme button fits. */
+@media (max-width: 685px) {
+  .status {
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+  }
+
+  .divider {
+    display: none;
+  }
+}
+
 /* On a phone the controls would run past the dock's edge; let them drop to their own line. */
 @media (max-width: 685px) {
   .dockRow {
