@@ -286,11 +286,14 @@ const DASH_PATTERNS: Record<"dashed" | "dotted", string> = {
   dotted: "1 6",
 };
 
-/** How much wider than the semantic stroke the background-coloured casing/halo paints — a solid
- * underlay that carves the dashed line clear of the canvas grid and neighbouring card borders
- * without introducing a neon outline. The halo follows the same path shape (dashes are preserved
- * on the semantic stroke on top); only its width grows. */
-const HALO_WIDTH_PADDING = 4;
+/** How much wider than the semantic stroke the background-coloured casing/halo paints — a thin
+ * underlay that carves the line clear of the canvas grid, card borders, and crossing edges. Kept
+ * small so it reads as separation, not as a glow around the thin line. The halo follows the same
+ * path shape (dashes are preserved on the semantic stroke on top); only its width grows. */
+const HALO_WIDTH_PADDING = 2;
+/** The halo stops this far from the target, under the arrowhead, so its flat end never shows
+ * beside the arrow's point. */
+const HALO_TIP_CUT = 5;
 /** How much a traced edge's stroke grows when path tracing is active (contract §11): tracing must
  * not only dim unrelated paths, it must also strengthen the path the user is following, so the
  * traced line reads as the figure rather than merely the ground. Kept under the next weight tier
@@ -565,8 +568,16 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     build !== undefined ? `hq-edge-build ${build.set}` : "",
   ].filter(Boolean).join(" ");
 
+  const haloMaskId = `${maskBaseId}-halo-${id}`.replace(/[^\w-]/g, "_");
+
   return (
     <>
+      <defs>
+        <mask id={haloMaskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+          <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+          <circle cx={targetX} cy={targetY} r={HALO_TIP_CUT} fill="black" />
+        </mask>
+      </defs>
       {labelGap !== null ? (
         <defs>
           <mask id={gapMaskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
@@ -593,7 +604,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       >
         <g mask={gapMask}>
           <g mask={cometActive ? `url(#${cometMaskId})` : undefined}>
-            <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
+            <path d={path} fill="none" data-edge-halo="" mask={`url(#${haloMaskId})`} style={haloStyle} />
             <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
           </g>
           {cometActive ? <HandoffComet path={path} maskId={cometMaskId} from={categoryVar(source)} to={categoryVar(target)} /> : null}
