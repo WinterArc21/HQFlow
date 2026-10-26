@@ -277,24 +277,9 @@ function smoothBendPath(
   return `M${source.x},${source.y} L${sourceLead.x},${sourceLead.y} C${sourceControl.x},${sourceControl.y} ${bend.x - tangent.x * tangentReach},${bend.y - tangent.y * tangentReach} ${bend.x},${bend.y} C${bend.x + tangent.x * tangentReach},${bend.y + tangent.y * tangentReach} ${targetControl.x},${targetControl.y} ${targetLead.x},${targetLead.y} L${target.x},${target.y}`;
 }
 
-/** Stroke width per connection type: normal sync flow is the strongest weight; every branch —
- * conditional, failure, async, retry — reads as subordinate but still intentional and legible.
- * The line and arrowhead use the same connection-type discriminator. */
-function edgeStrokeWidth(variant: string): number {
-  switch (variant) {
-    case "success":
-      return 2.75;
-    case "async":
-      return 2;
-    case "success-outcome":
-    case "failure":
-    case "conditional":
-    case "retry":
-      return 2;
-    default:
-      return 2.75;
-  }
-}
+/** Every connection uses one thin stroke, so the cards stay the figure and the edges step back.
+ * Colour and dash pattern carry the connection type; path tracing still thickens traced edges. */
+const EDGE_STROKE_WIDTH = 1.6;
 
 const DASH_PATTERNS: Record<"dashed" | "dotted", string> = {
   dashed: "8 6",
@@ -324,9 +309,7 @@ function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
  * A directional connector styled from the connection type or terminal outcome band: neutral solid
  * for success/default, green dashed for a successful terminal, muted red dashed for failure, amber
  * dashed for conditional, and neutral dotted for async. Geometry is derived from React Flow's live
- * handle coordinates, so every path remains attached while a card is dragged. The primary path
- * renders bolder than a branch so a reader can follow "what happens next" without consciously
- * parsing colour.
+ * handle coordinates, so every path remains attached while a card is dragged.
  */
 export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps<WorkflowFlowEdge>) {
   const { screenToFlowPosition, getZoom } = useReactFlow();
@@ -466,8 +449,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     labelY = bendPoint.y;
   }
 
-  const baseStrokeWidth = edgeStrokeWidth(markerVariant ?? "success");
-  const strokeWidth = baseStrokeWidth + (traced ? TRACED_STROKE_BOOST : 0);
+  const strokeWidth = EDGE_STROKE_WIDTH + (traced ? TRACED_STROKE_BOOST : 0);
   const opacity = dimmed ? DIMMED_OPACITY_FACTOR : 1;
   const edgeTransition = "opacity var(--dur-fast) var(--ease-standard), stroke-width var(--dur-fast) var(--ease-standard)";
   const edgeStyle: CSSProperties = {

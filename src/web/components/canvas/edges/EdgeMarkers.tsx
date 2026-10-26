@@ -23,7 +23,7 @@ export function edgeMarkerId(type: MarkerVariant | undefined): string {
  * reference `--accent-*` tokens (never a literal colour), matching `connectionStyle` (contract
  * §10's connection-type table).
  *
- * Deliberately compact: `markerUnits="userSpaceOnUse"` makes the 7x7 dimensions real canvas
+ * A small filled triangle. `markerUnits="userSpaceOnUse"` makes the 9x9 dimensions real canvas
  * units instead of SVG's default stroke-width multiples (which inflated these to roughly
  * 16-20px on the strengthened edges). Every connection type now gets the same quiet directional
  * cue without a large triangle competing with its line or destination node.
@@ -39,12 +39,12 @@ export function EdgeMarkers() {
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
-            markerWidth="10"
-            markerHeight="10"
+            markerWidth="9"
+            markerHeight="9"
             markerUnits="userSpaceOnUse"
             orient="auto-start-reverse"
           >
-            <path d="M1,1 L9,5 L1,9" className={MARKER_CLASS_NAMES[variant]} />
+            <path d="M1,1.5 L9,5 L1,8.5 Z" className={MARKER_CLASS_NAMES[variant]} />
           </marker>
         ))}
       </defs>

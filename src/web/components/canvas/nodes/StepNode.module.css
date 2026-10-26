@@ -3,19 +3,21 @@
    matching value here must change too. */
 
 /* Real edge anchors, visible for orientation but not interactive: users may move nodes, while
-   authoring connections remains outside this canvas. */
+   authoring connections remains outside this canvas. A small solid square in the colour of the
+   edge that leaves it, matching the square step badges. */
 .handle {
   box-sizing: border-box;
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  min-height: 0;
   opacity: 1;
-  background: var(--canvas-port-center);
-  border: 2px solid var(--canvas-port-ring);
+  border: 0;
+  border-radius: 1.5px;
+  background: var(--accent-ice);
   pointer-events: none;
   z-index: 3;
-  transition:
-    border-color var(--dur-fast) var(--ease-standard),
-    box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 /* Target-side anchors stay in the DOM for edge geometry but render invisible — the incoming
@@ -30,21 +32,21 @@
 }
 
 .failureHandle {
-  border-color: color-mix(in srgb, var(--accent-red) 75%, var(--canvas-port-ring));
+  background: var(--accent-red);
 }
 
 .successHandle {
-  border-color: color-mix(in srgb, var(--accent-output) 75%, var(--canvas-port-ring));
+  background: var(--accent-output);
 }
 
 .returnOutHandle {
   left: 70%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
+  background: var(--accent-amber);
 }
 
 .retryOutHandle {
   top: 72%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
+  background: var(--accent-amber);
 }
 
 /* The category marker is the card itself (contract §10 still holds — colour encodes category and
