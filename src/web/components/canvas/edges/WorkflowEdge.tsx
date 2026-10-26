@@ -1,9 +1,9 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
-import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useNodesData, useReactFlow, type EdgeProps } from "@xyflow/react";
+import { categoryToken, connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
 import { connectionLabelText } from "../edgeLabel";
-import type { WorkflowFlowEdge } from "../types";
+import type { CanvasFlowNode, WorkflowFlowEdge } from "../types";
 import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
 import { edgeMarkerId } from "./EdgeMarkers";
 import styles from "./WorkflowEdge.module.css";
@@ -103,6 +103,107 @@ function InkDrop({ path, delay, duration, color }: { path: string; delay: number
       <path ref={trackRef} d={path} fill="none" stroke="none" />
       <circle ref={dropRef} r={4.5} style={{ fill: color, opacity: 0, filter: `drop-shadow(0 0 6px ${color})` }} />
     </g>
+  );
+}
+
+/** The hand-off comet's constant speed, so short and long edges move the same. */
+const COMET_SPEED = 150;
+const COMET_REST = 700;
+const COMET_TAIL = 8;
+const COMET_TAIL_STEP = 3.1;
+
+/** Where along the edge the comet switches from the source colour to the target colour: it
+ * holds the source colour, crossfades over a short stretch, then holds the target colour, so the
+ * last third of the run clearly reads as the next card. */
+const COMET_SWITCH_START = 0.55;
+const COMET_SWITCH_END = 0.62;
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * The hand-off comet: a bead in the source card's colour that switches to the target card's
+ * colour part-way along, with a short tail that keeps the colour the bead had at each point. It
+ * is cut out of the line (the parent masks the line with `maskId`), so it never melts into the
+ * stroke.
+ */
+function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string; from: string; to: string }) {
+  const trackRef = useRef<SVGPathElement>(null);
+  const headRef = useRef<SVGCircleElement>(null);
+  const cutRef = useRef<SVGCircleElement>(null);
+  const tailRefs = useRef<Array<SVGCircleElement | null>>([]);
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (track === null || typeof track.getTotalLength !== "function") {
+      return;
+    }
+    const style = getComputedStyle(track);
+    const resolve = (name: string): string => style.getPropertyValue(name).trim() || "currentColor";
+    const fromColor = resolve(from);
+    const toColor = resolve(to);
+    const length = track.getTotalLength();
+    const travel = (length / COMET_SPEED) * 1000;
+    const duration = travel + COMET_REST;
+    const share = travel / duration;
+    const samples = Math.max(12, Math.ceil(length / 8));
+    const frames = (peak: number, cut: boolean): Keyframe[] => {
+      const list: Keyframe[] = [];
+      // Exact keyframes at both ends of the switch keep it crisp on short edges too.
+      const shares = [...Array.from({ length: samples + 1 }, (_, k) => k / samples), COMET_SWITCH_START, COMET_SWITCH_END]
+        .sort((a, b) => a - b);
+      for (const s of shares) {
+        const point = track.getPointAtLength(length * s);
+        const fade = Math.max(0, Math.min(1, s / 0.05, (1 - s) / 0.05));
+        list.push(cut
+          ? { offset: s * share, transform: `translate(${point.x}px, ${point.y}px) scale(${fade})` }
+          : {
+              offset: s * share,
+              transform: `translate(${point.x}px, ${point.y}px)`,
+              fill: s <= COMET_SWITCH_START
+                ? fromColor
+                : s >= COMET_SWITCH_END
+                  ? toColor
+                  : `color-mix(in oklch, ${toColor} ${Math.round(((s - COMET_SWITCH_START) / (COMET_SWITCH_END - COMET_SWITCH_START)) * 100)}%, ${fromColor})`,
+              opacity: fade * peak,
+            });
+      }
+      list.push(cut ? { offset: 1, transform: "scale(0)" } : { offset: 1, opacity: 0 });
+      return list;
+    };
+    const timing = { duration, iterations: Infinity, easing: "linear" } as const;
+    const animations: Animation[] = [];
+    if (headRef.current !== null) animations.push(headRef.current.animate(frames(1, false), timing));
+    if (cutRef.current !== null) animations.push(cutRef.current.animate(frames(1, true), timing));
+    tailRefs.current.forEach((circle, index) => {
+      if (circle === null) return;
+      const tailShare = 1 - (index + 1) / (COMET_TAIL + 1);
+      const lag = ((index + 1) * COMET_TAIL_STEP / COMET_SPEED) * 1000;
+      animations.push(circle.animate(frames(0.15 + 0.75 * tailShare, false), { ...timing, delay: lag }));
+    });
+    return () => animations.forEach((animation) => animation.cancel());
+  }, [path, from, to]);
+  return (
+    <>
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+          <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+          <circle ref={cutRef} r={7} fill="black" style={{ transform: "scale(0)" }} />
+        </mask>
+      </defs>
+      <g pointerEvents="none" aria-hidden="true" data-handoff-comet="">
+        <path ref={trackRef} d={path} fill="none" stroke="none" />
+        {Array.from({ length: COMET_TAIL }, (_, index) => (
+          <circle
+            key={index}
+            ref={(circle) => { tailRefs.current[index] = circle; }}
+            r={0.9 + 2.6 * (1 - (index + 1) / (COMET_TAIL + 1))}
+            style={{ opacity: 0 }}
+          />
+        ))}
+        <circle ref={headRef} r={4.2} style={{ opacity: 0, stroke: "var(--bg-raised)", strokeWidth: 1.4 }} />
+      </g>
+    </>
   );
 }
 
@@ -213,7 +314,7 @@ const TRACED_STROKE_BOOST = 1;
 /** Opacity applied to a dimmed edge during path tracing (contract §11) — a dimmed edge fades to a
  * quiet background tone while traced edges strengthen, so the followed path reads as the figure. */
 const DIMMED_OPACITY_FACTOR = 0.25;
-/** Success, async, conditional, and retry edges carry a hue-matched traveling bead.
+/** Success, async, conditional, and retry edges carry the hand-off comet while a trace is active.
  * Failure and terminal-outcome edges stay still so a hard stop does not look like flow. */
 function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
   return variant === "success" || variant === "async" || variant === "conditional" || variant === "retry" || variant === undefined;
@@ -232,6 +333,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const [bend, setBend] = useState<BendState | null>(null);
   const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
   const pendingBend = useRef<BendState | null>(null);
+  const endpoints = useNodesData<CanvasFlowNode>([source, target]);
   const maskBaseId = `codehq-label-gap${useId()}`;
   // The label's laid-out size in flow units (the label renderer sits inside the viewport
   // transform), so the line can stop at the word and continue after it.
@@ -403,8 +505,9 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const showLabel = labelText !== undefined;
   const handlePoint = bendPoint ?? { x: labelX, y: labelY };
   const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
-  const orbDuration = markerVariant === "async" ? "1.8s" : "2.4s";
-  const orbPathId = `codehq-orb-path-${id}`;
+  const cometActive = showTravelingOrb && traced && !prefersReducedMotion();
+  const cometMaskId = `${maskBaseId}-comet-${id}`.replace(/[^\w-]/g, "_");
+  const categoryVar = (nodeId: string): string => categoryToken(endpoints.find((node) => node.id === nodeId)?.data.step.category).varName;
   const build = data.build;
   const buildTiming = build !== undefined
     ? ({ "--hq-delay": `${build.delay}ms`, "--hq-dur": `${build.duration}ms` } as CSSProperties)
@@ -502,26 +605,17 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         data-edge-source={source}
         data-edge-target={target}
         data-traveling-orb={showTravelingOrb ? "true" : undefined}
-        data-orb-active={showTravelingOrb && traced ? "true" : undefined}
-        className={[showTravelingOrb ? styles.orbHost : "", build !== undefined ? `hq-edge-build ${build.set}` : ""].filter(Boolean).join(" ") || undefined}
+        data-orb-active={cometActive ? "true" : undefined}
+        className={[build !== undefined ? `hq-edge-build ${build.set}` : ""].filter(Boolean).join(" ") || undefined}
         style={buildTiming}
       >
         <g mask={gapMask}>
-          <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
-          <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+          <g mask={cometActive ? `url(#${cometMaskId})` : undefined}>
+            <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
+            <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+          </g>
+          {cometActive ? <HandoffComet path={path} maskId={cometMaskId} from={categoryVar(source)} to={categoryVar(target)} /> : null}
         </g>
-        {showTravelingOrb ? (
-          <>
-            <path id={orbPathId} d={path} fill="none" className={styles.orbTrack} />
-            <g className={styles.orb} style={{ color: `var(${visual.varName})` }} aria-hidden="true">
-              <circle r="6" className={styles.orbHalo} />
-              <circle r="3.2" className={styles.orbBead} />
-              <animateMotion dur={orbDuration} repeatCount="indefinite" rotate="auto">
-                <mpath href={`#${orbPathId}`} />
-              </animateMotion>
-            </g>
-          </>
-        ) : null}
       </g>
       {build !== undefined ? (
         <path
