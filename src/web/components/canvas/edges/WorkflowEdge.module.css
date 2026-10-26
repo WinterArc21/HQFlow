@@ -60,6 +60,9 @@
   pointer-events: none;
 }
 
+/* The bend handle hides at rest so it never looks like a stuck comet bead; its 24px grab
+   area stays live, so it appears as soon as the pointer reaches it. It is a small square, to match
+   the square step badges and to differ from the round comet. */
 .bendHandle {
   display: grid;
   width: 24px;
@@ -70,21 +73,21 @@
   border: 0;
   background: transparent;
   cursor: grab;
-  opacity: 0.78;
+  opacity: 0;
   transition: opacity var(--dur-fast) var(--ease-standard);
   pointer-events: all;
   touch-action: none;
 }
 
 .bendHandle::before {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border: 2px solid var(--bg-raised);
-  border-radius: 50%;
+  border-radius: 2px;
   background: currentColor;
   box-shadow: 0 1px 5px color-mix(in srgb, currentColor 35%, transparent);
   content: "";
-  transition: scale var(--dur-fast) var(--ease-standard), border-radius var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: scale var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .bendHandle:hover,
@@ -104,6 +107,5 @@
 }
 
 .bendHandle[data-snapped="true"]::before {
-  border-radius: 2px;
   box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 22%, transparent);
 }
