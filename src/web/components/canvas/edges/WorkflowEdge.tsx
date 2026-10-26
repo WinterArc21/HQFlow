@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
@@ -232,6 +232,27 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const [bend, setBend] = useState<BendState | null>(null);
   const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
   const pendingBend = useRef<BendState | null>(null);
+  const maskBaseId = `codehq-label-gap${useId()}`;
+  // The label's laid-out size in flow units (the label renderer sits inside the viewport
+  // transform), so the line can stop at the word and continue after it.
+  const [labelSize, setLabelSize] = useState<{ width: number; height: number } | null>(null);
+  const labelRef = useCallback((label: HTMLElement | null) => {
+    if (label === null || typeof ResizeObserver === "undefined") {
+      setLabelSize(null);
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      const width = label.offsetWidth;
+      const height = label.offsetHeight;
+      setLabelSize((current) => (
+        width === 0 || height === 0
+          ? null
+          : current?.width === width && current.height === height ? current : { width, height }
+      ));
+    });
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, []);
 
   if (data === undefined) {
     return null;
@@ -413,8 +434,69 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     pendingBend.current = next;
   };
 
+  const bendHandlers = {
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      pendingBend.current = null;
+      setDraggingForKey(data.bendResetKey);
+    },
+    onPointerMove: handleBendMove,
+    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>): void => {
+      event.stopPropagation();
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+      setDraggingForKey(null);
+      const completedBend = pendingBend.current;
+      pendingBend.current = null;
+      if (completedBend !== null) {
+        data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
+      }
+    },
+    onPointerCancel: (): void => {
+      pendingBend.current = null;
+      setDraggingForKey(null);
+    },
+  };
+  const bendTitle = activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
+    ? "Snapped to a 90-degree corner; drag to adjust"
+    : "Drag to bend; move near a corner to snap";
+
+  // Text-only labels: the line stops at the word and continues after it. The gap is a mask cut the
+  // size of the label box, so the halo, the line, and the live-build ink all break around it.
+  const labelGap = showLabel && labelSize !== null ? labelSize : null;
+  const gapMaskId = `${maskBaseId}-${id}`.replace(/[^\w-]/g, "_");
+  const gapMask = labelGap !== null ? `url(#${gapMaskId})` : undefined;
+  const labelStyle: CSSProperties = {
+    ...buildTiming,
+    transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+    color: `var(${visual.varName})`,
+    opacity: dimmed ? DIMMED_OPACITY_FACTOR : 1,
+    transition: "opacity var(--dur-fast) var(--ease-standard)",
+  };
+  const labelClassName = [
+    styles.label,
+    "nodrag nopan",
+    build !== undefined ? `hq-edge-build ${build.set}` : "",
+  ].filter(Boolean).join(" ");
+
   return (
     <>
+      {labelGap !== null ? (
+        <defs>
+          <mask id={gapMaskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+            <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+            <rect
+              x={labelX - labelGap.width / 2}
+              y={labelY - labelGap.height / 2}
+              width={labelGap.width}
+              height={labelGap.height}
+              rx={3}
+              fill="black"
+            />
+          </mask>
+        </defs>
+      ) : null}
       <g
         data-workflow-edge={id}
         data-edge-source={source}
@@ -424,8 +506,10 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         className={[showTravelingOrb ? styles.orbHost : "", build !== undefined ? `hq-edge-build ${build.set}` : ""].filter(Boolean).join(" ") || undefined}
         style={buildTiming}
       >
-        <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
-        <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+        <g mask={gapMask}>
+          <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
+          <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+        </g>
         {showTravelingOrb ? (
           <>
             <path id={orbPathId} d={path} fill="none" className={styles.orbTrack} />
@@ -445,29 +529,43 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
           pathLength={1}
           className={`hq-edge-ink ${build.set}`}
           data-edge-ink={id}
+          mask={gapMask}
           style={{ ...buildTiming, stroke: `var(${visual.varName})`, color: `var(${visual.varName})`, strokeWidth: strokeWidth + 1 }}
         />
       ) : null}
       {build !== undefined ? <InkDrop path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
       {showLabel ? (
         <EdgeLabelRenderer>
-          <div
-            className={`${styles.label} ${bendable ? "" : styles.labelHoverable} ${build !== undefined ? `hq-edge-build ${build.set}` : ""}`}
-            data-edge-label={id}
-            {...(bendable ? {} : { title: labelText })}
-            style={{
-              ...buildTiming,
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-              color: `var(${visual.varName})`,
-              opacity: dimmed ? DIMMED_OPACITY_FACTOR : 1,
-              transition: "opacity var(--dur-fast) var(--ease-standard)",
-            }}
-          >
-            {labelText}
-          </div>
+          {bendable ? (
+            // On a bendable edge the word is the bend handle: pull the word to bend the edge.
+            <button
+              ref={labelRef}
+              type="button"
+              className={`${labelClassName} ${styles.labelHandle}`}
+              data-edge-label={id}
+              data-edge-bend-handle={id}
+              data-active={dragging}
+              aria-label={`Bend edge ${id}`}
+              title={`${labelText}\n${bendTitle}`}
+              style={labelStyle}
+              {...bendHandlers}
+            >
+              {labelText}
+            </button>
+          ) : (
+            <div
+              ref={labelRef}
+              className={`${labelClassName} ${styles.labelHoverable}`}
+              data-edge-label={id}
+              title={labelText}
+              style={labelStyle}
+            >
+              {labelText}
+            </div>
+          )}
         </EdgeLabelRenderer>
       ) : null}
-      {bendable ? (
+      {bendable && !showLabel ? (
         <foreignObject
           className={styles.bendHandleRegion}
           x={handlePoint.x - 18}
@@ -483,31 +581,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
             data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
             style={{ color: `var(${visual.varName})` }}
             aria-label={`Bend edge ${id}`}
-            title={`${showLabel ? `${labelText}\n` : ""}${activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
-              ? "Snapped to a 90-degree corner; drag to adjust"
-              : "Drag to bend; move near a corner to snap"}`}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              event.currentTarget.setPointerCapture?.(event.pointerId);
-              pendingBend.current = null;
-              setDraggingForKey(data.bendResetKey);
-            }}
-            onPointerMove={handleBendMove}
-            onPointerUp={(event) => {
-              event.stopPropagation();
-              event.currentTarget.releasePointerCapture?.(event.pointerId);
-              setDraggingForKey(null);
-              const completedBend = pendingBend.current;
-              pendingBend.current = null;
-              if (completedBend !== null) {
-                data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
-              }
-            }}
-            onPointerCancel={() => {
-              pendingBend.current = null;
-              setDraggingForKey(null);
-            }}
+            title={bendTitle}
+            {...bendHandlers}
           />
         </foreignObject>
       ) : null}

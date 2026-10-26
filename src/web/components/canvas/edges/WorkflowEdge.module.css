@@ -35,13 +35,18 @@
   }
 }
 
+/* Text-only label: no pill at rest. The edge line stops at the word (a mask cut in
+   WorkflowEdge.tsx) and continues after it. The pill appears on hover, focus, and while dragging,
+   so it is clear the word can be pulled. The box size stays the same in every state, so the
+   gap in the line does not change. */
 .label {
   position: absolute;
+  margin: 0;
   padding: 2px var(--space-2);
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, currentColor 38%, var(--border-subtle));
-  background-color: var(--canvas-node-body, var(--bg-surface));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: inherit;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   line-height: 1.35;
@@ -49,14 +54,42 @@
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* A bendable edge's drag handle sits on its label and carries the full text as its tooltip. */
   pointer-events: none;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 /* Edges without a bend handle expose the full, possibly clamped text on the label itself. */
 .labelHoverable {
   pointer-events: auto;
   cursor: default;
+}
+
+/* On a bendable edge the word is the bend handle. */
+.labelHandle {
+  pointer-events: all;
+  cursor: grab;
+  touch-action: none;
+}
+
+.labelHandle[data-active="true"] {
+  cursor: grabbing;
+}
+
+.labelHoverable:hover,
+.labelHandle:hover,
+.labelHandle:focus-visible,
+.labelHandle[data-active="true"] {
+  border-color: color-mix(in srgb, currentColor 38%, var(--border-subtle));
+  background-color: var(--bg-raised);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
+}
+
+.labelHandle:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
 }
 
 .bendHandleRegion {
