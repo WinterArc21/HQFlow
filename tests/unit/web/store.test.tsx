@@ -79,7 +79,7 @@ describe("useCodeHQStore", () => {
       },
     });
     expect(Object.keys(parsed.state).sort()).toEqual(
-      ["darkScene", "lightScene", "motion", "theme"],
+      ["cardSize", "darkScene", "lightScene", "motion", "theme"],
     );
   });
 
@@ -154,6 +154,27 @@ describe("useCodeHQStore", () => {
     const reset = useCodeHQStore.getState().canvasLayouts.wf;
     expect(reset?.nodePositions).toEqual({});
     expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
+  });
+
+  it("keeps dragged positions per card format and restores them when switching back", () => {
+    const store = useCodeHQStore.getState();
+    store.setCanvasView("wf", "flow", "line");
+    store.saveNodePosition("wf", "a", { x: 10, y: 20 });
+
+    store.setCardSize("wide");
+    store.matchCardSize("wf", "flow");
+    let layout = useCodeHQStore.getState().canvasLayouts.wf;
+    // Standard positions would overlap at the wide size, so they are set aside, not reused.
+    expect(layout?.cardSize).toBe("wide");
+    expect(layout?.nodePositions).toEqual({});
+    store.saveNodePosition("wf", "a", { x: 50, y: 60 });
+
+    store.setCardSize("standard");
+    store.matchCardSize("wf", "flow");
+    layout = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(layout?.cardSize).toBeUndefined();
+    expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
+    expect(layout?.otherViews?.["flow:wide"]?.nodePositions).toEqual({ a: { x: 50, y: 60 } });
   });
 
 });

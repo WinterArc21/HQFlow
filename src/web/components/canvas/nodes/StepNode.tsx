@@ -3,8 +3,8 @@ import { Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
 import { Badge } from "../../primitives";
-import { purposeLineCount } from "../nodeContent";
 import type { StepFlowNode } from "../types";
+import { useCodeHQStore } from "../../../store/useCodeHQStore";
 import styles from "./StepNode.module.css";
 
 /**
@@ -53,16 +53,10 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
 
   // The open step card sits on this node's corner; the selection ring would peek out around it.
   const underCard = selected;
+  const cardSize = useCodeHQStore((state) => state.cardSize);
   const cardClassName = [styles.card, selected ? styles.selected : "", underCard ? styles.underCard : "", dimmed ? styles.dimmed : ""]
     .filter(Boolean)
     .join(" ");
-  const purposeLines = purposeLineCount(step.purpose);
-  const purposeClassName =
-    purposeLines === 3
-      ? `${styles.purpose} ${styles.purposeThreeLine}`
-      : purposeLines === 2
-        ? `${styles.purpose} ${styles.purposeTwoLine}`
-        : styles.purpose;
   const accessibleName = `${index + 1}. ${step.name}. ${category.label} category.${
     hasMissingSource ? " Missing sources." : ""
   }`;
@@ -72,6 +66,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     <div
       className={cardClassName}
       data-step-node={step.id}
+      data-card-size={cardSize}
       role="button"
       tabIndex={tabIndex}
       aria-label={accessibleName}
@@ -114,7 +109,7 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
           {hasMissingSource ? <Badge tone="red">Missing sources</Badge> : null}
         </div>
 
-        <p className={purposeClassName}>{step.purpose}</p>
+        <p className={styles.purpose}>{step.purpose}</p>
 
         <div className={styles.footer}>
           {/* No inline colour: the label derives its own from `--node-accent` in CSS, nudged toward

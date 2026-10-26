@@ -1,7 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { X } from "@phosphor-icons/react";
 import { SCENES } from "../../design/scenes";
-import { useCodeHQStore, type MotionLevel } from "../../store/useCodeHQStore";
+import { useCodeHQStore, type CardSize, type MotionLevel } from "../../store/useCodeHQStore";
 import { activeScene } from "../backdrop";
 import { IconButton } from "../primitives";
 import { Island } from "../shell/Island";
@@ -20,6 +20,11 @@ const MOTION_CHOICES: Choice<MotionLevel>[] = [
   { value: "full", label: "Full" },
   { value: "calm", label: "Calm" },
   { value: "still", label: "Still" },
+];
+const CARD_SIZE_CHOICES: Choice<CardSize>[] = [
+  { value: "compact", label: "Compact" },
+  { value: "standard", label: "Standard" },
+  { value: "wide", label: "Wide" },
 ];
 function Segmented<T extends string>({ label, value, choices, onChange }: { label: string; value: T; choices: Choice<T>[]; onChange: (value: T) => void }) {
   return (
@@ -55,6 +60,8 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
   const motion = useCodeHQStore((state) => state.motion);
   const setScene = useCodeHQStore((state) => state.setScene);
   const setMotion = useCodeHQStore((state) => state.setMotion);
+  const cardSize = useCodeHQStore((state) => state.cardSize);
+  const setCardSize = useCodeHQStore((state) => state.setCardSize);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -121,6 +128,7 @@ export function AppearancePanel({ onClose }: { onClose: () => void }) {
         </section>
 
         <Segmented label="Motion" value={motion} choices={MOTION_CHOICES} onChange={setMotion} />
+        <Segmented label="Cards" value={cardSize} choices={CARD_SIZE_CHOICES} onChange={setCardSize} />
 
       </div>
     </Island>

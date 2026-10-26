@@ -4,7 +4,8 @@ import type { Workflow, WorkflowConnection } from "@schema/workflow";
 import { outcomeTone } from "../../design/semantics";
 import { connectionLabelText, estimateEdgeLabelWidth } from "./edgeLabel";
 import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } from "./graph";
-import { computeNodeHeight, computeOutcomeNodeWidth, NODE_WIDTH, OUTCOME_NODE_HEIGHT } from "./nodeContent";
+import type { CardSize } from "@schema/wire";
+import { CARD_SIZES, computeOutcomeNodeWidth, OUTCOME_NODE_HEIGHT } from "./nodeContent";
 
 export const LAYOUT_RANK_SEP = 132;
 export const LAYOUT_MARGIN_X = 48;
@@ -63,6 +64,8 @@ export interface LayoutBounds {
 export interface ComputeLayoutOptions {
   /** Defaults to `line`. */
   view?: CanvasView;
+  /** Defaults to `standard`. */
+  cardSize?: CardSize;
 }
 export interface LayoutResult {
   view: CanvasView;
@@ -92,6 +95,7 @@ function mainlinePriority(connection: WorkflowConnection): number {
 }
 
 export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): LayoutResult {
+  const { width: nodeWidth, height: nodeHeight } = CARD_SIZES[opts.cardSize ?? "standard"];
   const ids = new Set(workflow.steps.map((step) => step.id));
   const valid = workflow.connections
     .map((connection, index) => ({ connection, index, id: edgeId(connection, index) }))
@@ -102,12 +106,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
   const byId = new Map(workflow.steps.map((step, index) => [step.id, { step, index }] as const));
   const workIds = order.filter((id) => !outcomes.has(id));
   const workIdSet = new Set(workIds);
-  const heights = new Map(
-    workIds.map((id) => {
-      const step = byId.get(id)!.step;
-      return [id, computeNodeHeight(step)] as const;
-    }),
-  );
+  const heights = new Map(workIds.map((id) => [id, nodeHeight] as const));
   const backEdgeIds = computeBackEdgeIds(workflow);
   const forwardWorkEdges = valid.filter(
     ({ connection, id }) =>
@@ -203,9 +202,9 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
   const view = opts.view ?? "line";
   let wrapRowBottoms: number[] | undefined;
   if (view === "flow") {
-    placeFlow({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, positioned, band: bandForOutcome });
+    placeFlow({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, nodeWidth, positioned, band: bandForOutcome });
   } else if (view === "wrap") {
-    wrapRowBottoms = placeWrap({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, positioned, band: bandForOutcome });
+    wrapRowBottoms = placeWrap({ workIds, rankById, mainline, orderIndex, heights, outcomeIds, sourceOf: outcomeSource, widthOf: outcomeWidth, labelWidthOf: outcomeLabelWidth, nodeWidth, positioned, band: bandForOutcome });
   } else {
     const failureY = LAYOUT_MARGIN_Y;
     const mainTopY = failureIds.length > 0
@@ -235,7 +234,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     const hangOutcomes = (source: string, x: number, bottom: number): number => {
       for (const id of hungBySource.get(source) ?? []) {
         bottom += OUTCOME_GAP;
-        positioned.set(id, { x: x + (NODE_WIDTH - outcomeWidth(id)) / 2, y: bottom, band: bandForOutcome(id) });
+        positioned.set(id, { x: x + (nodeWidth - outcomeWidth(id)) / 2, y: bottom, band: bandForOutcome(id) });
         bottom += OUTCOME_NODE_HEIGHT;
       }
       return bottom;
@@ -244,7 +243,7 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     let rankCursorX = LAYOUT_MARGIN_X;
     for (let rank = 0; rank <= maxRank; rank += 1) {
       xByRank.set(rank, rankCursorX);
-      rankCursorX += NODE_WIDTH + LAYOUT_RANK_SEP;
+      rankCursorX += nodeWidth + LAYOUT_RANK_SEP;
     }
     // Each stage's cards spread evenly above and below the main line: an odd count centres its
     // middle card on the line, an even count leaves a wider empty lane on it. Tops are first
@@ -289,12 +288,12 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
         .filter(({ connection }) => connection.to === outcomeId)
         .map(({ connection }) => {
           const source = positioned.get(connection.from);
-          return source === undefined ? undefined : source.x + NODE_WIDTH / 2;
+          return source === undefined ? undefined : source.x + nodeWidth / 2;
         })
         .filter((x): x is number => x !== undefined);
       return sourceCenters.length > 0
         ? sourceCenters.reduce((sum, x) => sum + x, 0) / sourceCenters.length
-        : LAYOUT_MARGIN_X + NODE_WIDTH / 2;
+        : LAYOUT_MARGIN_X + nodeWidth / 2;
     };
 
     const placeOutcomeBand = (bandIds: string[], bandName: OutcomeBand, y: number): void => {
@@ -319,16 +318,16 @@ export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): L
     const isOutcome = outcomes.has(step.id);
     const height = isOutcome
       ? OUTCOME_NODE_HEIGHT
-      : (heights.get(step.id) ?? computeNodeHeight(step));
+      : (heights.get(step.id) ?? nodeHeight);
     const point = positioned.get(step.id) ?? {
-      x: LAYOUT_MARGIN_X + index * (NODE_WIDTH + LAYOUT_RANK_SEP),
+      x: LAYOUT_MARGIN_X + index * (nodeWidth + LAYOUT_RANK_SEP),
       y: fallbackY - height / 2,
     };
     return {
       id: step.id,
       x: point.x,
       y: point.y,
-      width: isOutcome ? computeOutcomeNodeWidth(step) : NODE_WIDTH,
+      width: isOutcome ? computeOutcomeNodeWidth(step) : nodeWidth,
       height,
       index,
       isOutcome,
@@ -399,6 +398,7 @@ interface PlaceParams {
   widthOf: (id: string) => number;
   /** Width of the label on the connection into an outcome, or 0 when it has none. */
   labelWidthOf: (id: string) => number;
+  nodeWidth: number;
   positioned: Map<string, Placed>;
   band: (id: string) => OutcomeBand;
 }
@@ -460,10 +460,10 @@ function placeFlow(p: PlaceParams): void {
     // Main chain in the middle, the others alternating either side of it.
     const row: string[] = [];
     list.forEach((id, index) => (index % 2 === 0 ? row.unshift(id) : row.push(id)));
-    const total = row.length * NODE_WIDTH + (row.length - 1) * FLOW_COLUMN_GAP;
+    const total = row.length * p.nodeWidth + (row.length - 1) * FLOW_COLUMN_GAP;
     let rowHeight = 0;
     row.forEach((id, index) => {
-      const x = -total / 2 + index * (NODE_WIDTH + FLOW_COLUMN_GAP);
+      const x = -total / 2 + index * (p.nodeWidth + FLOW_COLUMN_GAP);
       const height = p.heights.get(id) ?? 0;
       p.positioned.set(id, { x, y });
       const mine = bySource.get(id) ?? [];
@@ -475,8 +475,8 @@ function placeFlow(p: PlaceParams): void {
         // A side outcome's label sits in the gap, so the gap grows to fit it.
         const gap = Math.max(FLOW_OUTCOME_GAP, p.labelWidthOf(outcome) + 2 * FLOW_LABEL_CLEARANCE);
         const outcomeX = side === "right"
-          ? x + NODE_WIDTH + gap
-          : side === "left" ? x - gap - width : x + (NODE_WIDTH - width) / 2;
+          ? x + p.nodeWidth + gap
+          : side === "left" ? x - gap - width : x + (p.nodeWidth - width) / 2;
         p.positioned.set(outcome, { x: outcomeX, y: outcomeY, band: p.band(outcome) });
         outcomeY += OUTCOME_NODE_HEIGHT + OUTCOME_GAP;
       }
@@ -502,7 +502,7 @@ function placeWrap(p: PlaceParams): number[] {
   const { bySource, orphans } = outcomesBySource(p);
   const stages = stageLists(p);
   const perRow = Math.max(3, Math.ceil(Math.sqrt(stages.length)));
-  const columnWidth = NODE_WIDTH + LAYOUT_RANK_SEP;
+  const columnWidth = p.nodeWidth + LAYOUT_RANK_SEP;
   const rowBottoms: number[] = [];
   let y = LAYOUT_MARGIN_Y;
   for (let first = 0, row = 0; first < stages.length; first += perRow, row += 1) {
@@ -519,11 +519,11 @@ function placeWrap(p: PlaceParams): number[] {
         const mine = [...(bySource.get(id) ?? [])];
         if (index === 0 && lifts[column] === true) {
           const lifted = mine.shift()!;
-          p.positioned.set(lifted, { x: x + (NODE_WIDTH - p.widthOf(lifted)) / 2, y, band: p.band(lifted), row });
+          p.positioned.set(lifted, { x: x + (p.nodeWidth - p.widthOf(lifted)) / 2, y, band: p.band(lifted), row });
         }
         for (const outcome of mine) {
           stackY += OUTCOME_GAP;
-          p.positioned.set(outcome, { x: x + (NODE_WIDTH - p.widthOf(outcome)) / 2, y: stackY, band: p.band(outcome), row });
+          p.positioned.set(outcome, { x: x + (p.nodeWidth - p.widthOf(outcome)) / 2, y: stackY, band: p.band(outcome), row });
           stackY += OUTCOME_NODE_HEIGHT;
         }
         stackY += WORK_NODE_GAP;

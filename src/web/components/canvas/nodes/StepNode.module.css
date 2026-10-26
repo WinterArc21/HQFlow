@@ -177,37 +177,25 @@
   color: var(--accent-blue);
 }
 
-/* Height mirrors `PURPOSE_LINE_HEIGHT * purposeLineCount(...)` in `../nodeContent.ts` exactly —
-   one line by default, two when `.purposeTwoLine` is also applied, three for `.purposeThreeLine`.
-   Top margin is 15px so a three-line card is 148px (header 40 + pad 30 + purpose 48 + footer 30). */
+/* Up to three lines (one in the compact format); the card's height is fixed per format
+   (`CARD_SIZES` in `../nodeContent.ts`), so the footer is pushed to the bottom and a short
+   purpose leaves the space below it, not above. */
 .purpose {
-  height: 16px;
   flex-shrink: 0;
   font-size: var(--fs-tiny);
   line-height: 16px;
+  max-height: 48px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 15px 12px 0;
-}
-
-.purposeTwoLine {
-  height: 32px;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.purposeThreeLine {
-  height: 48px;
-  white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 12px 12px 0;
+}
+
+.card[data-card-size="compact"] .purpose {
+  max-height: 16px;
+  -webkit-line-clamp: 1;
 }
 
 .footer {
@@ -217,7 +205,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-top: 15px;
+  margin-top: auto;
   padding: 0 12px;
   /* A translucent inset wash rather than the opaque footer token, so the tail of the gradient still
      shows through and the footer reads as part of the same card rather than a plate stuck on it. */

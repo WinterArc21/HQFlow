@@ -19,7 +19,7 @@ const TONE_LABELS = {
  * A terminal step's pill — "clearly not a unit of work" (contract §10): a compact rounded card
  * with a tone glyph instead of the category marker, name, and (when present) a single purpose
  * line. Sized to its own content by `layout.ts`/`nodeContent.ts`'s `computeOutcomeNodeWidth`
- * rather than the fixed `NODE_WIDTH` every `StepNode` uses — an outcome pill never grows with
+ * rather than the fixed card width every `StepNode` uses — an outcome pill never grows with
  * depth and never shows files/symbols, so there is nothing here for the depth ladder to expand
  * into.
  */
