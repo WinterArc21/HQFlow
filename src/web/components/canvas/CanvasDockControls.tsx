@@ -14,7 +14,7 @@ const VIEW_NAMES: Array<[CanvasView, string]> = [["flow", "Flow"], ["wrap", "Wra
  * The canvas's own controls as they sit inside the island shell's dock: a zoom group with a live
  * level readout that fits the map when clicked, then the layout actions. The connection key and
  * the rare and destructive actions live in the "More actions" menu. On a phone only the level and the menu stay in the
- * dock; the menu then also carries the views, reset and export. Same handlers and accessible
+ * dock; the menu then also carries the views, reset, replay and export. Same handlers and accessible
  * names as `CanvasToolbar`, which remains the title-strip version for the export viewer and
  * landing demo.
  */
@@ -59,6 +59,13 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, 
           <IconButton label="Reset layout" icon={<ArrowCounterClockwise size={16} />} size="sm" onClick={onResetLayout} />
         </Tooltip>
       </span>
+      {onReplay !== undefined ? (
+        <span className={styles.wide}>
+          <Tooltip content="Replay the build">
+            <IconButton label="Replay the build" icon={<PencilSimpleLine size={16} />} size="sm" onClick={onReplay} />
+          </Tooltip>
+        </span>
+      ) : null}
       {onExport !== undefined ? (
         <span className={styles.wide}>
           <Tooltip content="Export">
@@ -67,7 +74,7 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, 
         </span>
       ) : null}
       <MoreActions
-        narrowOnly={onReplay === undefined && onDelete === undefined && legendRows.length === 0}
+        narrowOnly={onDelete === undefined && legendRows.length === 0}
         {...(legend !== undefined ? { onClose: () => legend.onHighlight(null) } : {})}
       >
         {legend !== undefined && legendRows.length > 0 ? (
@@ -94,11 +101,11 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, 
           </MenuItem>
         )) : null}
         <MenuItem narrowOnly icon={<ArrowCounterClockwise size={14} />} onSelect={onResetLayout}>Reset layout</MenuItem>
+        {onReplay !== undefined ? (
+          <MenuItem narrowOnly icon={<PencilSimpleLine size={14} />} onSelect={onReplay}>Replay the build</MenuItem>
+        ) : null}
         {onExport !== undefined ? (
           <MenuItem narrowOnly icon={<DownloadSimple size={14} />} onSelect={onExport}>Export…</MenuItem>
-        ) : null}
-        {onReplay !== undefined ? (
-          <MenuItem icon={<PencilSimpleLine size={14} />} onSelect={onReplay}>Replay the build</MenuItem>
         ) : null}
         {onDelete !== undefined ? (
           <MenuItem danger icon={<Trash size={14} />} onSelect={onDelete}>Delete workflow…</MenuItem>
