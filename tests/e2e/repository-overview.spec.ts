@@ -51,7 +51,10 @@ test.describe("initialized but no workflow files", () => {
     const checkoutCard = page.locator('[data-step-node="checkout"]');
     await expect(checkoutCard).toBeVisible();
     await expect(page.locator('[data-step-node="fulfilment"]')).toBeVisible();
-    await expect(page.locator('.react-flow__edge[data-id="repository-handoff-0"]')).toBeVisible();
+    // A straight hand-off edge has a zero-height box, which Playwright calls hidden, so check that
+    // the edge is drawn and that its label shows.
+    await expect(page.locator('.react-flow__edge[data-id="repository-handoff-0"] path.react-flow__edge-path')).toHaveAttribute("d", /\S/);
+    await expect(page.getByText("paid order", { exact: true })).toBeVisible();
 
     const cardBox = await checkoutCard.boundingBox();
     expect(cardBox).not.toBeNull();

@@ -18,8 +18,11 @@ export function restoreGeneratedNodePositions<
   return nodes.map((node) => ({ ...node, position: generatedPositions.get(node.id) ?? node.position }));
 }
 
-/** Rendered size of the visible geometric ports in both node stylesheets. */
+/** Rendered size of the invisible target-side anchors in both node stylesheets (`.handleHidden`
+ * in StepNode, `.handle` in OutcomeNode). */
 const HANDLE_SIZE = 10;
+/** Rendered size of the visible source-side port squares (`.handle` in StepNode). */
+const SOURCE_HANDLE_SIZE = 7;
 export const RETRY_IN_FRACTION = 0.28;
 export const RETRY_OUT_FRACTION = 0.72;
 
@@ -66,17 +69,17 @@ function stepHandles(
 ): NodeHandle[] {
   return [
     ...cardinalTargetHandles(width, height),
-    { id: "out", type: "source", position: Position.Right, x: width - HANDLE_SIZE / 2, y: height / 2 - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-left", type: "source", position: Position.Left, x: -HANDLE_SIZE / 2, y: height / 2 - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-top", type: "source", position: Position.Top, x: width / 2 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-bottom", type: "source", position: Position.Bottom, x: width / 2 - HANDLE_SIZE / 2, y: height - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    ...(failure ? [{ id: "failure", type: "source" as const, position: Position.Top, x: width / 2 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
-    ...(success ? [{ id: "success", type: "source" as const, position: Position.Bottom, x: width / 2 - HANDLE_SIZE / 2, y: height - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
+    { id: "out", type: "source", position: Position.Right, x: width - SOURCE_HANDLE_SIZE / 2, y: height / 2 - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-left", type: "source", position: Position.Left, x: -SOURCE_HANDLE_SIZE / 2, y: height / 2 - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-top", type: "source", position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-bottom", type: "source", position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    ...(failure ? [{ id: "failure", type: "source" as const, position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
+    ...(success ? [{ id: "success", type: "source" as const, position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(returnIn ? [{ id: "return-in", type: "target" as const, position: Position.Top, x: width * 0.3 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
-    ...(returnOut ? [{ id: "return-out", type: "source" as const, position: Position.Top, x: width * 0.7 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
+    ...(returnOut ? [{ id: "return-out", type: "source" as const, position: Position.Top, x: width * 0.7 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(retry ? [
       { id: "retry-in", type: "target" as const, position: Position.Right, x: width - HANDLE_SIZE / 2, y: height * RETRY_IN_FRACTION - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-      { id: "retry-out", type: "source" as const, position: Position.Right, x: width - HANDLE_SIZE / 2, y: height * RETRY_OUT_FRACTION - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
+      { id: "retry-out", type: "source" as const, position: Position.Right, x: width - SOURCE_HANDLE_SIZE / 2, y: height * RETRY_OUT_FRACTION - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
     ] : []),
   ];
 }
