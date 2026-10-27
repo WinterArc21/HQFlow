@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CaretUp, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
+import { CaretUp, ClipboardText, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
 import type { CanvasChrome } from "../canvas";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
@@ -33,6 +33,8 @@ export interface IslandShellProps {
 
 const DOCK_WIDTH = 26;
 const DOCK_HEIGHT = 4;
+/** On a phone the dock is one row: search icon, workflow, zoom level and the actions menu. */
+const NARROW_DOCK_HEIGHT = 2;
 const DRAWER_WIDTH = 15;
 /** Dots kept clear above the grown dock, so the workflow tree never reaches the title island. */
 const TREE_TOP_CLEARANCE = 5;
@@ -40,6 +42,10 @@ const TREE_TOP_CLEARANCE = 5;
 const NARROW_COLUMNS = 24;
 /** In the narrow layout the title island starts under the two-dot status island. */
 const NARROW_IDENTITY_TOP = 3;
+/** Below this window width the title stays a pill until the reader asks for the full card. */
+const COMPACT_TITLE_WIDTH = 900;
+/** How long the dock waits after the canvas stops before it comes back. */
+const DOCK_RETURN_MS = 350;
 
 /**
  * The app frame: the canvas fills the window and every piece of chrome floats over it as an
@@ -60,14 +66,90 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const treeToggleRef = useRef<HTMLButtonElement>(null);
   const treeId = useId();
 
+  // The title card opens in full for a newly opened workflow on a wide window, and folds to a pill
+  // once the reader starts moving the canvas. Hover, focus or a tap open it again.
+  const identityRef = useRef<HTMLDivElement>(null);
+  const [titleHover, setTitleHover] = useState(false);
+  const [titleFocus, setTitleFocus] = useState(false);
+  const [titleTapped, setTitleTapped] = useState(false);
+  const [movedIn, setMovedIn] = useState<string | null>(null);
+  const compactTitle = grid.width < COMPACT_TITLE_WIDTH;
+  const titleOpen = titleHover || titleFocus || titleTapped || (!compactTitle && movedIn !== locationLabel);
+  const titleOpenRef = useRef(titleOpen);
+  useEffect(() => {
+    titleOpenRef.current = titleOpen;
+  }, [titleOpen]);
+
+  // Native listeners, not React props: the workflow title is portalled in from the canvas, and
+  // React routes a portal's events through the canvas's tree, not through this island.
+  useEffect(() => {
+    const island = identityRef.current;
+    if (island === null) {
+      return;
+    }
+    let pointerType = "mouse";
+    const onPointerDown = (event: PointerEvent) => { pointerType = event.pointerType; };
+    const onPointerEnter = (event: PointerEvent) => { if (event.pointerType === "mouse") setTitleHover(true); };
+    const onPointerLeave = () => setTitleHover(false);
+    const onFocusIn = () => setTitleFocus(true);
+    const onFocusOut = (event: FocusEvent) => {
+      if (!island.contains(event.relatedTarget as Node | null)) {
+        setTitleFocus(false);
+      }
+    };
+    // On a touch screen the first tap opens the pill; it does not also leave the workflow.
+    const onClick = (event: MouseEvent) => {
+      if (!titleOpenRef.current && pointerType !== "mouse") {
+        event.preventDefault();
+        event.stopPropagation();
+        setTitleTapped(true);
+      }
+    };
+    island.addEventListener("pointerdown", onPointerDown, true);
+    island.addEventListener("pointerenter", onPointerEnter);
+    island.addEventListener("pointerleave", onPointerLeave);
+    island.addEventListener("focusin", onFocusIn);
+    island.addEventListener("focusout", onFocusOut);
+    island.addEventListener("click", onClick, true);
+    return () => {
+      island.removeEventListener("pointerdown", onPointerDown, true);
+      island.removeEventListener("pointerenter", onPointerEnter);
+      island.removeEventListener("pointerleave", onPointerLeave);
+      island.removeEventListener("focusin", onFocusIn);
+      island.removeEventListener("focusout", onFocusOut);
+      island.removeEventListener("click", onClick, true);
+    };
+  }, []);
+
+  // The dock steps back while the reader pans, zooms or drags, and returns once the canvas rests.
+  const [canvasActive, setCanvasActive] = useState(false);
+  const [canvasMoving, setCanvasMoving] = useState(false);
+  const onCanvasMove = useCallback((moving: boolean) => {
+    setCanvasActive(moving);
+    if (moving) {
+      setCanvasMoving(true);
+      setMovedIn(locationLabel);
+    }
+  }, [locationLabel]);
+  useEffect(() => {
+    if (canvasActive || !canvasMoving) {
+      return;
+    }
+    const timer = window.setTimeout(() => setCanvasMoving(false), DOCK_RETURN_MS);
+    return () => window.clearTimeout(timer);
+  }, [canvasActive, canvasMoving]);
+
   const { lastColumn, lastRow } = grid;
   const narrow = lastColumn < NARROW_COLUMNS;
   const identityWidth = narrow ? lastColumn : Math.min(16, Math.max(8, lastColumn - 12));
   const identityTop = narrow ? NARROW_IDENTITY_TOP : 0;
   const dockWidth = Math.min(DOCK_WIDTH, lastColumn);
+  const dockHeight = narrow ? NARROW_DOCK_HEIGHT : DOCK_HEIGHT;
   const dockLeft = Math.max(0, Math.floor((lastColumn - dockWidth) / 2));
   const drawerMeetsDock = dockLeft + dockWidth > lastColumn - DRAWER_WIDTH;
-  const treeMaxHeight = Math.max(2, lastRow - DOCK_HEIGHT - TREE_TOP_CLEARANCE) * DOT_STEP;
+  const treeMaxHeight = Math.max(2, lastRow - dockHeight - TREE_TOP_CLEARANCE) * DOT_STEP;
+  // Pixels from the window's bottom edge up to the dock's top edge.
+  const dockClearance = grid.height - (DOT_ORIGIN + (lastRow - dockHeight) * DOT_STEP);
 
   useEffect(() => {
     if (!treeOpen) {
@@ -93,35 +175,60 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
     };
   }, [treeOpen]);
 
+  useEffect(() => {
+    if (!titleTapped) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!identityRef.current?.contains(event.target as Node)) {
+        setTitleTapped(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [titleTapped]);
+
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
     legendPlacement: { l: 0, b: 0 },
-    // The key shares the bottom row with the centred dock, so it gets the columns left of the dock,
-    // less a one-dot gap. On a phone the dock spans the row and the key has no room.
+    // The key shares the bottom row with the centred dock, so it gets the columns left of the
+    // dock, less a one-dot gap. Without that room it rises to sit one dot above the dock.
     legendMaxWidth: dockLeft - 1,
+    legendLift: (dockHeight + 1) * DOT_STEP,
+    dockClearance,
+    onCanvasMove,
     fitInsets: {
-      top: DOT_ORIGIN + (identityTop + (narrow ? 5 : 4)) * DOT_STEP,
+      top: DOT_ORIGIN + (identityTop + (narrow ? 3 : 4)) * DOT_STEP,
       right: DOT_ORIGIN,
-      bottom: DOT_ORIGIN + (DOCK_HEIGHT + (narrow ? 3 : 1)) * DOT_STEP,
+      bottom: DOT_ORIGIN + (dockHeight + 1) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, dockLeft, identityTop, narrow, titleTarget]);
+  }), [controlsTarget, dockClearance, dockHeight, dockLeft, identityTop, narrow, onCanvasMove, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.
   const drawerInsets = {
     "--island-drawer-top": `${DOT_ORIGIN + 3 * DOT_STEP}px`,
     "--island-drawer-right": `${grid.width - (DOT_ORIGIN + lastColumn * DOT_STEP)}px`,
-    "--island-drawer-bottom": `${grid.height - (DOT_ORIGIN + (lastRow - (drawerMeetsDock ? DOCK_HEIGHT + 1 : 0)) * DOT_STEP)}px`,
+    "--island-drawer-bottom": `${grid.height - (DOT_ORIGIN + (lastRow - (drawerMeetsDock ? dockHeight + 1 : 0)) * DOT_STEP)}px`,
   } as CSSProperties;
 
   return (
     <div className={styles.shell} style={drawerInsets}>
       <div className={styles.canvas}>{children(chrome)}</div>
 
-      <Island placement={{ l: 0, t: identityTop, w: identityWidth, h: "auto" }} role="banner">
-        <div className={styles.identity}>
+      <Island
+        ref={identityRef}
+        placement={{ l: 0, t: identityTop, w: titleOpen ? identityWidth : "auto", h: "auto" }}
+        className={styles.identityIsland}
+        role="banner"
+      >
+        <div
+          className={styles.identity}
+          data-collapsed={titleOpen ? undefined : "true"}
+          style={{ "--identity-max-width": `${identityWidth * DOT_STEP - 2}px` } as CSSProperties}
+        >
           <div className={styles.repository}>
             <span className={styles.mark} aria-hidden="true">HQ</span>
             {onSelectRepository !== undefined ? (
@@ -129,8 +236,9 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
             ) : (
               <span className={styles.repositoryName}>{repositoryName}</span>
             )}
+            <span className={styles.slash} aria-hidden="true">/</span>
           </div>
-          <div ref={setTitleTarget} />
+          <div ref={setTitleTarget} className={styles.title} />
         </div>
         {notice}
       </Island>
@@ -139,7 +247,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
         <div className={styles.status}>
           <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} {...(pulseKey !== undefined ? { pulseKey } : {})} />
           <span className={styles.divider} aria-hidden="true" />
-          <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
+          <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" {...(narrow ? { icon: <ClipboardText size={16} /> } : {})} />
           <span data-appearance-toggle="">
             <IconButton
               label="Appearance"
@@ -152,7 +260,13 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
         </div>
       </Island>
 
-      <Island placement={{ l: dockLeft, b: 0, w: dockWidth, h: "auto" }} className={styles.dock} role="region" aria-label="Search and canvas controls">
+      <Island
+        placement={{ l: dockLeft, b: 0, w: dockWidth, h: "auto" }}
+        className={styles.dock}
+        role="region"
+        aria-label="Search and canvas controls"
+        data-receded={canvasMoving && !treeOpen ? "true" : undefined}
+      >
         {treeOpen ? (
           <div ref={treeRef} id={treeId} className={styles.tree} style={{ maxHeight: treeMaxHeight }}>
             {navigator(() => setTreeOpen(false))}
@@ -165,6 +279,9 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
             <Kbd>{searchShortcutLabel()}</Kbd>
           </button>
           <div className={styles.dockRow}>
+            <span className={styles.searchIcon}>
+              <IconButton label="Search" icon={<MagnifyingGlass size={16} />} size="sm" onClick={openSearch} />
+            </span>
             <button
               ref={treeToggleRef}
               type="button"
@@ -176,8 +293,6 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
               onClick={() => setTreeOpen((open) => !open)}
             >
               <TreeStructure size={14} aria-hidden="true" />
-              <span className={styles.locationRepo}>{repositoryName}</span>
-              <span className={styles.locationRepo} aria-hidden="true">/</span>
               <span className={styles.locationName}>{locationLabel}</span>
               <CaretUp size={12} className={styles.caret} aria-hidden="true" />
             </button>

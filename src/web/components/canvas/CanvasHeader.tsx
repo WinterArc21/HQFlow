@@ -26,9 +26,9 @@ export function CanvasTitle({ workflow, itemLabel = "step", modifiedAt, state }:
     <div className={styles.identity}>
       <div className={styles.titleRow}>
         <h1 className={styles.name}>{workflow.name}</h1>
-        <span className={styles.stepCount}>{countLabel(workflow.steps.length, itemLabel)}</span>
+        <span className={styles.stepCount} data-title-detail="">{countLabel(workflow.steps.length, itemLabel)}</span>
       </div>
-      <div className={styles.detailsRow}>
+      <div className={styles.detailsRow} data-title-detail="">
         <p className={styles.purpose}>{workflow.purpose}</p>
         <div className={styles.trust} aria-label="Workflow freshness">
           {state === "stale" ? <Badge tone="amber">Stale</Badge> : null}

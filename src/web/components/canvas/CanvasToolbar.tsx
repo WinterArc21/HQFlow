@@ -12,6 +12,8 @@ import styles from "./CanvasToolbar.module.css";
 export interface CanvasToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
+  /** Fits the whole map back into view; the dock's zoom level calls it when clicked. */
+  onFit?: () => void;
   onResetLayout: () => void;
   /** When provided, an export button is shown. Omitted in the export viewer. */
   onExport?: () => void;

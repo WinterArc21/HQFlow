@@ -22,15 +22,95 @@
   padding: var(--space-2);
 }
 
-/* Island shell: the key becomes one more island, its box rounded to whole dot steps. */
+/* Island shell: the key is one more island, a small chip whose box is rounded to whole dot steps. */
 .onGrid {
   z-index: 10;
   border-radius: 12px;
   background: var(--bg-surface);
+  pointer-events: auto;
 }
 
-.onGrid .rows {
+/* Open, the key sits over the dock so its rows are never cut. */
+.open {
+  z-index: 11;
+}
+
+.onGrid {
+  justify-content: center;
+}
+
+.chipBox {
+  display: flex;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  padding: 0 var(--space-3);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+.chip:hover,
+.open .chip {
+  color: var(--text-primary);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.chipGlyph {
+  display: grid;
+  gap: 3px;
+}
+
+.chipGlyph .swatch {
+  width: 14px;
+}
+
+/* Opens upward. The padding bridges the gap, so the pointer can travel from chip to rows. */
+.popover {
+  position: absolute;
+  left: -1px;
+  bottom: 100%;
+  padding-bottom: var(--space-2);
+  animation: key-in var(--dur-fast) var(--ease-standard);
+  transform-origin: bottom left;
+}
+
+@keyframes key-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.popover .rows {
   padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+.popover .row {
+  margin: 0 calc(-1 * var(--space-1));
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+
+.popover .row:hover {
+  background: var(--bg-inset);
+  color: var(--text-primary);
 }
 
 .dimmed {
@@ -57,9 +137,4 @@
   width: 22px;
   height: 0;
   flex: none;
-}
-
-/* No room beside the dock: the dock wins. */
-.hidden {
-  visibility: hidden;
 }

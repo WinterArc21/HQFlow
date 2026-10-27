@@ -607,6 +607,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       ) : null}
       <g
         data-workflow-edge={id}
+        data-edge-kind={markerVariant ?? "success"}
         data-edge-source={source}
         data-edge-target={target}
         data-traveling-orb={showTravelingOrb ? "true" : undefined}
@@ -642,6 +643,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               type="button"
               className={`${labelClassName} ${styles.labelHandle}`}
               data-edge-label={id}
+              data-edge-kind={markerVariant ?? "success"}
               data-edge-bend-handle={id}
               data-active={dragging}
               aria-label={`Bend edge ${id}`}
@@ -656,6 +658,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               ref={labelRef}
               className={`${labelClassName} ${styles.labelHoverable}`}
               data-edge-label={id}
+              data-edge-kind={markerVariant ?? "success"}
               title={labelText}
               style={labelStyle}
             >

@@ -12,11 +12,71 @@
 }
 
 /* ---- identity (top left) ---- */
+/* The box glides between the pill and the full card instead of jumping a dot step at a time. */
+.identityIsland {
+  overflow: hidden;
+  transition:
+    width var(--dur-base) var(--ease-standard),
+    height var(--dur-base) var(--ease-standard);
+}
+
 .identity {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
+  min-width: 0;
+  max-width: var(--identity-max-width);
+}
+
+.identity:not([data-collapsed]) .title {
+  animation: identity-reveal var(--dur-base) var(--ease-standard);
+}
+
+@keyframes identity-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+/* The pill: mark, repository and workflow on one line. The size, purpose and freshness wait for
+   hover, focus or a tap. */
+.identity[data-collapsed] {
+  flex-direction: row;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.identity[data-collapsed] .repository {
+  flex: 0 1 auto;
+  max-width: 45%;
+}
+
+.identity[data-collapsed] .title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.identity[data-collapsed] .title :global(h1) {
+  font-size: var(--fs-base);
+}
+
+.identity[data-collapsed] .title :global([data-title-detail]) {
+  display: none;
+}
+
+.slash {
+  display: none;
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.identity[data-collapsed] .slash {
+  display: inline;
+}
+
+.title {
   min-width: 0;
 }
 
@@ -77,6 +137,21 @@
 /* ---- dock (bottom centre) ---- */
 .dock {
   border-radius: 20px;
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-standard);
+}
+
+/* While the canvas moves, the dock steps back so the map shows through. */
+.dock[data-receded="true"] {
+  opacity: 0.35;
+  transform: translateY(6px) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock[data-receded="true"] {
+    transform: none;
+  }
 }
 
 .dockBody {
@@ -115,6 +190,19 @@
   outline-offset: 2px;
 }
 
+/* Touch screens have no shortcut key to press. */
+@media (pointer: coarse) {
+  .search :global(kbd) {
+    display: none;
+  }
+}
+
+/* The dock's own search icon stands in for the search bar on a phone. */
+.searchIcon {
+  display: none;
+  flex: none;
+}
+
 .searchLabel {
   flex: 1;
   min-width: 0;
@@ -145,27 +233,6 @@
 .location:hover,
 .location[data-open="true"] {
   background-color: var(--bg-inset);
-}
-
-.locationRepo {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 40%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-tertiary);
-}
-
-.locationRepo[aria-hidden="true"] {
-  flex: none;
-}
-
-/* Matches IslandShell's NARROW_COLUMNS: the open workflow's name outranks the repository's. */
-@media (max-width: 685px) {
-  .locationRepo {
-    display: none;
-  }
 }
 
 .locationName {
@@ -202,17 +269,24 @@
   }
 }
 
-/* On a phone the controls would run past the dock's edge; let them drop to their own line. */
+/* Matches IslandShell's NARROW_COLUMNS: on a phone the dock is a single row, and the search bar
+   becomes the icon at its start. */
 @media (max-width: 685px) {
-  .dockRow {
-    flex-wrap: wrap;
-    row-gap: var(--space-1);
+  .search {
+    display: none;
   }
 
-  .controls {
+  .searchIcon {
+    display: inline-flex;
+  }
+
+  .dockBody {
+    padding: var(--space-2);
+  }
+
+  .location {
     flex: 1 1 auto;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+    padding: 0 var(--space-2);
   }
 }
 

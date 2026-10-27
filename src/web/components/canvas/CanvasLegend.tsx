@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Workflow } from "@schema/workflow";
 import { connectionStyle, outcomeEdgeStyle, outcomeTone, RETRY_EDGE_VISUAL, type ConnectionVisual } from "../../design/semantics";
 import { computeIncomingTypes, computeOutcomeStepIds } from "./graph";
@@ -12,8 +12,12 @@ interface CanvasLegendProps {
   dimmed?: boolean;
   /** Snaps the key onto the dot grid (island shell); without it, it sits in the stage corner. */
   placement?: GridPlacement;
-  /** With `placement`: the widest the key may be, in dots. A wider key hides instead of overlapping. */
+  /** With `placement`: the widest the key may be, in dots, where `placement` puts it. */
   maxWidth?: number;
+  /** With `placement`: pixels the key rises when it is wider than `maxWidth`. */
+  lift?: number;
+  /** Called with a row's key while the pointer is on that row, and `null` after. */
+  onHighlight?: (key: string | null) => void;
 }
 
 const CONNECTION_TYPES = ["success", "failure", "conditional", "async"] as const;
@@ -32,12 +36,46 @@ function swatchStyle(visual: ConnectionVisual) {
   } as const;
 }
 
-/** A read-only key for only the edge grammar currently visible in this workflow. */
-export function CanvasLegend({ workflow, dimmed = false, placement, maxWidth }: CanvasLegendProps) {
+/**
+ * A key for only the edge grammar currently visible in this workflow. On the island shell it is a
+ * small "Key" chip that opens on hover or tap; pointing at a row there picks out those edges.
+ */
+export function CanvasLegend({ workflow, dimmed = false, placement, maxWidth, lift = 0, onHighlight }: CanvasLegendProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const popoverId = useId();
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovered || pinned;
   const box = useGridBox(contentRef, placement === undefined ? undefined : { ...placement, w: "auto", h: "auto" });
-  // Hidden stays laid out, so the key keeps measuring and comes back when the window widens.
-  const tooWide = box !== null && maxWidth !== undefined && box.width > maxWidth * DOT_STEP;
+  const lifted = box !== null && maxWidth !== undefined && box.width > maxWidth * DOT_STEP;
+
+  useEffect(() => {
+    if (!open) {
+      onHighlight?.(null);
+    }
+  }, [onHighlight, open]);
+  useEffect(() => {
+    if (!pinned) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setPinned(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPinned(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pinned]);
   // A self-loop renders with the retry grammar instead of its declared connection grammar, so
   // exclude it from the ordinary rows and add the dedicated Retry row below.
   const outcomeIds = computeOutcomeStepIds(workflow);
@@ -72,21 +110,59 @@ export function CanvasLegend({ workflow, dimmed = false, placement, maxWidth }: 
   }
   if (rows.length === 0) return null;
 
+  const rowList = rows.map((row) => (
+    <div
+      className={styles.row}
+      key={row.key}
+      {...(box !== null ? { onPointerEnter: () => onHighlight?.(row.key), onPointerLeave: () => onHighlight?.(null) } : {})}
+    >
+      <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />
+      <span>{row.label}</span>
+    </div>
+  ));
+
+  if (box === null) {
+    return (
+      <div className={`${styles.legend} ${dimmed ? styles.dimmed : ""}`} role="group" aria-label="Connection legend">
+        <div className={styles.rows}>
+          <h2 className={styles.heading}>Connections</h2>
+          {rowList}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`${styles.legend} ${dimmed ? styles.dimmed : ""} ${box !== null ? styles.onGrid : ""} ${tooWide ? styles.hidden : ""}`}
-      style={box !== null ? { ...box, position: "fixed", bottom: "auto" } : undefined}
-      role="group"
-      aria-label="Connection legend"
+      ref={rootRef}
+      className={`${styles.legend} ${styles.onGrid} ${dimmed && !open ? styles.dimmed : ""} ${open ? styles.open : ""}`}
+      style={{ ...box, top: lifted ? box.top - lift : box.top, position: "fixed", bottom: "auto" }}
+      onPointerEnter={(event) => { if (event.pointerType === "mouse") setHovered(true); }}
+      onPointerLeave={() => setHovered(false)}
     >
-      <div ref={contentRef} className={styles.rows}>
-        <h2 className={styles.heading}>Connections</h2>
-        {rows.map((row) => (
-          <div className={styles.row} key={row.key}>
-            <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />
-            <span>{row.label}</span>
+      {open ? (
+        <div className={styles.popover}>
+          <div id={popoverId} className={styles.rows} role="group" aria-label="Connection legend">
+            <h2 className={styles.heading}>Connections</h2>
+            {rowList}
           </div>
-        ))}
+        </div>
+      ) : null}
+      <div ref={contentRef} className={styles.chipBox}>
+        <button
+          type="button"
+          className={styles.chip}
+          aria-expanded={open}
+          aria-controls={open ? popoverId : undefined}
+          onClick={() => setPinned((value) => !value)}
+        >
+          <span className={styles.chipGlyph} aria-hidden="true">
+            {rows.slice(0, 3).map((row) => (
+              <span key={row.key} className={styles.swatch} style={swatchStyle(row.visual)} />
+            ))}
+          </span>
+          Key
+        </button>
       </div>
     </div>
   );

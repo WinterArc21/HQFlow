@@ -5,13 +5,9 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 685px) {
-  .controls {
-    flex-shrink: 1;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    row-gap: var(--space-1);
-  }
+/* Wrappers that only group a control with its divider; they add no box of their own. */
+.wide {
+  display: contents;
 }
 
 /* Zoom reads as one inset segment: out, level, in. */
@@ -32,9 +28,113 @@
   color: var(--text-secondary);
 }
 
+/* The level is also the "fit to screen" button. */
+.levelButton {
+  height: var(--space-6);
+  border-radius: var(--radius-md);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.levelButton:hover {
+  background-color: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.levelButton:focus-visible,
+.item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
 .divider {
   width: 1px;
   height: 20px;
   margin: 0 var(--space-2);
   background-color: var(--border-subtle);
+}
+
+/* ---- the "More actions" menu, opening upward from the dock ---- */
+.more {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-3));
+  z-index: 30;
+  display: grid;
+  min-width: 200px;
+  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background-color: var(--bg-surface);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--text-primary) 12%, transparent);
+  transform-origin: bottom right;
+  animation: menu-in var(--dur-fast) var(--ease-standard);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible {
+  background-color: var(--bg-inset);
+}
+
+.itemIcon {
+  display: inline-flex;
+  width: 14px;
+  color: var(--text-tertiary);
+}
+
+/* Delete sits last, apart from the rest, in the failure colour. */
+.danger {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  color: var(--accent-red);
+}
+
+.danger .itemIcon {
+  color: var(--accent-red);
+}
+
+.narrow {
+  display: none;
+}
+
+/* Matches IslandShell's NARROW_COLUMNS: on a phone the dock keeps only the level and the menu. */
+@media (max-width: 685px) {
+  .wide {
+    display: none;
+  }
+
+  .narrow {
+    display: flex;
+  }
+
+  .more.narrow {
+    display: inline-flex;
+  }
 }
