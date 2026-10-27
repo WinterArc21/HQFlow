@@ -2,7 +2,7 @@ import { useRef } from "react";
 import type { Workflow } from "@schema/workflow";
 import { connectionStyle, outcomeEdgeStyle, outcomeTone, RETRY_EDGE_VISUAL, type ConnectionVisual } from "../../design/semantics";
 import { computeIncomingTypes, computeOutcomeStepIds } from "./graph";
-import type { GridPlacement } from "../shell/dotGrid";
+import { DOT_STEP, type GridPlacement } from "../shell/dotGrid";
 import { useGridBox } from "../shell/Island";
 import styles from "./CanvasLegend.module.css";
 
@@ -12,6 +12,8 @@ interface CanvasLegendProps {
   dimmed?: boolean;
   /** Snaps the key onto the dot grid (island shell); without it, it sits in the stage corner. */
   placement?: GridPlacement;
+  /** With `placement`: the widest the key may be, in dots. A wider key hides instead of overlapping. */
+  maxWidth?: number;
 }
 
 const CONNECTION_TYPES = ["success", "failure", "conditional", "async"] as const;
@@ -31,9 +33,11 @@ function swatchStyle(visual: ConnectionVisual) {
 }
 
 /** A read-only key for only the edge grammar currently visible in this workflow. */
-export function CanvasLegend({ workflow, dimmed = false, placement }: CanvasLegendProps) {
+export function CanvasLegend({ workflow, dimmed = false, placement, maxWidth }: CanvasLegendProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const box = useGridBox(contentRef, placement === undefined ? undefined : { ...placement, w: "auto", h: "auto" });
+  // Hidden stays laid out, so the key keeps measuring and comes back when the window widens.
+  const tooWide = box !== null && maxWidth !== undefined && box.width > maxWidth * DOT_STEP;
   // A self-loop renders with the retry grammar instead of its declared connection grammar, so
   // exclude it from the ordinary rows and add the dedicated Retry row below.
   const outcomeIds = computeOutcomeStepIds(workflow);
@@ -70,7 +74,7 @@ export function CanvasLegend({ workflow, dimmed = false, placement }: CanvasLege
 
   return (
     <div
-      className={`${styles.legend} ${dimmed ? styles.dimmed : ""} ${box !== null ? styles.onGrid : ""}`}
+      className={`${styles.legend} ${dimmed ? styles.dimmed : ""} ${box !== null ? styles.onGrid : ""} ${tooWide ? styles.hidden : ""}`}
       style={box !== null ? { ...box, position: "fixed", bottom: "auto" } : undefined}
       role="group"
       aria-label="Connection legend"

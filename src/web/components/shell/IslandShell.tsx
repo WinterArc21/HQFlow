@@ -97,13 +97,16 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
     titleTarget,
     controlsTarget,
     legendPlacement: { l: 0, b: 0 },
+    // The key shares the bottom row with the centred dock, so it gets the columns left of the dock,
+    // less a one-dot gap. On a phone the dock spans the row and the key has no room.
+    legendMaxWidth: dockLeft - 1,
     fitInsets: {
       top: DOT_ORIGIN + (identityTop + (narrow ? 5 : 4)) * DOT_STEP,
       right: DOT_ORIGIN,
       bottom: DOT_ORIGIN + (DOCK_HEIGHT + (narrow ? 3 : 1)) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, identityTop, narrow, titleTarget]);
+  }), [controlsTarget, dockLeft, identityTop, narrow, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.

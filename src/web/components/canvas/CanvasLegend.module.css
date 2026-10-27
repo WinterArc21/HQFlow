@@ -59,9 +59,7 @@
   flex: none;
 }
 
-/* On a phone the key would sit on the map; the dock needs the room. */
-@media (max-width: 685px) {
-  .onGrid {
-    display: none;
-  }
+/* No room beside the dock: the dock wins. */
+.hidden {
+  visibility: hidden;
 }

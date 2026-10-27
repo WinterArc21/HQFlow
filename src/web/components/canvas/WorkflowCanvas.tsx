@@ -59,13 +59,14 @@ const EDGE_TYPES = { workflow: WorkflowEdge };
 /**
  * Hands the canvas's title and controls to an outer shell instead of the built-in title strip:
  * the title renders into `titleTarget`, the controls into `controlsTarget` (both through portals,
- * so they keep this canvas's React Flow context), the legend snaps to `legendPlacement`, and
- * fitting keeps `fitInsets` clear.
+ * so they keep this canvas's React Flow context), the legend snaps to `legendPlacement` and shows
+ * only while it fits in `legendMaxWidth` dots, and fitting keeps `fitInsets` clear.
  */
 export interface CanvasChrome {
   titleTarget: HTMLElement | null;
   controlsTarget: HTMLElement | null;
   legendPlacement: GridPlacement;
+  legendMaxWidth: number;
   fitInsets: FitInsets;
 }
 
@@ -581,7 +582,7 @@ function WorkflowCanvasInner({
             />
           ) : null}
         </ReactFlow>
-        <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
+        <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement, maxWidth: chrome.legendMaxWidth } : {})} />
         {showViewHint ? (
           <CanvasViewHint
             view={view}
