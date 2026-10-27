@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 import { ViewportPortal } from "@xyflow/react";
 import { countLabel } from "../../../lib/pluralize";
 import { CARD_PHASE, WEAVE_SWING, type BuildPlan, type CardDraw, type CursorKey } from "./buildPlan";
@@ -8,9 +8,25 @@ import styles from "./AgentCursor.module.css";
 const CURSOR_COLORS = ["var(--accent-blue)", "var(--accent-amber)", "var(--accent-violet)", "var(--accent-cyan)"];
 /** Time after the build for the cursors to leave. */
 const LEAVE_MS = 700;
-const RIDE_SAMPLES = 16;
-/** Matches the ink's `cubic-bezier(0.65, 0, 0.35, 1)` closely enough to keep the pen on the drop. */
-const inkEase = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+/** The pen follows an edge through one point for every this many pixels, so it stays on curves. */
+const RIDE_STEP_PX = 30;
+const MIN_RIDE_SAMPLES = 16;
+/** The ink's `cubic-bezier(0.65, 0, 0.35, 1)` (liveBuild.css), exactly, so the pen stays on the
+ * ink's tip even on a long edge. Finds the curve parameter for time `p` by bisection. */
+function inkEase(p: number): number {
+  const bezier = (s: number, a: number, b: number) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3;
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 30; i += 1) {
+    const mid = (low + high) / 2;
+    if (bezier(mid, 0.65, 0.35) < p) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return bezier((low + high) / 2, 0, 1);
+}
 
 /** Replaces each edge ride (a key with `edge` and the key after it) with points on the drawn path. */
 function rideEdges(keys: CursorKey[], root: ParentNode): CursorKey[] {
@@ -26,8 +42,9 @@ function rideEdges(keys: CursorKey[], root: ParentNode): CursorKey[] {
       continue;
     }
     const length = path.getTotalLength();
-    for (let k = 0; k <= RIDE_SAMPLES; k += 1) {
-      const share = k / RIDE_SAMPLES;
+    const samples = Math.max(MIN_RIDE_SAMPLES, Math.ceil(length / RIDE_STEP_PX));
+    for (let k = 0; k <= samples; k += 1) {
+      const share = k / samples;
       const point = path.getPointAtLength(length * inkEase(share));
       result.push({ t: key.t + (end.t - key.t) * share, x: point.x, y: point.y });
     }
@@ -63,13 +80,16 @@ function penFrames(keys: CursorKey[], total: number): Keyframe[] {
  */
 export function AgentCursor({ plan }: { plan: BuildPlan }) {
   const penRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const tilesRef = useRef<HTMLDivElement>(null);
   const [labels, setLabels] = useState<Array<string | null>>(() => plan.cursors.map(() => null));
 
   useLayoutEffect(() => {
-    // The CSS that draws the cards starts now; the pens start from the same moment. They wait two
-    // frames for the new edges to render, so they can ride their real paths.
+    // The pens wait two frames for the new edges to render, so they can ride their real paths.
+    // Then they and the weave tiles take the start time of the CSS that draws this build, so pen
+    // and drawing run on one clock however long the browser took to start the CSS.
     const startedAt = performance.now();
     const animations: Animation[] = [];
+    let cancelled = false;
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
         plan.cursors.forEach((keys, index) => {
@@ -82,9 +102,29 @@ export function AgentCursor({ plan }: { plan: BuildPlan }) {
           animation.currentTime = performance.now() - startedAt;
           animations.push(animation);
         });
+        // The browser can give this build's CSS animations different start times: it starts the
+        // opacity ones on the compositor, later than the marquee and ink. Move every animation of
+        // this build (the CSS and the ink drops wear this build's keyframe set class) to the
+        // earliest start.
+        const set = plan.id % 2 === 0 ? ".hq-build-b" : ".hq-build-a";
+        const drawing = document.getAnimations().filter((animation) =>
+          (!(animation instanceof CSSAnimation) || animation.animationName.startsWith("hq")) &&
+          animation.effect instanceof KeyframeEffect && animation.effect.target?.closest(set) != null);
+        const all = [...animations, ...drawing, ...(tilesRef.current?.getAnimations({ subtree: true }) ?? [])];
+        void Promise.all(drawing.map((animation) => animation.ready)).then(() => {
+          const starts = drawing.map((animation) => animation.startTime).filter((start): start is number => typeof start === "number");
+          if (cancelled || starts.length === 0) {
+            return;
+          }
+          const start = Math.min(...starts);
+          for (const animation of all) {
+            animation.startTime = start;
+          }
+        });
       });
     });
     return () => {
+      cancelled = true;
       cancelAnimationFrame(frame);
       animations.forEach((animation) => animation.cancel());
     };
@@ -105,7 +145,7 @@ export function AgentCursor({ plan }: { plan: BuildPlan }) {
   }
   return (
     <ViewportPortal>
-      <WeaveTiles cards={plan.cards} />
+      <WeaveTiles ref={tilesRef} cards={plan.cards} />
       {plan.cursors.map((_, index) => (
         <div
           key={index}
@@ -136,10 +176,10 @@ export function AgentCursor({ plan }: { plan: BuildPlan }) {
  * The weave: tiles in the card's colour fly off the pen's tip as it sweeps back across the
  * marquee, and land in place. They clear away when the card appears. Pure CSS, timed from mount.
  */
-function WeaveTiles({ cards }: { cards: CardDraw[] }) {
+function WeaveTiles({ cards, ref }: { cards: CardDraw[]; ref: Ref<HTMLDivElement> }) {
   const dense = cards.length <= 12;
   return (
-    <div className={styles.tiles} aria-hidden="true">
+    <div ref={ref} className={styles.tiles} aria-hidden="true">
       {cards.flatMap((card, cardIndex) => {
         const cols = card.outcome ? 8 : dense ? 12 : 8;
         const rows = card.outcome ? 2 : dense ? 4 : 3;

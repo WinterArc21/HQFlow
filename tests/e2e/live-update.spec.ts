@@ -98,7 +98,7 @@ test("a card that moves in a live edit keeps its connector attached", async ({ p
   await expect(page.locator('[data-step-node="quality-check"]')).toBeVisible({ timeout: 10_000 });
 
   const incomingEdgeId = "save-result->outcome-generation-created#9";
-  const connectorDistance = await page.evaluate((edgeId) => {
+  const connectorDistance = () => page.evaluate((edgeId) => {
     // The step moves onto the main line with the new layout, so whichever side faces its source
     // takes the edge; attached means the line ends on one of the step's target handles.
     const targetHandles = [...document.querySelectorAll<HTMLElement>('[data-nodeid="outcome-generation-created"].react-flow__handle.target')];
@@ -117,8 +117,8 @@ test("a card that moves in a live edit keeps its connector attached", async ({ p
   }, incomingEdgeId);
   // The horizontal canvas attaches incoming connections to the target's live facing handle,
   // rather than the card centre. A larger gap means node and edge geometry diverged during the
-  // live update.
-  expect(connectorDistance).toBeLessThan(5);
+  // live update. The card can take a frame or two to settle as it appears, so allow a short wait.
+  await expect.poll(connectorDistance, { timeout: 1_000 }).toBeLessThan(5);
 });
 
 test("cards that survive a live edit re-flow with the new layout instead of stacking under new cards", async ({ page }) => {
