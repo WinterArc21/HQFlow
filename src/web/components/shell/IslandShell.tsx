@@ -191,11 +191,6 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
-    legendPlacement: { l: 0, b: 0 },
-    // The key shares the bottom row with the centred dock, so it gets the columns left of the
-    // dock, less a one-dot gap. Without that room it rises to sit one dot above the dock.
-    legendMaxWidth: dockLeft - 1,
-    legendLift: (dockHeight + 1) * DOT_STEP,
     dockClearance,
     onCanvasMove,
     fitInsets: {
@@ -204,7 +199,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
       bottom: DOT_ORIGIN + (dockHeight + 1) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, dockClearance, dockHeight, dockLeft, identityTop, narrow, onCanvasMove, titleTarget]);
+  }), [controlsTarget, dockClearance, dockHeight, identityTop, narrow, onCanvasMove, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.

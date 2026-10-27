@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { ArrowCounterClockwise, Check, DotsThreeVertical, DownloadSimple, Minus, PencilSimpleLine, Plus, Trash } from "@phosphor-icons/react";
 import { useStore } from "@xyflow/react";
 import { IconButton, Tooltip } from "../primitives";
+import { swatchStyle } from "./CanvasLegend";
 import type { CanvasToolbarProps } from "./CanvasToolbar";
 import { CanvasViewSwitch } from "./CanvasViewSwitch";
 import type { CanvasView } from "./layout";
@@ -11,13 +12,14 @@ const VIEW_NAMES: Array<[CanvasView, string]> = [["flow", "Flow"], ["wrap", "Wra
 
 /**
  * The canvas's own controls as they sit inside the island shell's dock: a zoom group with a live
- * level readout that fits the map when clicked, then the layout actions. Rare and destructive
- * actions live in the "More actions" menu. On a phone only the level and the menu stay in the
+ * level readout that fits the map when clicked, then the layout actions. The connection key and
+ * the rare and destructive actions live in the "More actions" menu. On a phone only the level and the menu stay in the
  * dock; the menu then also carries the views, reset and export. Same handlers and accessible
  * names as `CanvasToolbar`, which remains the title-strip version for the export viewer and
  * landing demo.
  */
-export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, onReplay, onExport, onDelete, viewSwitch }: CanvasToolbarProps) {
+export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, onReplay, onExport, onDelete, viewSwitch, legend }: CanvasToolbarProps) {
+  const legendRows = legend?.rows ?? [];
   const zoom = useStore((state) => state.transform[2]);
   const level = `${Math.round(zoom * 100)}%`;
   return (
@@ -64,7 +66,21 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, 
           </Tooltip>
         </span>
       ) : null}
-      <MoreActions narrowOnly={onReplay === undefined && onDelete === undefined}>
+      <MoreActions
+        narrowOnly={onReplay === undefined && onDelete === undefined && legendRows.length === 0}
+        {...(legend !== undefined ? { onClose: () => legend.onHighlight(null) } : {})}
+      >
+        {legend !== undefined && legendRows.length > 0 ? (
+          <div className={styles.key} role="group" aria-label="Connection legend" onPointerLeave={() => legend.onHighlight(null)}>
+            <p className={styles.keyHeading} aria-hidden="true">Connections</p>
+            {legendRows.map((row) => (
+              <div key={row.key} className={styles.keyRow} onPointerEnter={() => legend.onHighlight(row.key)}>
+                <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />
+                {row.label}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {viewSwitch !== undefined ? VIEW_NAMES.map(([view, name]) => (
           <MenuItem
             key={view}
@@ -93,10 +109,14 @@ export function CanvasDockControls({ onZoomIn, onZoomOut, onFit, onResetLayout, 
 }
 
 /** A small menu that opens upward from the dock. Escape, an outside click, or a choice closes it. */
-function MoreActions({ narrowOnly, children }: { narrowOnly: boolean; children: ReactNode }) {
+function MoreActions({ narrowOnly, onClose, children }: { narrowOnly: boolean; onClose?: () => void; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const close = () => {
+    setOpen(false);
+    onClose?.();
+  };
 
   useEffect(() => {
     if (!open) {
@@ -104,6 +124,7 @@ function MoreActions({ narrowOnly, children }: { narrowOnly: boolean; children: 
     }
     visibleItems(menuRef.current)[0]?.focus();
     const onPointerDown = (event: PointerEvent) => {
+      // The pointer has already left the key rows, which cleared any highlight.
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -115,7 +136,7 @@ function MoreActions({ narrowOnly, children }: { narrowOnly: boolean; children: 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       event.stopPropagation();
-      setOpen(false);
+      close();
       rootRef.current?.querySelector<HTMLElement>("button")?.focus();
       return;
     }
@@ -137,7 +158,7 @@ function MoreActions({ narrowOnly, children }: { narrowOnly: boolean; children: 
         size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => (open ? close() : setOpen(true))}
       />
       {open ? (
         <div
@@ -147,7 +168,7 @@ function MoreActions({ narrowOnly, children }: { narrowOnly: boolean; children: 
           aria-label="More actions"
           onClick={(event) => {
             if ((event.target as HTMLElement).closest("[role^='menuitem']") !== null) {
-              setOpen(false);
+              close();
               rootRef.current?.querySelector<HTMLElement>("button")?.focus();
             }
           }}

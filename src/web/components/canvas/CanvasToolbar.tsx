@@ -6,6 +6,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { IconButton } from "../primitives";
+import type { LegendRow } from "./CanvasLegend";
 import { CanvasViewSwitch, type CanvasViewSwitchProps } from "./CanvasViewSwitch";
 import styles from "./CanvasToolbar.module.css";
 
@@ -23,6 +24,8 @@ export interface CanvasToolbarProps {
   onDelete?: () => void;
   /** The Flow / Wrap / Line switch. */
   viewSwitch?: CanvasViewSwitchProps;
+  /** The connection key, shown in the dock's "More actions" menu; pointing at a row picks out those edges. */
+  legend?: { rows: LegendRow[]; onHighlight: (key: string | null) => void };
 }
 
 /** The canvas's own chrome: zoom, reset, and (when available) export/delete. */

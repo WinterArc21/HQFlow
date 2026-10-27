@@ -9,7 +9,7 @@ import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { layoutCardSize, useCodeHQStore } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
-import { CanvasLegend } from "./CanvasLegend";
+import { CanvasLegend, legendRows } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
@@ -32,7 +32,6 @@ import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
 import { AgentCursor, BuildToast } from "./live/AgentCursor";
 import { useLiveBuild } from "./live/useLiveBuild";
 import type { FitInsets } from "./fitViewport";
-import type { GridPlacement } from "../shell/dotGrid";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -59,17 +58,13 @@ const EDGE_TYPES = { workflow: WorkflowEdge };
 /**
  * Hands the canvas's title and controls to an outer shell instead of the built-in title strip:
  * the title renders into `titleTarget`, the controls into `controlsTarget` (both through portals,
- * so they keep this canvas's React Flow context), the legend snaps to `legendPlacement` and rises
- * by `legendLift` pixels when it is wider than `legendMaxWidth` dots, fitting keeps `fitInsets`
- * clear, and cues near the bottom stay above `dockClearance`. `onCanvasMove` hears when the
+ * so they keep this canvas's React Flow context) with the connection key in the controls' menu,
+ * fitting keeps `fitInsets` clear, and cues near the bottom stay above `dockClearance`. `onCanvasMove` hears when the
  * reader starts and stops panning, zooming or dragging.
  */
 export interface CanvasChrome {
   titleTarget: HTMLElement | null;
   controlsTarget: HTMLElement | null;
-  legendPlacement: GridPlacement;
-  legendMaxWidth: number;
-  legendLift: number;
   dockClearance: number;
   onCanvasMove: (moving: boolean) => void;
   fitInsets: FitInsets;
@@ -536,6 +531,7 @@ function WorkflowCanvasInner({
     onResetLayout: () => resetLayout(canvasId),
     ...(exportMode === null ? { onReplay: live.replay } : {}),
     viewSwitch: { view, autoView: suggestedView, onViewChange: changeView },
+    legend: { rows: legendRows(workflow), onHighlight: setLegendFocus },
     ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
     ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
       ? { onDelete: () => setDeleteDialogOpen(true) }
@@ -612,13 +608,7 @@ function WorkflowCanvasInner({
             />
           ) : null}
         </ReactFlow>
-        <CanvasLegend
-          workflow={workflow}
-          dimmed={tracePath !== null}
-          {...(chrome !== undefined
-            ? { placement: chrome.legendPlacement, maxWidth: chrome.legendMaxWidth, lift: chrome.legendLift, onHighlight: setLegendFocus }
-            : {})}
-        />
+        {chrome === undefined ? <CanvasLegend workflow={workflow} dimmed={tracePath !== null} /> : null}
         {showViewHint ? (
           <CanvasViewHint
             view={view}
