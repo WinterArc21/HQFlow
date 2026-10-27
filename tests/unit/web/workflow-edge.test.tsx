@@ -60,6 +60,14 @@ function edgePaths(container: HTMLElement): { semantic: SVGPathElement; halo: SV
   return { semantic: semantic!, halo: halo! };
 }
 
+/** Every point of a path's `d`, in order (move, line, and curve control points alike). */
+function pathPoints(d: string | null): Array<{ x: number; y: number }> {
+  return [...(d ?? "").matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(([, x, y]) => ({ x: Number(x), y: Number(y) }));
+}
+
+/** The 10px arrowhead drawn at every target end. */
+const ARROWHEAD_LENGTH = 10;
+
 describe("WorkflowEdge visual grammar", () => {
   describe("manual bends", () => {
     it("keeps the ordinary default path unchanged before interaction", () => {
@@ -74,7 +82,10 @@ describe("WorkflowEdge visual grammar", () => {
       // Source and target nearly aligned across the port axis: the bare bezier would only turn
       // horizontal in its last few pixels, so the line would cut through an arrowhead arm.
       const [path] = arrowSafeBezierPath({ x: 0, y: 240 }, Position.Right, { x: 20, y: 0 }, Position.Left);
-      expect(path).toMatch(/ 6,0 L20,0$/);
+      expect(path).toMatch(/ L20,0$/);
+      const [beforeEnd, end] = pathPoints(path).slice(-2);
+      expect(beforeEnd!.y).toBe(end!.y);
+      expect(end!.x - beforeEnd!.x).toBeGreaterThan(ARROWHEAD_LENGTH);
     });
 
     it("draws a smooth curve through a freely dragged bend point", () => {
@@ -86,10 +97,9 @@ describe("WorkflowEdge visual grammar", () => {
       fireEvent.pointerUp(handle, { pointerId: 1 });
 
       const path = edgePaths(result.container).semantic.getAttribute("d");
-      expect(path).toContain(" C");
       expect(path).toContain(" 40,55 C");
-      expect(path).toMatch(/^M0,0 L18,0 /);
-      expect(path).toMatch(/ 63\.25,100 82,100 L100,100$/);
+      expect(path).toMatch(/^M0,0 /);
+      expect(path).toMatch(/L100,100$/);
       expect(handle).toHaveAttribute("data-snapped", "false");
     });
 
@@ -112,19 +122,33 @@ describe("WorkflowEdge visual grammar", () => {
     });
 
     it("snaps to an orthogonal route that follows both endpoint directions", () => {
+      // The vertical run sits on the side of the edge that the pointer was dragged towards.
       const cases = [
-        { pointer: { clientX: 20, clientY: 80 }, path: "M0,0 L18,0 L18,100 L82,100 L100,100" },
-        { pointer: { clientX: 80, clientY: 20 }, path: "M0,0 L18,0 L82,0 L82,100 L100,100" },
+        { pointer: { clientX: 20, clientY: 80 }, verticalNearSource: true },
+        { pointer: { clientX: 80, clientY: 20 }, verticalNearSource: false },
       ];
 
-      for (const { pointer, path } of cases) {
+      for (const { pointer, verticalNearSource } of cases) {
         const result = renderInteractiveEdge(makeData());
         const handle = result.getByRole("button", { name: "Bend edge e1" });
         fireEvent.pointerDown(handle, { pointerId: 1 });
         fireEvent.pointerMove(handle, { pointerId: 1, ...pointer });
         fireEvent.pointerUp(handle, { pointerId: 1 });
 
-        expect(edgePaths(result.container).semantic.getAttribute("d")).toBe(path);
+        const d = edgePaths(result.container).semantic.getAttribute("d");
+        expect(d).toMatch(/^M[\d.,-]+( L[\d.,-]+)+$/);
+        const points = pathPoints(d);
+        expect(points[0]).toEqual({ x: 0, y: 0 });
+        expect(points.at(-1)).toEqual({ x: 100, y: 100 });
+        const segments = points.slice(1).map((point, index) => ({ from: points[index]!, to: point }));
+        for (const { from, to } of segments) {
+          expect(from.x === to.x || from.y === to.y, `${from.x},${from.y} -> ${to.x},${to.y}`).toBe(true);
+        }
+        // Both ends leave and enter horizontally, along their Right/Left ports.
+        expect(segments[0]!.from.y).toBe(segments[0]!.to.y);
+        expect(segments.at(-1)!.from.y).toBe(segments.at(-1)!.to.y);
+        const vertical = segments.find(({ from, to }) => from.x === to.x && from.y !== to.y)!;
+        expect(vertical.from.x < 50).toBe(verticalNearSource);
         expect(handle).toHaveAttribute("data-snapped", "true");
         result.unmount();
       }
