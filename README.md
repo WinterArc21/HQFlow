@@ -8,23 +8,45 @@ HQFlow watches those files and renders them in your browser as you work. **It co
 of its own and never uploads your code anywhere** — everything runs
 on `localhost`.
 
+**[Try the live demo →](https://hqflow.vercel.app/)** · [npm](https://www.npmjs.com/package/hqflow)
+
 ## See HQFlow in action
 
-The image follows your light or dark system theme.
+An agent writes a checkout workflow, and HQFlow draws each step as the file changes. The
+recording uses the Flow view and the Sorbet scene.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/hqflow-canvas-dark.webp">
-  <source media="(prefers-color-scheme: light)" srcset="./docs/assets/hqflow-canvas-light.webp">
-  <img alt="HQFlow canvas showing the Generate Video Prompt workflow, including validation and quota failure branches" src="./docs/assets/hqflow-canvas-light.webp" width="1440" height="900">
-</picture>
+<img alt="HQFlow drawing a branching checkout workflow live, step by step, in the Flow view on the Sorbet scene" src="./docs/assets/hqflow-drawing.gif" width="720">
 
-## Privacy & security
+## What you get
 
-- Runs entirely on your machine (`localhost`)
-- Never uploads repository source to a remote service
-- Contains no built-in LLM — your existing coding agent authors the `.codehq` files
+- **Live drawing.** As your agent saves a workflow file, the canvas draws the new steps and
+  connections in place. You do not refresh.
+- **Three views.** Read a workflow as **Flow** (top to bottom, branches side by side), **Wrap**
+  (rows that read left to right), or **Line** (one long row).
+- **Evidence on every step.** Click a step to open its card: sources, inputs, outputs, edge
+  cases, tests, and external services. **Open in editor** jumps to the referenced file.
+- **Path tracing.** Hover a step to dim everything that is not on its paths.
+- **Repository overview.** Ask your agent to map the whole repository. HQFlow shows every
+  workflow and the handoffs between them, then fills each one in as its file arrives.
+- **Search.** Press `Ctrl+K` / `⌘K` to jump to any workflow or step.
+- **Scenes.** Light and dark themes, plus animated backgrounds (Abyss Mesh, Seafoam, Sorbet).
+- **Export.** Download a PNG, or a self-contained interactive HTML file that works offline.
+  You can hide file paths before you share it.
+- **Validation.** Files that break the contract are reported in the app and in
+  `.codehq/diagnostics.json`, so your agent can fix them. Run `hqflow validate` in CI.
 
-See [SECURITY.md](./SECURITY.md) to report vulnerabilities privately.
+## Quickstart
+
+```sh
+npx hqflow init
+npx hqflow open
+```
+
+Then paste this into your coding agent:
+
+> Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
+> `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
+> email, and write the result to `.codehq/workflows/checkout.json`.
 
 ## The core loop
 
@@ -47,18 +69,13 @@ you run `hqflow open`
   the board updates live, in your browser, no refresh
 ```
 
-## Quickstart
+## Privacy & security
 
-```sh
-npx hqflow init
-npx hqflow open
-```
+- Runs entirely on your machine (`localhost`)
+- Never uploads repository source to a remote service
+- Contains no built-in LLM — your existing coding agent authors the `.codehq` files
 
-Then paste this into your coding agent:
-
-> Read `.codehq/SKILL.md`, then document the checkout workflow. It starts at the
-> `POST /api/checkout` route. Trace it through order creation, payment, and confirmation
-> email, and write the result to `.codehq/workflows/checkout.json`.
+See [SECURITY.md](./SECURITY.md) to report vulnerabilities privately.
 
 ## Commands
 
@@ -96,16 +113,23 @@ Starts the local server and opens the workflow canvas in your browser.
 
 Stop it with `Ctrl+C`.
 
+### `hqflow validate [--json] [--root <path>]`
+
+Validates `.codehq/` and prints every issue. It exits with code `1` when a file is invalid, so
+you can run it in CI or ask your agent to run it before handoff.
+
+- `--json` — print only the diagnostics report as JSON.
+- `--root <path>` — repository root to check. Defaults to the same detection as `open`.
+
 ### Canvas layouts
 
 HQFlow automatically saves node positions after you move a card and edge bends after you adjust
-a connection. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
+a connection. Each view (Flow, Wrap, Line) keeps its own positions and bends. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
 after you close the browser, stop HQFlow, or restart your computer. The file stays local to the
 repository and is ignored by Git.
 
-Pan, zoom, and expanded cards describe the current view, so they reset when you reopen HQFlow.
-Use **Reset layout** to delete the saved node positions and edge bends and restore the generated
-layout.
+Pan and zoom reset when you reopen HQFlow. **Reset layout** deletes the saved node positions and
+edge bends of the current view and restores its generated layout.
 
 Also available: `--help`, `--version`, `--debug` (or `HQFLOW_DEBUG=1`) for full stack
 traces on error.

@@ -1,0 +1,46 @@
+.prompt {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--focus-ring) 30%, var(--border-subtle));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-inset) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
+  font-family: var(--font-mono);
+  font-size: var(--fs-tiny);
+  line-height: var(--lh-relaxed);
+  color: var(--text-primary);
+  min-height: 9.5em;
+}
+
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--focus-ring);
+}
+
+.done {
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .done {
+    animation: none;
+  }
+}

@@ -61,58 +61,16 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().stepPanRequest).toBeNull();
   });
 
-  it("clears temporary expansion when the selected workflow changes", () => {
-    useCodeHQStore.getState().selectStep("step-1");
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
-    expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
-
-    useCodeHQStore.getState().selectWorkflow("workflow-a");
-
-    expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
-    expect(useCodeHQStore.getState().selectedStepId).toBeNull();
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
-  it("toggleStepExpanded toggles a single step id on and off", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ a: true });
-
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
-  it("collapseAllSteps clears every expanded step", () => {
-    useCodeHQStore.getState().toggleStepExpanded("a");
-    useCodeHQStore.getState().toggleStepExpanded("b");
-    useCodeHQStore.getState().collapseAllSteps();
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
-  });
-
-  it("signals a layout reset without changing workflow or step selection", () => {
-    useCodeHQStore.getState().selectWorkflow("workflow-a");
-    useCodeHQStore.getState().selectStep("step-1");
-    useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 20, y: 30 });
-
-    useCodeHQStore.getState().resetLayout();
-
-    expect(useCodeHQStore.getState().layoutResetRevision).toBe(1);
-    expect(useCodeHQStore.getState().selectedWorkflowId).toBe("workflow-a");
-    expect(useCodeHQStore.getState().selectedStepId).toBe("step-1");
-    expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toBeUndefined();
-  });
-
-  it("keeps canvas state in memory while persisting only the theme", () => {
+  it("keeps canvas state in memory while persisting only appearance preferences", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
     expect(raw).not.toBeNull();
     const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
-    expect(parsed.version).toBe(4);
+    expect(parsed.version).toBe(7);
     expect(parsed.state.theme).toBe("light");
     expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
@@ -120,13 +78,13 @@ describe("useCodeHQStore", () => {
         edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
       },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
-    expect(Object.keys(parsed.state)).toEqual(["theme"]);
+    expect(Object.keys(parsed.state).sort()).toEqual(
+      ["cardSize", "darkScene", "lightScene", "motion", "theme"],
+    );
   });
 
   it("hydrates repository-local canvas state for the selected workflow", () => {
     useCodeHQStore.getState().selectWorkflow("workflow-a");
-    useCodeHQStore.getState().toggleStepExpanded("step-1");
     useCodeHQStore.getState().hydrateCanvasLayout("workflow-a", {
       nodePositions: { "step-1": { x: 12, y: 34 } },
       edgeBends: {},
@@ -135,7 +93,6 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]?.nodePositions).toEqual({
       "step-1": { x: 12, y: 34 },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({ "step-1": true });
   });
 
   it("prunes visual state for removed nodes and edges without touching known entries", () => {
@@ -143,7 +100,6 @@ describe("useCodeHQStore", () => {
     useCodeHQStore.getState().saveNodePosition("workflow-a", "removed", { x: 3, y: 4 });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "known-edge", { point: { x: 5, y: 6 }, snap: "source-x" });
     useCodeHQStore.getState().saveEdgeBend("workflow-a", "removed-edge", { point: { x: 7, y: 8 }, snap: null });
-    useCodeHQStore.getState().toggleStepExpanded("removed");
 
     useCodeHQStore.getState().reconcileCanvasLayout(
       "workflow-a",
@@ -155,7 +111,6 @@ describe("useCodeHQStore", () => {
       nodePositions: { known: { x: 1, y: 2 } },
       edgeBends: { "known-edge": { point: { x: 5, y: 6 }, snap: "source-x" } },
     });
-    expect(useCodeHQStore.getState().expandedStepIds).toEqual({});
   });
 
   it("does not throw when localStorage.setItem fails (quota exceeded, private mode, etc.)", () => {
@@ -181,4 +136,45 @@ describe("useCodeHQStore", () => {
       window.localStorage.getItem = originalGetItem;
     }
   });
+
+  it("restores dragged positions and bends when switching back to a view", () => {
+    const store = useCodeHQStore.getState();
+    store.saveNodePosition("wf", "a", { x: 10, y: 20 });
+    store.saveEdgeBend("wf", "e", { point: { x: 1, y: 2 }, snap: null });
+    store.setCanvasView("wf", "wrap", "flow");
+    expect(useCodeHQStore.getState().canvasLayouts.wf?.nodePositions).toEqual({});
+    store.saveNodePosition("wf", "a", { x: 99, y: 99 });
+    store.setCanvasView("wf", "flow", "wrap");
+    const layout = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
+    expect(layout?.edgeBends).toEqual({ e: { point: { x: 1, y: 2 }, snap: null } });
+    expect(layout?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
+
+    store.resetLayout("wf");
+    const reset = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(reset?.nodePositions).toEqual({});
+    expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
+  });
+
+  it("keeps dragged positions per card format and restores them when switching back", () => {
+    const store = useCodeHQStore.getState();
+    store.setCanvasView("wf", "flow", "line");
+    store.saveNodePosition("wf", "a", { x: 10, y: 20 });
+
+    store.setCardSize("wide");
+    store.matchCardSize("wf", "flow");
+    let layout = useCodeHQStore.getState().canvasLayouts.wf;
+    // Standard positions would overlap at the wide size, so they are set aside, not reused.
+    expect(layout?.cardSize).toBe("wide");
+    expect(layout?.nodePositions).toEqual({});
+    store.saveNodePosition("wf", "a", { x: 50, y: 60 });
+
+    store.setCardSize("standard");
+    store.matchCardSize("wf", "flow");
+    layout = useCodeHQStore.getState().canvasLayouts.wf;
+    expect(layout?.cardSize).toBeUndefined();
+    expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
+    expect(layout?.otherViews?.["flow:wide"]?.nodePositions).toEqual({ a: { x: 50, y: 60 } });
+  });
+
 });

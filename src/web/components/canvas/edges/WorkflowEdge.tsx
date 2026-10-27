@@ -1,9 +1,9 @@
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
-import { connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
+import { useCallback, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useNodesData, useReactFlow, type EdgeProps } from "@xyflow/react";
+import { categoryToken, connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
 import { connectionLabelText } from "../edgeLabel";
-import type { WorkflowFlowEdge } from "../types";
+import type { CanvasFlowNode, WorkflowFlowEdge } from "../types";
 import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
 import { edgeMarkerId } from "./EdgeMarkers";
 import styles from "./WorkflowEdge.module.css";
@@ -61,6 +61,171 @@ function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Excl
   };
 }
 
+/** The live build's ink easing (liveBuild.css `hqEdgeDraw`); the riding cursor uses it too. */
+export const INK_EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
+const INK_DROP_SAMPLES = 24;
+
+/**
+ * The ink drop: a glowing bead that runs along the edge while its ink line draws in behind it,
+ * swelling mid-way like a drop of ink. Timed from when it mounts, like the CSS that draws the line.
+ */
+function InkDrop({ path, delay, duration, color }: { path: string; delay: number; duration: number; color: string }) {
+  const trackRef = useRef<SVGPathElement>(null);
+  const dropRef = useRef<SVGCircleElement>(null);
+  const mountedAt = useRef(0);
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    const drop = dropRef.current;
+    if (track === null || drop === null || typeof drop.animate !== "function" || typeof track.getTotalLength !== "function") {
+      return;
+    }
+    if (mountedAt.current === 0) {
+      mountedAt.current = performance.now();
+    }
+    const length = track.getTotalLength();
+    const frames: Keyframe[] = [];
+    for (let k = 0; k <= INK_DROP_SAMPLES; k += 1) {
+      const share = k / INK_DROP_SAMPLES;
+      const point = track.getPointAtLength(length * share);
+      frames.push({
+        offset: share,
+        transform: `translate(${point.x}px, ${point.y}px) scale(${0.65 + 0.55 * Math.sin(share * Math.PI)})`,
+        opacity: k === INK_DROP_SAMPLES ? 0 : 1,
+      });
+    }
+    const animation = drop.animate(frames, { duration, delay, easing: INK_EASING, fill: "forwards" });
+    // A re-render with a new path keeps the drop where it was in time instead of restarting it.
+    animation.currentTime = performance.now() - mountedAt.current;
+    return () => animation.cancel();
+  }, [delay, duration, path]);
+  return (
+    <g pointerEvents="none" aria-hidden="true">
+      <path ref={trackRef} d={path} fill="none" stroke="none" />
+      <circle ref={dropRef} r={4.5} style={{ fill: color, opacity: 0, filter: `drop-shadow(0 0 6px ${color})` }} />
+    </g>
+  );
+}
+
+/** The hand-off comet's constant speed, so short and long edges move the same. */
+const COMET_SPEED = 150;
+const COMET_REST = 700;
+const COMET_TAIL = 8;
+const COMET_TAIL_STEP = 3.1;
+
+/** Where along the edge the comet switches from the source colour to the target colour: it
+ * holds the source colour, crossfades over a short stretch, then holds the target colour, so the
+ * last third of the run clearly reads as the next card. */
+const COMET_SWITCH_START = 0.55;
+const COMET_SWITCH_END = 0.62;
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * The hand-off comet: a bead in the source card's colour that switches to the target card's
+ * colour part-way along, with a short tail that keeps the colour the bead had at each point. It
+ * is cut out of the line (the parent masks the line with `maskId`), so it never melts into the
+ * stroke.
+ */
+function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string; from: string; to: string }) {
+  const trackRef = useRef<SVGPathElement>(null);
+  const headRef = useRef<SVGCircleElement>(null);
+  const cutRef = useRef<SVGCircleElement>(null);
+  const tailRefs = useRef<Array<SVGCircleElement | null>>([]);
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (track === null || typeof track.getTotalLength !== "function") {
+      return;
+    }
+    const style = getComputedStyle(track);
+    const resolve = (name: string): string => style.getPropertyValue(name).trim() || "currentColor";
+    const fromColor = resolve(from);
+    const toColor = resolve(to);
+    const length = track.getTotalLength();
+    const travel = (length / COMET_SPEED) * 1000;
+    const duration = travel + COMET_REST;
+    const share = travel / duration;
+    const samples = Math.max(12, Math.ceil(length / 8));
+    const frames = (peak: number, cut: boolean): Keyframe[] => {
+      const list: Keyframe[] = [];
+      // Exact keyframes at both ends of the switch keep it crisp on short edges too.
+      const shares = [...Array.from({ length: samples + 1 }, (_, k) => k / samples), COMET_SWITCH_START, COMET_SWITCH_END]
+        .sort((a, b) => a - b);
+      for (const s of shares) {
+        const point = track.getPointAtLength(length * s);
+        const fade = Math.max(0, Math.min(1, s / 0.05, (1 - s) / 0.05));
+        list.push(cut
+          ? { offset: s * share, transform: `translate(${point.x}px, ${point.y}px) scale(${fade})` }
+          : {
+              offset: s * share,
+              transform: `translate(${point.x}px, ${point.y}px)`,
+              fill: s <= COMET_SWITCH_START
+                ? fromColor
+                : s >= COMET_SWITCH_END
+                  ? toColor
+                  : `color-mix(in oklch, ${toColor} ${Math.round(((s - COMET_SWITCH_START) / (COMET_SWITCH_END - COMET_SWITCH_START)) * 100)}%, ${fromColor})`,
+              opacity: fade * peak,
+            });
+      }
+      list.push(cut ? { offset: 1, transform: "scale(0)" } : { offset: 1, opacity: 0 });
+      return list;
+    };
+    const timing = { duration, iterations: Infinity, easing: "linear" } as const;
+    const animations: Animation[] = [];
+    if (headRef.current !== null) animations.push(headRef.current.animate(frames(1, false), timing));
+    if (cutRef.current !== null) animations.push(cutRef.current.animate(frames(1, true), timing));
+    tailRefs.current.forEach((circle, index) => {
+      if (circle === null) return;
+      const tailShare = 1 - (index + 1) / (COMET_TAIL + 1);
+      const lag = ((index + 1) * COMET_TAIL_STEP / COMET_SPEED) * 1000;
+      animations.push(circle.animate(frames(0.15 + 0.75 * tailShare, false), { ...timing, delay: lag }));
+    });
+    return () => animations.forEach((animation) => animation.cancel());
+  }, [path, from, to]);
+  return (
+    <>
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+          <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+          <circle ref={cutRef} r={7} fill="black" style={{ transform: "scale(0)" }} />
+        </mask>
+      </defs>
+      <g pointerEvents="none" aria-hidden="true" data-handoff-comet="">
+        <path ref={trackRef} d={path} fill="none" stroke="none" />
+        {Array.from({ length: COMET_TAIL }, (_, index) => (
+          <circle
+            key={index}
+            ref={(circle) => { tailRefs.current[index] = circle; }}
+            r={0.9 + 2.6 * (1 - (index + 1) / (COMET_TAIL + 1))}
+            style={{ opacity: 0 }}
+          />
+        ))}
+        <circle ref={headRef} r={4.2} style={{ opacity: 0, stroke: "var(--bg-raised)", strokeWidth: 1.4 }} />
+      </g>
+    </>
+  );
+}
+
+/** A polyline through `points` with each corner rounded off. */
+export function roundedPolylinePath(points: Array<{ x: number; y: number }>, radius = EDGE_BORDER_RADIUS): string {
+  let path = `M${points[0]!.x},${points[0]!.y}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const c = points[i + 1]!;
+    const l1 = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const l2 = Math.hypot(c.x - b.x, c.y - b.y) || 1;
+    const r = Math.min(radius, l1 / 2, l2 / 2);
+    path += ` L${b.x + ((a.x - b.x) / l1) * r},${b.y + ((a.y - b.y) / l1) * r} Q${b.x},${b.y} ${b.x + ((c.x - b.x) / l2) * r},${b.y + ((c.y - b.y) / l2) * r}`;
+  }
+  const last = points[points.length - 1]!;
+  return `${path} L${last.x},${last.y}`;
+}
+
+/** Wrap view: how far a row-turn edge runs out of its source and in front of its target. */
+const TURN_LEAD = 24;
+
 /** React Flow's bezier, ending on a straight `ARROW_LEAD` run so the arrowhead always sits on its own line. */
 export function arrowSafeBezierPath(
   source: { x: number; y: number },
@@ -112,35 +277,23 @@ function smoothBendPath(
   return `M${source.x},${source.y} L${sourceLead.x},${sourceLead.y} C${sourceControl.x},${sourceControl.y} ${bend.x - tangent.x * tangentReach},${bend.y - tangent.y * tangentReach} ${bend.x},${bend.y} C${bend.x + tangent.x * tangentReach},${bend.y + tangent.y * tangentReach} ${targetControl.x},${targetControl.y} ${targetLead.x},${targetLead.y} L${target.x},${target.y}`;
 }
 
-/** Stroke width per connection type: normal sync flow is the strongest weight; every branch —
- * conditional, failure, async, retry — reads as subordinate but still intentional and legible.
- * The line and arrowhead use the same connection-type discriminator. */
-function edgeStrokeWidth(variant: string): number {
-  switch (variant) {
-    case "success":
-      return 2.75;
-    case "async":
-      return 2;
-    case "success-outcome":
-    case "failure":
-    case "conditional":
-    case "retry":
-      return 2;
-    default:
-      return 2.75;
-  }
-}
+/** Every connection uses one thin stroke, so the cards stay the figure and the edges step back.
+ * Colour and dash pattern carry the connection type; path tracing still thickens traced edges. */
+const EDGE_STROKE_WIDTH = 1.6;
 
 const DASH_PATTERNS: Record<"dashed" | "dotted", string> = {
   dashed: "8 6",
   dotted: "1 6",
 };
 
-/** How much wider than the semantic stroke the background-coloured casing/halo paints — a solid
- * underlay that carves the dashed line clear of the canvas grid and neighbouring card borders
- * without introducing a neon outline. The halo follows the same path shape (dashes are preserved
- * on the semantic stroke on top); only its width grows. */
-const HALO_WIDTH_PADDING = 4;
+/** How much wider than the semantic stroke the background-coloured casing/halo paints — a thin
+ * underlay that carves the line clear of the canvas grid, card borders, and crossing edges. Kept
+ * small so it reads as separation, not as a glow around the thin line. The halo follows the same
+ * path shape (dashes are preserved on the semantic stroke on top); only its width grows. */
+const HALO_WIDTH_PADDING = 2;
+/** The halo stops this far from the target, under the arrowhead, so its flat end never shows
+ * beside the arrow's point. */
+const HALO_TIP_CUT = 5;
 /** How much a traced edge's stroke grows when path tracing is active (contract §11): tracing must
  * not only dim unrelated paths, it must also strengthen the path the user is following, so the
  * traced line reads as the figure rather than merely the ground. Kept under the next weight tier
@@ -149,7 +302,7 @@ const TRACED_STROKE_BOOST = 1;
 /** Opacity applied to a dimmed edge during path tracing (contract §11) — a dimmed edge fades to a
  * quiet background tone while traced edges strengthen, so the followed path reads as the figure. */
 const DIMMED_OPACITY_FACTOR = 0.25;
-/** Success, async, conditional, and retry edges carry a hue-matched traveling bead.
+/** Success, async, conditional, and retry edges carry the hand-off comet while a trace is active.
  * Failure and terminal-outcome edges stay still so a hard stop does not look like flow. */
 function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
   return variant === "success" || variant === "async" || variant === "conditional" || variant === "retry" || variant === undefined;
@@ -159,15 +312,35 @@ function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
  * A directional connector styled from the connection type or terminal outcome band: neutral solid
  * for success/default, green dashed for a successful terminal, muted red dashed for failure, amber
  * dashed for conditional, and neutral dotted for async. Geometry is derived from React Flow's live
- * handle coordinates, so every path remains attached while a card is dragged. The primary path
- * renders bolder than a branch so a reader can follow "what happens next" without consciously
- * parsing colour.
+ * handle coordinates, so every path remains attached while a card is dragged.
  */
 export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps<WorkflowFlowEdge>) {
   const { screenToFlowPosition, getZoom } = useReactFlow();
   const [bend, setBend] = useState<BendState | null>(null);
   const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
   const pendingBend = useRef<BendState | null>(null);
+  const endpoints = useNodesData<CanvasFlowNode>([source, target]);
+  const maskBaseId = `codehq-label-gap${useId()}`;
+  // The label's laid-out size in flow units (the label renderer sits inside the viewport
+  // transform), so the line can stop at the word and continue after it.
+  const [labelSize, setLabelSize] = useState<{ width: number; height: number } | null>(null);
+  const labelRef = useCallback((label: HTMLElement | null) => {
+    if (label === null || typeof ResizeObserver === "undefined") {
+      setLabelSize(null);
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      const width = label.offsetWidth;
+      const height = label.offsetHeight;
+      setLabelSize((current) => (
+        width === 0 || height === 0
+          ? null
+          : current?.width === width && current.height === height ? current : { width, height }
+      ));
+    });
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, []);
 
   if (data === undefined) {
     return null;
@@ -180,7 +353,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       ? null
       : { ...data.savedBend, resetKey: data.bendResetKey };
   const dragging = draggingForKey === data.bendResetKey;
-  const bendable = !retry && !returnEdge && !branch;
+  const { turnY, returnX } = data;
+  const bendable = !retry && !returnEdge && !branch && turnY === undefined;
   const isRetryLoop = retry;
   const visual = isRetryLoop
     ? RETRY_EDGE_VISUAL
@@ -207,13 +381,30 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     const cardHeight = Math.abs(sourceY - targetY) / (RETRY_OUT_FRACTION - RETRY_IN_FRACTION);
     labelX = Math.max(sourceX, targetX) - RETRY_LABEL_INSET;
     labelY = Math.min(sourceY, targetY) - cardHeight * RETRY_IN_FRACTION - RETRY_LABEL_LIFT;
+  } else if (returnEdge && returnX !== undefined) {
+    path = roundedPolylinePath([{ x: sourceX, y: sourceY }, { x: returnX, y: sourceY }, { x: returnX, y: targetY }, { x: targetX, y: targetY }]);
+    labelX = returnX;
+    labelY = (sourceY + targetY) / 2;
+  } else if (turnY !== undefined) {
+    const outX = sourceX + TURN_LEAD;
+    const inX = targetX - TURN_LEAD;
+    path = roundedPolylinePath([
+      { x: sourceX, y: sourceY },
+      { x: outX, y: sourceY },
+      { x: outX, y: turnY },
+      { x: inX, y: turnY },
+      { x: inX, y: targetY },
+      { x: targetX, y: targetY },
+    ]);
+    labelX = (outX + inX) / 2;
+    labelY = turnY;
   } else if (returnEdge) {
     const liftY = Math.min(sourceY, targetY) - RETURN_EDGE_LIFT;
     path = `M${sourceX},${sourceY} C${sourceX},${liftY} ${targetX},${liftY} ${targetX},${targetY}`;
     labelX = (sourceX + targetX) / 2;
     labelY = liftY;
   } else {
-    const geometry = branch
+    const geometry = branch || data.routing === "step"
       ? getSmoothStepPath({
           sourceX,
           sourceY,
@@ -261,8 +452,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     labelY = bendPoint.y;
   }
 
-  const baseStrokeWidth = edgeStrokeWidth(markerVariant ?? "success");
-  const strokeWidth = baseStrokeWidth + (traced ? TRACED_STROKE_BOOST : 0);
+  const strokeWidth = EDGE_STROKE_WIDTH + (traced ? TRACED_STROKE_BOOST : 0);
   const opacity = dimmed ? DIMMED_OPACITY_FACTOR : 1;
   const edgeTransition = "opacity var(--dur-fast) var(--ease-standard), stroke-width var(--dur-fast) var(--ease-standard)";
   const edgeStyle: CSSProperties = {
@@ -289,7 +479,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   // opacity/transition as the semantic stroke so a dimmed edge's halo fades with it, and it never
   // captures pointer events (edges are not interactive; nodes drive path tracing).
   const haloStyle: CSSProperties = {
-    stroke: "var(--bg-canvas)",
+    stroke: "var(--edge-halo)",
     strokeWidth: strokeWidth + HALO_WIDTH_PADDING,
     opacity,
     transition: edgeTransition,
@@ -300,8 +490,13 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const showLabel = labelText !== undefined;
   const handlePoint = bendPoint ?? { x: labelX, y: labelY };
   const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
-  const orbDuration = markerVariant === "async" ? "1.8s" : "2.4s";
-  const orbPathId = `codehq-orb-path-${id}`;
+  const cometActive = showTravelingOrb && traced && !prefersReducedMotion();
+  const cometMaskId = `${maskBaseId}-comet-${id}`.replace(/[^\w-]/g, "_");
+  const categoryVar = (nodeId: string): string => categoryToken(endpoints.find((node) => node.id === nodeId)?.data.step.category).varName;
+  const build = data.build;
+  const buildTiming = build !== undefined
+    ? ({ "--hq-delay": `${build.delay}ms`, "--hq-dur": `${build.duration}ms` } as CSSProperties)
+    : undefined;
 
   const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
     if (!dragging) {
@@ -327,49 +522,137 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     pendingBend.current = next;
   };
 
+  const bendHandlers = {
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      pendingBend.current = null;
+      setDraggingForKey(data.bendResetKey);
+    },
+    onPointerMove: handleBendMove,
+    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>): void => {
+      event.stopPropagation();
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+      setDraggingForKey(null);
+      const completedBend = pendingBend.current;
+      pendingBend.current = null;
+      if (completedBend !== null) {
+        data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
+      }
+    },
+    onPointerCancel: (): void => {
+      pendingBend.current = null;
+      setDraggingForKey(null);
+    },
+  };
+  const bendTitle = activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
+    ? "Snapped to a 90-degree corner; drag to adjust"
+    : "Drag to bend; move near a corner to snap";
+
+  // Text-only labels: the line stops at the word and continues after it. The gap is a mask cut the
+  // size of the label box, so the halo, the line, and the live-build ink all break around it.
+  const labelGap = showLabel && labelSize !== null ? labelSize : null;
+  const gapMaskId = `${maskBaseId}-${id}`.replace(/[^\w-]/g, "_");
+  const gapMask = labelGap !== null ? `url(#${gapMaskId})` : undefined;
+  const labelStyle: CSSProperties = {
+    ...buildTiming,
+    transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+    color: `var(${visual.varName})`,
+    opacity: dimmed ? DIMMED_OPACITY_FACTOR : 1,
+    transition: "opacity var(--dur-fast) var(--ease-standard)",
+  };
+  const labelClassName = [
+    styles.label,
+    "nodrag nopan",
+    build !== undefined ? `hq-edge-build ${build.set}` : "",
+  ].filter(Boolean).join(" ");
+
+  const haloMaskId = `${maskBaseId}-halo-${id}`.replace(/[^\w-]/g, "_");
+
   return (
     <>
+      <defs>
+        <mask id={haloMaskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+          <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+          <circle cx={targetX} cy={targetY} r={HALO_TIP_CUT} fill="black" />
+        </mask>
+      </defs>
+      {labelGap !== null ? (
+        <defs>
+          <mask id={gapMaskId} maskUnits="userSpaceOnUse" x={-1e5} y={-1e5} width={2e5} height={2e5}>
+            <rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="white" />
+            <rect
+              x={labelX - labelGap.width / 2}
+              y={labelY - labelGap.height / 2}
+              width={labelGap.width}
+              height={labelGap.height}
+              rx={3}
+              fill="black"
+            />
+          </mask>
+        </defs>
+      ) : null}
       <g
         data-workflow-edge={id}
         data-edge-source={source}
         data-edge-target={target}
         data-traveling-orb={showTravelingOrb ? "true" : undefined}
-        data-orb-active={showTravelingOrb && traced ? "true" : undefined}
-        className={showTravelingOrb ? styles.orbHost : undefined}
+        data-orb-active={cometActive ? "true" : undefined}
+        className={[build !== undefined ? `hq-edge-build ${build.set}` : ""].filter(Boolean).join(" ") || undefined}
+        style={buildTiming}
       >
-        <path d={path} fill="none" data-edge-halo="" style={haloStyle} />
-        <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
-        {showTravelingOrb ? (
-          <>
-            <path id={orbPathId} d={path} fill="none" className={styles.orbTrack} />
-            <g className={styles.orb} style={{ color: `var(${visual.varName})` }} aria-hidden="true">
-              <circle r="6" className={styles.orbHalo} />
-              <circle r="3.2" className={styles.orbBead} />
-              <animateMotion dur={orbDuration} repeatCount="indefinite" rotate="auto">
-                <mpath href={`#${orbPathId}`} />
-              </animateMotion>
-            </g>
-          </>
-        ) : null}
+        <g mask={gapMask}>
+          <g mask={cometActive ? `url(#${cometMaskId})` : undefined}>
+            <path d={path} fill="none" data-edge-halo="" mask={`url(#${haloMaskId})`} style={haloStyle} />
+            <BaseEdge path={path} markerEnd={`url(#${edgeMarkerId(markerVariant)})`} style={edgeStyle} />
+          </g>
+          {cometActive ? <HandoffComet path={path} maskId={cometMaskId} from={categoryVar(source)} to={categoryVar(target)} /> : null}
+        </g>
       </g>
+      {build !== undefined ? (
+        <path
+          d={path}
+          pathLength={1}
+          className={`hq-edge-ink ${build.set}`}
+          data-edge-ink={id}
+          mask={gapMask}
+          style={{ ...buildTiming, stroke: `var(${visual.varName})`, color: `var(${visual.varName})`, strokeWidth: strokeWidth + 1 }}
+        />
+      ) : null}
+      {build !== undefined ? <InkDrop path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
       {showLabel ? (
         <EdgeLabelRenderer>
-          <div
-            className={`${styles.label} ${bendable ? "" : styles.labelHoverable}`}
-            data-edge-label={id}
-            {...(bendable ? {} : { title: labelText })}
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-              color: `var(${visual.varName})`,
-              opacity: dimmed ? DIMMED_OPACITY_FACTOR : 1,
-              transition: "opacity var(--dur-fast) var(--ease-standard)",
-            }}
-          >
-            {labelText}
-          </div>
+          {bendable ? (
+            // On a bendable edge the word is the bend handle: pull the word to bend the edge.
+            <button
+              ref={labelRef}
+              type="button"
+              className={`${labelClassName} ${styles.labelHandle}`}
+              data-edge-label={id}
+              data-edge-bend-handle={id}
+              data-active={dragging}
+              aria-label={`Bend edge ${id}`}
+              title={`${labelText}\n${bendTitle}`}
+              style={labelStyle}
+              {...bendHandlers}
+            >
+              {labelText}
+            </button>
+          ) : (
+            <div
+              ref={labelRef}
+              className={`${labelClassName} ${styles.labelHoverable}`}
+              data-edge-label={id}
+              title={labelText}
+              style={labelStyle}
+            >
+              {labelText}
+            </div>
+          )}
         </EdgeLabelRenderer>
       ) : null}
-      {bendable ? (
+      {bendable && !showLabel ? (
         <foreignObject
           className={styles.bendHandleRegion}
           x={handlePoint.x - 18}
@@ -385,31 +668,8 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
             data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
             style={{ color: `var(${visual.varName})` }}
             aria-label={`Bend edge ${id}`}
-            title={`${showLabel ? `${labelText}\n` : ""}${activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
-              ? "Snapped to a 90-degree corner; drag to adjust"
-              : "Drag to bend; move near a corner to snap"}`}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              event.currentTarget.setPointerCapture?.(event.pointerId);
-              pendingBend.current = null;
-              setDraggingForKey(data.bendResetKey);
-            }}
-            onPointerMove={handleBendMove}
-            onPointerUp={(event) => {
-              event.stopPropagation();
-              event.currentTarget.releasePointerCapture?.(event.pointerId);
-              setDraggingForKey(null);
-              const completedBend = pendingBend.current;
-              pendingBend.current = null;
-              if (completedBend !== null) {
-                data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
-              }
-            }}
-            onPointerCancel={() => {
-              pendingBend.current = null;
-              setDraggingForKey(null);
-            }}
+            title={bendTitle}
+            {...bendHandlers}
           />
         </foreignObject>
       ) : null}

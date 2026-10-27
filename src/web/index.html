@@ -16,6 +16,10 @@
             var theme = parsed && parsed.state && parsed.state.theme;
             if (theme === "light" || theme === "dark") {
               document.documentElement.setAttribute("data-theme", theme);
+              var scene = theme === "dark" ? parsed.state.darkScene : parsed.state.lightScene;
+              if (typeof scene === "string") {
+                document.documentElement.setAttribute("data-scene", scene);
+              }
             }
           }
         } catch (error) {

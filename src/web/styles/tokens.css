@@ -65,6 +65,15 @@
   --accent-orchid: #bf88cc; /* unused; kept so old mixes do not go missing */
   --focus-ring: #5b8def;
 
+  /* ---- step-card categories (semantics.ts) — each defaults to its accent, and only the card
+     reads it, so recolouring a category never repaints an edge or a badge ---- */
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+
   /* ---- technical canvas texture (very low opacity, theme-tuned) ---- */
   --grid-line: rgba(255, 255, 255, 0.035);
   --grid-line-strong: rgba(255, 255, 255, 0.07);
@@ -108,6 +117,27 @@
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- scene plumbing (design/scenes.ts) — what a scene may swap besides colours ---- */
+  --stage-bg: var(--bg-canvas);
+  --stage-grid: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  --surface-alpha: 100%;
+  --surface-filter: none;
+  --card-alpha: 100%;
+  --card-filter: none;
+  --edge-halo: var(--bg-canvas);
+  /* The agent cursor: a dark arrow with a white keyline, the same on every scene. */
+  --agent-cursor-fill: #0b0c0e;
+  --agent-cursor-line: #ffffff;
+  --agent-cursor-shadow: rgb(0 0 0 / 0.4);
+  --overflow-fade: var(--bg-canvas);
+  --scene-c0: #0e0f11;
+  --scene-c1: #191c20;
+  --scene-c2: #5b8def;
+  --scene-c3: #5ec4c0;
+  --scene-c4: #d98cb4;
 }
 
 :root[data-theme="light"] {
@@ -141,6 +171,173 @@
   --grid-line-strong: rgba(0, 0, 0, 0.07);
   --grid-dot: rgba(0, 0, 0, 0.085);
   --shadow-node-rest: 0 1px 2px rgba(22, 24, 27, 0.08), 0 8px 24px rgba(22, 24, 27, 0.06);
+}
+
+/* ================================================================================================
+ * Scenes. Each block is a complete look: background shader colours (--scene-c0..c4, read by
+ * components/backdrop), surfaces, text, every accent re-picked to read on that background, and
+ * card colours (--cat-*) curated for it: dark scenes keep >=8:1 against their canvas.
+ * Dark scenes ride on the dark defaults above; light scenes ride on the paper block.
+ * `[data-scene-probe]` lets the appearance picker read a scene's colours without applying it.
+ * Light-scene accents and card colours keep >=4.5:1 against their white surface.
+ * ============================================================================================== */
+
+:root[data-scene="plain"][data-theme="dark"],
+:root[data-theme="dark"] [data-scene-probe="plain"] {
+  --scene-c0: #0e0f11;
+  --scene-c1: #1b1e23;
+  --scene-c2: #5ec4c0;
+  --scene-c3: #d98cb4;
+  --scene-c4: #e08d55;
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+}
+
+:root[data-scene="plain"][data-theme="light"],
+:root[data-theme="light"] [data-scene-probe="plain"] {
+  --scene-c0: #f6f4f0;
+  --scene-c1: #e9e4da;
+  --scene-c2: #0f7f7a;
+  --scene-c3: #a83a72;
+  --scene-c4: #a85718;
+  --cat-entry: var(--accent-output);
+  --cat-logic: var(--accent-cyan);
+  --cat-decision: var(--accent-rose);
+  --cat-data: var(--accent-orange);
+  --cat-external: var(--accent-violet);
+  --cat-output: var(--accent-output);
+}
+
+:root[data-scene="abyss-mesh"],
+[data-scene-probe="abyss-mesh"] {
+  --scene-c0: #010810;
+  --scene-c1: #04324a;
+  --scene-c2: #4fe3d0;
+  --scene-c3: #b8fff0;
+  --scene-c4: #ff7ac6;
+  --bg-canvas: #02121a;
+  --bg-surface: #062029;
+  --bg-raised: #0a2a35;
+  --bg-inset: #010b10;
+  --border-subtle: #0f3a46;
+  --border-strong: #16505f;
+  --text-primary: #e6fbff;
+  --text-secondary: #98c2cc;
+  --text-tertiary: #628e99;
+  --accent-blue: #60a5fa;
+  --accent-green: #34d399;
+  --accent-amber: #fcd34d;
+  --accent-red: #fb7185;
+  --accent-violet: #a5b4fc;
+  --accent-neutral: #7fa3ac;
+  --accent-cyan: #2dd4bf;
+  --accent-ice: #ccfbf1;
+  --accent-output: #6ee7b7;
+  --accent-rose: #f9a8d4;
+  --accent-orange: #fdba74;
+  /* card colours, curated for this scene */
+  --cat-entry: #7cf5c8;
+  --cat-logic: #4fd8ff;
+  --cat-decision: #ff8fc8;
+  --cat-data: #ffc78a;
+  --cat-external: #b3a4ff;
+  --cat-output: #7cf5c8;
+  --focus-ring: #60a5fa;
+  --grid-dot: rgba(204, 251, 241, 0.12);
+}
+
+:root[data-scene="sorbet"],
+[data-scene-probe="sorbet"] {
+  --scene-c0: #fff4ec;
+  --scene-c1: #ffc2a6;
+  --scene-c2: #cdb5ff;
+  --scene-c3: #a8edd2;
+  --scene-c4: #a6d4ff;
+  --bg-canvas: #fff6f0;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-inset: #fbeee6;
+  --border-subtle: #f0dcd2;
+  --border-strong: #e2c4b6;
+  --text-primary: #2a1f2d;
+  --text-secondary: #67566a;
+  --text-tertiary: #988699;
+  --accent-blue: #3b5bdb;
+  --accent-green: #2b8a3e;
+  --accent-amber: #a85400;
+  --accent-red: #c92a2a;
+  --accent-violet: #6741d9;
+  --accent-neutral: #6b5a6e;
+  --accent-cyan: #0b7285;
+  --accent-ice: #1c4f8f;
+  --accent-output: #2b8a3e;
+  --accent-rose: #c2255c;
+  --accent-orange: #c4420c;
+  /* card colours, curated for this scene */
+  --cat-entry: #1e7a5a;
+  --cat-logic: #2f62c9;
+  --cat-decision: #c2306f;
+  --cat-data: #bd4b17;
+  --cat-external: #6b45c9;
+  --cat-output: #1e7a5a;
+  --focus-ring: #3b5bdb;
+  --grid-dot: rgba(42, 31, 45, 0.1);
+}
+
+:root[data-scene="seafoam"],
+[data-scene-probe="seafoam"] {
+  --scene-c0: #f0fbf6;
+  --scene-c1: #b9ecd6;
+  --scene-c2: #b6d8ff;
+  --scene-c3: #e3cdff;
+  --scene-c4: #ffe3b8;
+  --bg-canvas: #f3fbf8;
+  --bg-surface: #ffffff;
+  --bg-raised: #ffffff;
+  --bg-inset: #e7f5ef;
+  --border-subtle: #d5e9e0;
+  --border-strong: #bcd8cb;
+  --text-primary: #16282a;
+  --text-secondary: #4d6466;
+  --text-tertiary: #7d9496;
+  --accent-blue: #3b5bdb;
+  --accent-green: #2b8a3e;
+  --accent-amber: #a85400;
+  --accent-red: #c92a2a;
+  --accent-violet: #6741d9;
+  --accent-neutral: #6b5a6e;
+  --accent-cyan: #0b7285;
+  --accent-ice: #1c4f8f;
+  --accent-output: #2b8a3e;
+  --accent-rose: #c2255c;
+  --accent-orange: #c4420c;
+  /* card colours, curated for this scene */
+  --cat-entry: #1e7a5a;
+  --cat-logic: #2f62c9;
+  --cat-decision: #c2306f;
+  --cat-data: #bd4b17;
+  --cat-external: #6b45c9;
+  --cat-output: #1e7a5a;
+  --focus-ring: #3b5bdb;
+  --grid-dot: rgba(22, 40, 42, 0.1);
+}
+
+/* A shader scene paints its own background, so the stage turns transparent and the chrome turns
+   to frosted glass over it. Edge casings thin to a translucent halo so they don't draw dark tubes
+   across a bright background. */
+:root[data-scene-shader] {
+  --stage-bg: transparent;
+  --stage-grid: none;
+  --surface-alpha: 72%;
+  --surface-filter: blur(18px) saturate(1.6);
+  --card-alpha: 84%;
+  --card-filter: blur(12px) saturate(1.4);
+  --edge-halo: color-mix(in srgb, var(--bg-canvas) 45%, transparent);
+  --overflow-fade: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

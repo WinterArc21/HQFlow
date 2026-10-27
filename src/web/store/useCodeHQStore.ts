@@ -1,12 +1,40 @@
+import { findScene } from "../design/scenes";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type {
   CanvasBend,
   CanvasPoint,
+  CanvasSlot,
+  CardSize,
   WorkflowCanvasLayout,
 } from "@schema/wire";
 
-export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
+export type { CanvasBend, CanvasBendSnap, CanvasPoint, CardSize, WorkflowCanvasLayout } from "@schema/wire";
+
+type CanvasViewName = NonNullable<WorkflowCanvasLayout["view"]>;
+
+function slotOf(view: CanvasViewName, size: CardSize): CanvasSlot {
+  return size === "standard" ? view : `${view}:${size}`;
+}
+
+/** The card format a layout's live positions belong to. */
+export function layoutCardSize(layout: WorkflowCanvasLayout | undefined): CardSize {
+  return layout?.cardSize ?? "standard";
+}
+
+/** Sets the live positions and bends aside under `from` and brings back the ones saved under
+ * `to`, so each view and card format keeps what the user dragged in it. */
+function moveToSlot(layout: WorkflowCanvasLayout, from: CanvasSlot, to: CanvasSlot, size: CardSize): WorkflowCanvasLayout {
+  const { [to]: restored, ...others } = layout.otherViews ?? {};
+  const { cardSize: _previous, ...rest } = layout;
+  return {
+    ...rest,
+    nodePositions: restored?.nodePositions ?? {},
+    edgeBends: restored?.edgeBends ?? {},
+    otherViews: { ...others, [from]: { nodePositions: layout.nodePositions, edgeBends: layout.edgeBends } },
+    ...(size !== "standard" ? { cardSize: size } : {}),
+  };
+}
 
 /**
  * UI state only (contract §11) — workflow/step/project data always comes from the server
@@ -14,6 +42,8 @@ export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } fr
  */
 
 export type Theme = "dark" | "light";
+/** Ambient motion: `full` animates scenes and edges, `calm` slows them, `still` freezes them. */
+export type MotionLevel = "full" | "calm" | "still";
 
 export interface StepPanRequest {
   workflowId: string;
@@ -21,17 +51,14 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 4;
+const PERSIST_VERSION = 7;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
   selectedStepId: string | null;
   /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
   stepPanRequest: StepPanRequest | null;
-  /** Whether the selected step shows its full side panel instead of the in-place step card. */
-  stepDetailFull: boolean;
   /** Per-step expansion; `true` = that card shows files, symbols, and I/O. */
-  expandedStepIds: Record<string, true>;
   /** In-memory visual state loaded from the active repository's local server. */
   canvasLayouts: Record<string, WorkflowCanvasLayout>;
   /** Non-persisted signal for the mounted canvas to restore its generated node positions. */
@@ -40,26 +67,40 @@ interface CodeHQUiState {
   searchOpen: boolean;
   diagnosticsOpen: boolean;
   theme: Theme;
+  /** The scene shown in each theme family; the theme toggle swaps between the two. */
+  darkScene: string;
+  lightScene: string;
+  motion: MotionLevel;
+  cardSize: CardSize;
+  appearanceOpen: boolean;
 }
 
 interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
-  openStepDetailFull: () => void;
-  toggleStepExpanded: (stepId: string) => void;
-  collapseAllSteps: () => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
   saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
   reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
   resetLayout: (workflowId?: string) => void;
+  /** Picks a view for one workflow. Dragged positions and bends belong to the view they were
+   * made in: they are set aside under `from` and come back when the user returns to it. */
+  setCanvasView: (workflowId: string, view: CanvasViewName, from: CanvasViewName) => void;
+  /** Brings one workflow's saved geometry in line with the current card format, setting the
+   * positions dragged in the previous format aside the same way `setCanvasView` does. */
+  matchCardSize: (workflowId: string, view: CanvasViewName) => void;
   setSearchQuery: (query: string) => void;
   openSearch: () => void;
   closeSearch: () => void;
   toggleDiagnostics: () => void;
   closeDiagnostics: () => void;
   setTheme: (theme: Theme) => void;
+  /** Shows a scene: switches to its theme family and remembers it for that family. */
+  setScene: (sceneId: string, base: Theme) => void;
+  setMotion: (motion: MotionLevel) => void;
+  setCardSize: (cardSize: CardSize) => void;
+  setAppearanceOpen: (open: boolean) => void;
 }
 
 export type CodeHQStore = CodeHQUiState & CodeHQUiActions;
@@ -110,14 +151,17 @@ const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
   selectedStepId: null,
   stepPanRequest: null,
-  stepDetailFull: false,
-  expandedStepIds: {},
   canvasLayouts: {},
   layoutResetRevision: 0,
   searchQuery: "",
   searchOpen: false,
   diagnosticsOpen: false,
   theme: getInitialTheme(),
+  darkScene: "abyss-mesh",
+  lightScene: "sorbet",
+  motion: "full",
+  cardSize: "standard",
+  appearanceOpen: false,
 };
 
 export const useCodeHQStore = create<CodeHQStore>()(
@@ -130,9 +174,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
           selectedWorkflowId: workflowId,
           selectedStepId: null,
           stepPanRequest: null,
-          stepDetailFull: false,
-          expandedStepIds: {},
-        }),
+                }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes
@@ -142,7 +184,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
         set((state) => ({
           selectedStepId: stepId,
           stepPanRequest: null,
-          stepDetailFull: false,
           diagnosticsOpen: stepId !== null ? false : state.diagnosticsOpen,
         })),
 
@@ -150,24 +191,8 @@ export const useCodeHQStore = create<CodeHQStore>()(
         set({
           selectedStepId: stepId,
           stepPanRequest: { workflowId, stepId },
-          stepDetailFull: false,
           diagnosticsOpen: false,
         }),
-
-      openStepDetailFull: () => set({ stepDetailFull: true }),
-
-      toggleStepExpanded: (stepId) =>
-        set((state) => {
-          const next = { ...state.expandedStepIds };
-          if (next[stepId]) {
-            delete next[stepId];
-          } else {
-            next[stepId] = true;
-          }
-          return { expandedStepIds: next };
-        }),
-
-      collapseAllSteps: () => set({ expandedStepIds: {} }),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
         const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
@@ -200,29 +225,22 @@ export const useCodeHQStore = create<CodeHQStore>()(
       }),
 
       reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
-        const expandedStepIds = Object.fromEntries(
-          Object.entries(state.expandedStepIds).filter(([id]) => nodeIds.has(id)),
-        ) as Record<string, true>;
         const layout = state.canvasLayouts[workflowId];
         if (layout === undefined) {
-          return Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
-            ? state
-            : { expandedStepIds };
+          return state;
         }
         const nodePositions = Object.fromEntries(Object.entries(layout.nodePositions).filter(([id]) => nodeIds.has(id)));
         const edgeBends = Object.fromEntries(Object.entries(layout.edgeBends).filter(([id]) => edgeIds.has(id)));
         if (
           Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length
           && Object.keys(edgeBends).length === Object.keys(layout.edgeBends).length
-          && Object.keys(expandedStepIds).length === Object.keys(state.expandedStepIds).length
         ) {
           return state;
         }
         return {
-          expandedStepIds,
           canvasLayouts: {
             ...state.canvasLayouts,
-            [workflowId]: { nodePositions, edgeBends },
+            [workflowId]: { ...layout, nodePositions, edgeBends },
           },
         };
       }),
@@ -233,8 +251,39 @@ export const useCodeHQStore = create<CodeHQStore>()(
           return state;
         }
         const canvasLayouts = { ...state.canvasLayouts };
-        delete canvasLayouts[workflowId];
-        return { canvasLayouts, expandedStepIds: {}, layoutResetRevision: state.layoutResetRevision + 1 };
+        // Reset clears what the user dragged in the current view; the view they picked and
+        // the positions they set in other views stay.
+        const { nodePositions: _positions, edgeBends: _bends, ...kept }: WorkflowCanvasLayout = canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        if (kept.view === undefined && kept.otherViews === undefined) {
+          delete canvasLayouts[workflowId];
+        } else {
+          canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, ...kept };
+        }
+        return { canvasLayouts, layoutResetRevision: state.layoutResetRevision + 1 };
+      }),
+
+      setCanvasView: (workflowId, view, from) => set((state) => {
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        const size = layoutCardSize(layout);
+        return {
+          canvasLayouts: {
+            ...state.canvasLayouts,
+            [workflowId]: { ...moveToSlot(layout, slotOf(from, size), slotOf(view, size), size), view },
+          },
+        };
+      }),
+
+      matchCardSize: (workflowId, view) => set((state) => {
+        const layout = state.canvasLayouts[workflowId];
+        if (layout === undefined || layoutCardSize(layout) === state.cardSize) {
+          return state;
+        }
+        return {
+          canvasLayouts: {
+            ...state.canvasLayouts,
+            [workflowId]: moveToSlot(layout, slotOf(view, layoutCardSize(layout)), slotOf(view, state.cardSize), state.cardSize),
+          },
+        };
       }),
 
       setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -252,14 +301,31 @@ export const useCodeHQStore = create<CodeHQStore>()(
       closeDiagnostics: () => set({ diagnosticsOpen: false }),
 
       setTheme: (theme) => set({ theme }),
+
+      setScene: (sceneId, base) => set(findScene(sceneId)?.base === "both" ? { theme: base, darkScene: sceneId, lightScene: sceneId } : base === "dark" ? { theme: base, darkScene: sceneId } : { theme: base, lightScene: sceneId }),
+
+      setMotion: (motion) => set({ motion }),
+
+      setCardSize: (cardSize) => set({ cardSize }),
+
+      setAppearanceOpen: (appearanceOpen) => set({ appearanceOpen }),
     }),
     {
       name: STORAGE_KEY,
       version: PERSIST_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (state) => ({ theme: state.theme }),
+      partialize: (state) => ({
+        theme: state.theme,
+        darkScene: state.darkScene,
+        lightScene: state.lightScene,
+        motion: state.motion,
+        cardSize: state.cardSize,
+      }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
+       * v5 added appearance fields; older states simply take their defaults from the initial state.
+       * v6 dropped the per-scene card colour overrides: each scene now owns its card colours.
+       * v7 dropped the grid and card-surface overrides: each scene owns those too.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {
@@ -268,6 +334,9 @@ export const useCodeHQStore = create<CodeHQStore>()(
         const state = { ...(persisted as Record<string, unknown>) };
         delete state.depth;
         delete state.canvasLayouts;
+        delete state.categoryColors;
+        delete state.gridMode;
+        delete state.cardSurface;
         return state as unknown as CodeHQUiState;
       },
     },

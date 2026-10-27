@@ -1,0 +1,73 @@
+.hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 6px 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-green) 40%, var(--border-subtle));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg-canvas) 60%, transparent);
+  font-size: var(--fs-tiny);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: hintIn 320ms var(--ease-spring);
+}
+
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-green) 22%, transparent);
+}
+
+.text {
+  color: var(--text-secondary);
+}
+
+.text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.primary,
+.secondary {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font: 600 var(--fs-tiny) / 1.2 var(--font-ui);
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--accent-green);
+  background: var(--accent-green);
+  color: var(--bg-canvas);
+}
+
+.secondary {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.secondary:hover {
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint {
+    animation: none;
+  }
+}

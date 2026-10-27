@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App as McpApp, applyDocumentTheme, applyHostStyleVariables } from "@modelcontextprotocol/ext-apps";
 import { OpenAIExtensions } from "@openai/mcp-extensions/app";
 import { App } from "../App";
+import { Backdrop } from "../components/backdrop";
 import { useCodeHQStore } from "../store/useCodeHQStore";
 import { installApiBridge } from "./bridge";
 import "../styles/tokens.css";
@@ -33,5 +34,5 @@ const container = document.getElementById("root");
 if (container === null) throw new Error("Missing plugin root.");
 // The app's first `/api/state` request needs the host connection, so render after connecting.
 host.connect().then(() => applyContext(host.getHostContext())).finally(() => {
-  createRoot(container).render(<StrictMode><App /></StrictMode>);
+  createRoot(container).render(<StrictMode><Backdrop /><App /></StrictMode>);
 });

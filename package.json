@@ -5,7 +5,7 @@
   "description": "Local-first workflow mapping for coding agents, rendered as an interactive canvas.",
   "license": "MIT",
   "author": "WinterArc21",
-  "homepage": "https://github.com/WinterArc21/HQFlow#readme",
+  "homepage": "https://hqflow.vercel.app/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WinterArc21/HQFlow.git"

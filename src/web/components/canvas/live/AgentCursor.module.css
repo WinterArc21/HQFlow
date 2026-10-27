@@ -1,0 +1,188 @@
+/* Positioned by its Web Animation alone; the tip of the arrow is the drawing point. */
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+}
+
+/* A dark arrow with a white keyline, like a person's cursor in a shared doc: it reads on every
+   scene, light or dark. The tip is the drawing point. */
+.pointer {
+  position: absolute;
+  top: -3px;
+  left: -3.6px;
+  width: 22px;
+  min-width: 22px;
+  height: 24px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px var(--agent-cursor-shadow)) drop-shadow(0 4px 8px var(--agent-cursor-shadow));
+}
+
+.pointer path {
+  fill: var(--agent-cursor-fill);
+  stroke: var(--agent-cursor-line);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+/* A name tag like a collaborator's cursor: who is drawing, and what. The dot tells pens apart. */
+.label {
+  position: absolute;
+  top: 19px;
+  left: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border: 1.5px solid var(--agent-cursor-line);
+  border-radius: 999px 999px 999px 4px;
+  background: var(--agent-cursor-fill);
+  color: var(--agent-cursor-line);
+  font: 600 var(--fs-micro) / 1.4 var(--font-ui);
+  white-space: nowrap;
+  box-shadow: 0 4px 14px var(--agent-cursor-shadow);
+  animation: labelIn 260ms var(--ease-spring);
+}
+
+.labelDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pen-color);
+  animation: typing 700ms ease-in-out infinite alternate;
+}
+
+@keyframes labelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.85);
+  }
+}
+
+@keyframes typing {
+  from {
+    opacity: 0.35;
+  }
+}
+
+/* ---- the weave: tiles fly off the pen's tip into the marquee, then clear for the card ---- */
+.tiles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.tile {
+  position: absolute;
+  opacity: 0;
+  transform-origin: 0 0;
+  animation:
+    tileFly var(--tile-fly) cubic-bezier(0.16, 1, 0.3, 1) var(--tile-at) both,
+    tileOut 260ms var(--ease-standard) var(--tile-out) forwards;
+}
+
+@keyframes tileFly {
+  from {
+    opacity: 0;
+    transform: translate(var(--tile-dx), var(--tile-dy)) rotate(var(--tile-rot)) scale(0.2);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tileOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- the toast: one line, top centre, fades out as the build settles ---- */
+.toast {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--focus-ring) 40%, var(--border-subtle));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-surface) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--focus-ring) 22%, transparent);
+  font-size: var(--fs-tiny);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: toastLife linear both;
+}
+
+@keyframes toastLife {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.92);
+  }
+  6% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.98);
+  }
+}
+
+.toastPulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+}
+
+.toastPulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent-green);
+  animation: ping 1100ms var(--ease-out-expo) infinite;
+}
+
+@keyframes ping {
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.toastFile {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.toastText {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 685px) {
+  .toast {
+    top: auto;
+    bottom: calc(6 * 28px);
+  }
+}

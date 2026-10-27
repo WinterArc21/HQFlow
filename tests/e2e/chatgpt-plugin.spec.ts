@@ -64,6 +64,7 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
       throw new Error(`Plugin UI failed to mount: ${errors.join("; ")}`, { cause: error });
     }
     await expect(frame.locator('[data-step-node="generate-video"]')).toBeVisible();
+    await expect(frame.locator('[data-scene-canvas="abyss-mesh"]')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("hqflow-plugin-overview.png") });
     await frame.locator('[data-step-node="generate-video"]').click();
     await expect(frame.getByRole("heading", { name: "Generate Video" })).toBeVisible();
@@ -71,6 +72,13 @@ test("bundled plugin serves a canvas through the MCP Apps host bridge", async ({
     await firstStep.click();
     await expect(frame.locator("[data-step-card]")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("hqflow-plugin-workflow.png") });
+    await frame.getByRole("button", { name: "Appearance", exact: true }).click();
+    await frame.getByRole("radio", { name: "Plain", exact: true }).click();
+    await expect(frame.locator("[data-scene-canvas]")).toHaveCount(0);
+    await frame.getByRole("radio", { name: "Sorbet", exact: true }).click();
+    await expect(frame.locator('[data-scene-canvas="sorbet"]')).toBeVisible();
+    await frame.getByRole("button", { name: "Close appearance", exact: true }).click();
+    await page.screenshot({ path: testInfo.outputPath("hqflow-plugin-sorbet.png") });
     expect(errors).toEqual([]);
   } finally {
     await client.close();

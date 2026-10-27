@@ -7,7 +7,6 @@ import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./comp
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
 import { WorkflowCanvas } from "./components/canvas";
 import { RepositoryOverview } from "./components/repository-map";
-import { StepDrawer } from "./components/drawer";
 import { CommandPalette } from "./components/search";
 import { useCodeHQStore } from "./store/useCodeHQStore";
 
@@ -30,9 +29,6 @@ export function App() {
 
   const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
-  const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
-  const selectStep = useCodeHQStore((state) => state.selectStep);
-  const stepDetailFull = useCodeHQStore((state) => state.stepDetailFull);
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
   const closeDiagnostics = useCodeHQStore((state) => state.closeDiagnostics);
@@ -88,8 +84,6 @@ export function App() {
       ))
       .map((workflow) => workflow.id) ?? [],
   );
-  const displayedWorkflow = selectedRecord?.workflow ?? null;
-  const displayedSourceChecks = selectedRecord?.sourceChecks ?? {};
 
   const handleRecheck = async (): Promise<void> => {
     await recheck();
@@ -106,6 +100,7 @@ export function App() {
       {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
       locationLabel={selectedRecord?.workflow.name ?? "Overview"}
       status={connectionStatus}
+      pulseKey={snapshot.generatedAt}
       {...(connectionStatus === "invalid" ? { errorCount } : {})}
       navigator={(close) => (
         <WorkflowNavigator
@@ -131,15 +126,6 @@ export function App() {
       }
       overlays={
         <>
-          {/* A selected step opens as a card on the canvas; the side panel is its "full details". */}
-          {displayedWorkflow !== null && selectedStepId !== null && stepDetailFull ? (
-            <StepDrawer
-              workflow={displayedWorkflow}
-              stepId={selectedStepId}
-              sourceChecks={displayedSourceChecks}
-              onClose={() => selectStep(null)}
-            />
-          ) : null}
           {diagnosticsOpen ? (
             <DiagnosticsPanel diagnostics={snapshot.diagnostics} onClose={closeDiagnostics} onRecheck={handleRecheck} />
           ) : null}

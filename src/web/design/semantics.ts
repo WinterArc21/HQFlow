@@ -54,17 +54,21 @@ export interface ToneVisual {
  * External uses `--accent-violet` so the canvas matches the drawer; orchid is unused.
  * Logic uses `--accent-cyan`. Success edges use `--accent-ice` so the happy path is not a
  * category colour and can run from the first node to the last.
+ *
+ * Each category reads its own `--cat-*` token (tokens.css), which defaults to the accent named
+ * above. Each scene curates its card colours through that token alone, so a card colour never
+ * leaks into the edges, badges, or drawer services that share the accent.
  */
 const CATEGORY_VISUALS: Record<NonNullable<WorkflowStep["category"]>, CategoryVisual> = {
-  entry: { varName: "--accent-output", label: "Entry" },
-  logic: { varName: "--accent-cyan", label: "Logic" },
-  decision: { varName: "--accent-rose", label: "Decision" },
-  data: { varName: "--accent-orange", label: "Data" },
-  external: { varName: "--accent-violet", label: "External" },
-  output: { varName: "--accent-output", label: "Output" },
+  entry: { varName: "--cat-entry", label: "Entry" },
+  logic: { varName: "--cat-logic", label: "Logic" },
+  decision: { varName: "--cat-decision", label: "Decision" },
+  data: { varName: "--cat-data", label: "Data" },
+  external: { varName: "--cat-external", label: "External" },
+  output: { varName: "--cat-output", label: "Output" },
 };
 
-const UNSPECIFIED_CATEGORY_VISUAL: CategoryVisual = { varName: "--accent-cyan", label: "Unspecified" };
+const UNSPECIFIED_CATEGORY_VISUAL: CategoryVisual = { varName: "--cat-logic", label: "Unspecified" };
 
 /** Left-marker colour + label for a step's `category` (contract §10 table). */
 export function categoryToken(category?: WorkflowStep["category"]): CategoryVisual {

@@ -6,12 +6,14 @@ import { useCodeHQStore } from "../../store/useCodeHQStore";
 import type { FitInsets } from "./fitViewport";
 import { computeOutcomeStepIds } from "./graph";
 import type { LayoutBounds } from "./layout";
-import { StepCard, STEP_CARD_WIDTH } from "./StepCard";
+import { StepCard, STEP_CARD_HEIGHT, STEP_CARD_WIDTH } from "./StepCard";
 import type { CanvasFlowNode } from "./types";
 
 /** The card never opens smaller than this, so it is always readable, nor larger than this. */
 const CARD_MIN_ZOOM = 0.9;
 const CARD_MAX_ZOOM = 1.1;
+/** On a small screen the card shrinks to fit between the chrome, down to this floor. */
+const CARD_FLOOR_ZOOM = 0.5;
 /** Breathing room between the card and the chrome it is fitted between. */
 const CARD_MARGIN = 8;
 
@@ -29,14 +31,12 @@ export interface StepCardLayerProps {
 /**
  * Opens the selected step as a `StepCard` over its own node. The card grows toward free space
  * (leftward when the node is at the board's right edge), and the viewport pans so the whole card
- * sits between the title island and the dock. The full side panel takes over once requested.
+ * sits between the title island and the dock.
  */
 export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, containerRef, reducedMotion }: StepCardLayerProps) {
   const reactFlow = useReactFlow();
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
-  const stepDetailFull = useCodeHQStore((state) => state.stepDetailFull);
   const selectStep = useCodeHQStore((state) => state.selectStep);
-  const openStepDetailFull = useCodeHQStore((state) => state.openStepDetailFull);
 
   // ← → walks the work steps in story order; terminal outcomes are endpoints, not stops.
   const walk = useMemo(() => {
@@ -53,12 +53,15 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
   // Pan once per opened step (not on every node drag) so the card lands clear of the chrome.
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (origin === null || stepDetailFull || container === null) {
+    if (origin === null || container === null) {
       return;
     }
     const rect = container.getBoundingClientRect();
-    const zoom = Math.min(Math.max(reactFlow.getZoom(), CARD_MIN_ZOOM), CARD_MAX_ZOOM);
     const freeWidth = rect.width - insets.left - insets.right;
+    const freeHeight = rect.height - insets.top - insets.bottom;
+    const fitsZoom = Math.min((freeWidth - CARD_MARGIN * 2) / STEP_CARD_WIDTH, (freeHeight - CARD_MARGIN * 2) / STEP_CARD_HEIGHT);
+    const minZoom = Math.max(CARD_FLOOR_ZOOM, Math.min(CARD_MIN_ZOOM, fitsZoom));
+    const zoom = Math.min(Math.max(reactFlow.getZoom(), minZoom), CARD_MAX_ZOOM, Math.max(fitsZoom, minZoom));
     void reactFlow.setViewport(
       {
         x: insets.left + freeWidth / 2 - (origin.x + STEP_CARD_WIDTH / 2) * zoom,
@@ -68,9 +71,9 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
       { duration: reducedMotion ? 0 : 300 },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStepId, stepDetailFull]);
+  }, [selectedStepId]);
 
-  if (step === undefined || origin === null || stepDetailFull) {
+  if (step === undefined || origin === null) {
     return null;
   }
 
@@ -97,7 +100,6 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
         origin={origin}
         growsLeft={growsLeft}
         onClose={close}
-        onOpenFull={openStepDetailFull}
         onWalk={walkTo}
       />
     </ViewportPortal>

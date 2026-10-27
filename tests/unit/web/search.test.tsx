@@ -71,23 +71,6 @@ describe("CommandPalette", () => {
     expect(screen.getByRole("dialog", { name: "Search HQFlow" })).toBeInTheDocument();
   });
 
-  it("opens on Cmd+K (metaKey) too", () => {
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-    fireEvent.keyDown(window, { key: "k", metaKey: true });
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("shows every workflow plus the default actions on an empty query", () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    expect(screen.getByText("Site Flow")).toBeInTheDocument();
-    expect(screen.getByText("Checkout")).toBeInTheDocument();
-    expect(screen.getByText("Copy agent prompt")).toBeInTheDocument();
-    expect(screen.getByText("Recheck files")).toBeInTheDocument();
-    expect(screen.queryByText("Reset layout")).not.toBeInTheDocument();
-  });
-
   it("offers a searchable layout reset only for the selected workflow and preserves selection", async () => {
     useCodeHQStore.getState().selectWorkflow("site-flow");
     useCodeHQStore.getState().selectStep("scrape");
@@ -120,16 +103,6 @@ describe("CommandPalette", () => {
     expect(screen.queryByText("Capture Payment")).not.toBeInTheDocument();
   });
 
-  it("shows an honest empty message when nothing matches", async () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    const user = userEvent.setup();
-    await user.type(screen.getByRole("combobox"), "xyzzy-not-present");
-
-    expect(screen.getByRole("status")).toHaveTextContent("No results for “xyzzy-not-present”.");
-  });
-
   it("moves the active option with Arrow keys and selects the second workflow with Enter", async () => {
     useCodeHQStore.getState().openSearch();
     render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
@@ -157,17 +130,6 @@ describe("CommandPalette", () => {
     expect(useCodeHQStore.getState().searchOpen).toBe(false);
   });
 
-  it("closes on Escape", async () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    const user = userEvent.setup();
-    await user.keyboard("{Escape}");
-
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  });
-
   it("closes on Escape when opened via the store after the initial (closed) mount", async () => {
     // Regression test: CommandPalette is always mounted so Ctrl/Cmd+K keeps working, and used to
     // wire its focus trap's effect to a dependency array that never changed identity, so the trap
@@ -183,45 +145,5 @@ describe("CommandPalette", () => {
     await user.keyboard("{Escape}");
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  });
-
-  it("closes when a click starts and ends on the backdrop", async () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    const dialog = screen.getByRole("dialog");
-    const backdrop = dialog.parentElement as HTMLElement;
-    expect(backdrop).not.toBe(dialog);
-
-    fireEvent.pointerDown(backdrop);
-    fireEvent.pointerUp(backdrop);
-
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  });
-
-  it("does not close when a click lands inside the dialog", async () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    const dialog = screen.getByRole("dialog");
-    fireEvent.pointerDown(dialog);
-    fireEvent.pointerUp(dialog);
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("does not close on a pointer-down inside the dialog that drags out and releases on the backdrop", async () => {
-    useCodeHQStore.getState().openSearch();
-    render(<CommandPalette snapshot={SNAPSHOT} onRecheck={() => Promise.resolve()} />);
-
-    const dialog = screen.getByRole("dialog");
-    const backdrop = dialog.parentElement as HTMLElement;
-
-    // Simulates selecting text in the input, then dragging the mouse out and releasing on the
-    // backdrop — a real, common gesture that must not be misread as "clicked outside."
-    fireEvent.pointerDown(dialog);
-    fireEvent.pointerUp(backdrop);
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

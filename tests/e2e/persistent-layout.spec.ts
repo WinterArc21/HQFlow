@@ -2,6 +2,7 @@
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
@@ -32,7 +33,7 @@ test.afterAll(async () => {
 test("persists geometry across restart while resetting temporary view state", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 
   const node = page.locator(`.react-flow__node[data-id="${NODE_ID}"]`);
   const edgePath = page.locator(`.react-flow__edge[data-id="${EDGE_ID}"] path.react-flow__edge-path`);
@@ -41,9 +42,6 @@ test("persists geometry across restart while resetting temporary view state", as
   const initialEdgePath = await edgePath.getAttribute("d");
   const initialViewportTransform = await viewport.getAttribute("style");
 
-  await page.getByRole("button", { name: "Expand Receive Request to show code details" }).click();
-  await expect.poll(storedLayout).toBeUndefined();
-  await expect(page.getByRole("button", { name: "Collapse Receive Request" })).toBeVisible();
 
   const nodeBox = await node.boundingBox();
   expect(nodeBox).not.toBeNull();
@@ -90,14 +88,12 @@ test("persists geometry across restart while resetting temporary view state", as
   server = await startCodeHQServer(root, PORTS.persistentLayoutRestart);
   await page.goto(server.url);
   await node.waitFor({ state: "visible", timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
   await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(persistedNodeTransform);
   await expect.poll(async () => (await storedLayout() as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
   await expect.poll(async () => (await edgePath.getAttribute("d")) ?? "").toContain(`${persistedBend.point.x},${persistedBend.point.y}`);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
 
   await page.getByRole("button", { name: "Reset layout" }).click();
-  await expect(page.getByRole("button", { name: "Expand Receive Request to show code details" })).toBeVisible();
   await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(initialNodeTransform);
   await expect(edgePath).toHaveAttribute("d", initialEdgePath!);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);

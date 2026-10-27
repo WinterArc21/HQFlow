@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CaretUp, MagnifyingGlass, TreeStructure } from "@phosphor-icons/react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { CaretUp, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
 import type { CanvasChrome } from "../canvas";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
-import { CopyButton, Kbd } from "../primitives";
+import { AppearancePanel } from "../appearance";
+import { CopyButton, IconButton, Kbd } from "../primitives";
 import { DOT_ORIGIN, DOT_STEP, useDotGrid } from "./dotGrid";
 import { Island } from "./Island";
 import { StatusIndicator, type CodeHQStatus } from "./StatusIndicator";
@@ -19,6 +20,8 @@ export interface IslandShellProps {
   locationLabel: string;
   status: CodeHQStatus;
   errorCount?: number;
+  /** Changes on every snapshot, so the status dot can ping. */
+  pulseKey?: string;
   /** The workflow navigator; `close` dismisses the tree island. */
   navigator: (close: () => void) => ReactNode;
   /** Shown under the title, e.g. the diagnostics banner. */
@@ -44,9 +47,12 @@ const NARROW_IDENTITY_TOP = 3;
  * right carries status, the agent prompt and theme; the bottom dock carries search, the canvas
  * controls, and the workflow tree, which opens by growing the dock upward.
  */
-export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, navigator, notice, overlays, children }: IslandShellProps) {
+export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, pulseKey, navigator, notice, overlays, children }: IslandShellProps) {
   const grid = useDotGrid();
   const openSearch = useCodeHQStore((state) => state.openSearch);
+  const appearanceOpen = useCodeHQStore((state) => state.appearanceOpen);
+  const setAppearanceOpen = useCodeHQStore((state) => state.setAppearanceOpen);
+  const closeAppearance = useCallback(() => setAppearanceOpen(false), [setAppearanceOpen]);
   const [titleTarget, setTitleTarget] = useState<HTMLElement | null>(null);
   const [controlsTarget, setControlsTarget] = useState<HTMLElement | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
@@ -90,11 +96,11 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
-    legendPlacement: narrow ? { l: 0, b: DOCK_HEIGHT + 1 } : { l: 0, b: 0 },
+    legendPlacement: { l: 0, b: 0 },
     fitInsets: {
-      top: DOT_ORIGIN + (identityTop + 4) * DOT_STEP,
+      top: DOT_ORIGIN + (identityTop + (narrow ? 5 : 4)) * DOT_STEP,
       right: DOT_ORIGIN,
-      bottom: DOT_ORIGIN + (DOCK_HEIGHT + 1) * DOT_STEP,
+      bottom: DOT_ORIGIN + (DOCK_HEIGHT + (narrow ? 3 : 1)) * DOT_STEP,
       left: DOT_ORIGIN,
     },
   }), [controlsTarget, identityTop, narrow, titleTarget]);
@@ -128,9 +134,17 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
 
       <Island placement={{ r: 0, t: 0, w: "auto", h: 2 }}>
         <div className={styles.status}>
-          <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} />
+          <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} {...(pulseKey !== undefined ? { pulseKey } : {})} />
           <span className={styles.divider} aria-hidden="true" />
           <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" />
+          <span data-appearance-toggle="">
+            <IconButton
+              label="Appearance"
+              icon={<Palette size={16} />}
+              aria-expanded={appearanceOpen}
+              onClick={() => setAppearanceOpen(!appearanceOpen)}
+            />
+          </span>
           <ThemeToggle />
         </div>
       </Island>
@@ -169,6 +183,7 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
         </div>
       </Island>
 
+      {appearanceOpen ? <AppearancePanel onClose={closeAppearance} /> : null}
       {overlays}
     </div>
   );

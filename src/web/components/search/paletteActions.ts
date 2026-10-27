@@ -1,5 +1,6 @@
 import { copyToClipboard } from "../primitives/clipboard";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
+import { useCodeHQStore } from "../../store/useCodeHQStore";
 
 export interface PaletteAction {
   id: string;
@@ -28,6 +29,14 @@ export function buildPaletteActions(onRecheck: () => Promise<void>, onResetLayou
       label: "Recheck files",
       detail: "Forces a full reload of every workflow file on disk.",
       run: onRecheck,
+    },
+    {
+      id: "action:appearance",
+      label: "Change scene and colours",
+      detail: "Opens appearance: scenes and motion.",
+      run: async () => {
+        useCodeHQStore.getState().setAppearanceOpen(true);
+      },
     },
   ];
   if (onResetLayout !== undefined) {

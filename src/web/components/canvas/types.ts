@@ -1,17 +1,14 @@
 /** Shared React Flow node/edge type aliases, kept separate so nodes/edges/canvas can all import
  * them without reaching into one another. */
 import type { Edge, Node } from "@xyflow/react";
-import type { KeyboardEvent as ReactKeyboardEvent, FocusEvent as ReactFocusEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
-import type { Depth } from "./nodeContent";
 import type { OutcomeBand } from "./layout";
 import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
   index: number;
-  effectiveDepth: Depth;
-  expanded: boolean;
   selected: boolean;
   hasMissingSource: boolean;
   hasFailureOutcome?: boolean;
@@ -23,12 +20,9 @@ export interface StepNodeData extends Record<string, unknown> {
    * upstream/downstream neighborhood. */
   dimmed: boolean;
   tabIndex: 0 | -1;
-  onToggleExpand: () => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onHoverStart: () => void;
   onHoverEnd: () => void;
-  onFocusStep: (event: ReactFocusEvent<HTMLElement>) => void;
-  onBlurStep: (event: ReactFocusEvent<HTMLElement>) => void;
 }
 
 export type StepFlowNode = Node<StepNodeData, "step">;
@@ -42,8 +36,6 @@ export interface OutcomeNodeData extends Record<string, unknown> {
   onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onHoverStart: () => void;
   onHoverEnd: () => void;
-  onFocusStep: (event: ReactFocusEvent<HTMLElement>) => void;
-  onBlurStep: (event: ReactFocusEvent<HTMLElement>) => void;
 }
 
 export type OutcomeFlowNode = Node<OutcomeNodeData, "outcome">;
@@ -69,6 +61,13 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * a successful terminal is dashed green while an ordinary success connection stays neutral
    * solid. */
   outcomeBand?: OutcomeBand;
+  /** Flow and wrap views draw ordinary connections as rounded right-angle lines. */
+  routing?: "step";
+  /** Wrap view: a connection into a later row runs right, down to this y under its row, back
+   * left past the start of the next row, then into the target's left side. */
+  turnY?: number;
+  /** Flow and wrap views: a return edge runs up the right side of the map at this x. */
+  returnX?: number;
   /** Path tracing: true whenever a trace is active and this edge is not an outgoing edge from the
    * anchor. */
   dimmed: boolean;
@@ -80,6 +79,8 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * component state and restore the repository-local bend for this workflow. */
   bendResetKey?: string;
   savedBend?: CanvasBend;
+  /** Set while a live build draws this edge in (live/useLiveBuild.ts). */
+  build?: { delay: number; duration: number; set: string };
   onBendChange?: (bend: CanvasBend) => void;
 }
 

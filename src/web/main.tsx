@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { Backdrop } from "./components/backdrop";
 import "./styles/tokens.css";
 import "./styles/reset.css";
 import "./styles/base.css";
@@ -12,6 +13,7 @@ if (container === null) {
 
 createRoot(container).render(
   <StrictMode>
+    <Backdrop />
     <App />
   </StrictMode>,
 );

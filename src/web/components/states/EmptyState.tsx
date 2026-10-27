@@ -1,6 +1,8 @@
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { CopyButton } from "../primitives";
+import { BuildingPreview } from "./BuildingPreview";
 import { StateLayout } from "./StateLayout";
+import { TypedPrompt } from "./TypedPrompt";
 import styles from "./EmptyState.module.css";
 
 /**
@@ -10,10 +12,12 @@ import styles from "./EmptyState.module.css";
  */
 export function EmptyState() {
   return (
-    <StateLayout title="Map your repository">
+    <StateLayout title="Map your repository" hero={<BuildingPreview />}>
       <p>
         Ask your coding agent to identify the important workflows and build an explorable repository map.
+        This page draws the map as the agent writes it.
       </p>
+      <TypedPrompt text={AGENT_PROMPT} />
       <div className={styles.actionRow}>
         <CopyButton value={AGENT_PROMPT} label="Map my repository" />
       </div>

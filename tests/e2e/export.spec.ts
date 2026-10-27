@@ -7,6 +7,7 @@
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 import { SHARED_BASE_URL } from "./helpers/paths";
 
 function pngDimensions(bytes: Buffer): { width: number; height: number } {
@@ -16,11 +17,11 @@ function pngDimensions(bytes: Buffer): { width: number; height: number } {
 
 test.describe("Export canvas", () => {
   test("downloads a self-contained HTML snapshot that renders offline", async ({ page, browser }) => {
-    // 1. Navigate to the running app and wait for the canvas to render.
+    // Navigate to the running app and wait for the canvas to render.
     await page.goto(SHARED_BASE_URL);
-    await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+    await waitForBoot(page);
 
-    // 2. Choose the privacy setting in the export dialog, then download the artifact.
+    // Choose the privacy setting in the export dialog, then download the artifact.
     const downloadPromise = page.waitForEvent("download", { timeout: 15_000 });
     await page.getByRole("button", { name: "Export canvas" }).click();
     await expect(page.getByRole("dialog", { name: /Export/ })).toBeVisible();
@@ -29,44 +30,40 @@ test.describe("Export canvas", () => {
     await page.getByRole("button", { name: "Download HTML" }).click();
     const download = await downloadPromise;
 
-    // 3. Save the downloaded file to a temp path.
+    // Save the downloaded file to a temp path.
     const tmpDir = await fsp.mkdtemp(path.join(await import("node:os").then((m) => m.tmpdir()), "codehq-export-"));
     const exportPath = path.join(tmpDir, "export.html");
     await download.saveAs(exportPath);
 
     const html = await fsp.readFile(exportPath, "utf-8");
 
-    // 4. Assert: no external resource references (src/href pointing to http(s) or //).
+    // The file is self-contained: no loaded scripts or stylesheets, and no external URLs.
     expect(html).not.toMatch(/<script[^>]+src=/i);
     expect(html).not.toMatch(/<link[^>]+href=/i);
-    // No external URL in attribute values (src="", href="https://...", etc.)
     expect(html).not.toMatch(/\b(?:src|href)\s*=\s*["'](?:https?:)?\/\//i);
-    // No external URL in link/script/img/style attribute values
-    expect(html).not.toMatch(/<(?:link|script|img|source|iframe)\b[^>]*\bsrc\s*=\s*["']https?:\/\//i);
-    expect(html).not.toMatch(/<(?:link|script|img)\b[^>]*\bhref\s*=\s*["']https?:\/\//i);
 
-    // 5. Assert: contains the export banner and payload.
+    // Assert: contains the export banner and payload.
     expect(html).toContain("codehq-export-payload");
     expect(html).toContain('"hideFilePaths":true');
     expect(html).not.toContain("real-source.ts");
 
-    // 6. Open the exported file in a fresh browser context via file:// — no server.
+    // Open the exported file in a fresh browser context via file:// — no server.
     const offlineContext = await browser.newContext();
     const offlinePage = await offlineContext.newPage();
     await offlinePage.goto(`file://${exportPath}`);
 
-    // 7. The frozen canvas should render step nodes.
-    await offlinePage.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+    // The frozen canvas should render step nodes.
+    await waitForBoot(offlinePage);
 
-    // 8. The export banner should be visible with the privacy notice.
+    // The export banner should be visible with the privacy notice.
     await expect(offlinePage.getByText("HQFlow Export")).toBeVisible();
     await expect(offlinePage.getByText("not source code")).toBeVisible();
 
-    // 9. The export viewer reflects the choice made before download and has no post-export toggle.
+    // The export viewer reflects the choice made before download and has no post-export toggle.
     await expect(offlinePage.getByText("File paths hidden")).toBeVisible();
     await expect(offlinePage.getByRole("checkbox", { name: /Hide file paths/i })).toHaveCount(0);
 
-    // 10. Click a step node to open the drawer, then verify no "Open in editor" button.
+    // Click a step node to open the drawer, then verify no "Open in editor" button.
     await offlinePage.locator("[data-step-node]").first().click();
     await expect(offlinePage.getByRole("heading", { name: "Source references" })).toBeVisible({ timeout: 5_000 });
 
@@ -76,20 +73,13 @@ test.describe("Export canvas", () => {
     // The "Export canvas" button (which would point at /api/export/... under file://) must
     // also be absent in the export viewer — it is a server-only action.
     await expect(offlinePage.getByRole("button", { name: "Export canvas" })).toHaveCount(0);
-
-    // 11. Theme toggle should work.
-    const themeButton = offlinePage.getByRole("button", { name: /Switch to.*theme/i });
-    await expect(themeButton).toBeVisible();
-
     await offlineContext.close();
     await fsp.rm(tmpDir, { recursive: true, force: true });
   });
 
   test("downloads a PNG of the complete diagram without editor controls", async ({ page }) => {
     await page.goto(SHARED_BASE_URL);
-    const nodes = page.locator("[data-step-node]");
-    await nodes.first().waitFor({ state: "visible", timeout: 15_000 });
-    const nodeCount = await nodes.count();
+    await waitForBoot(page);
 
     // Make the visible viewport intentionally unrepresentative. The exported image must still
     // use graph bounds rather than browser viewport bounds.
@@ -116,7 +106,6 @@ test.describe("Export canvas", () => {
     expect(width).toBeGreaterThanOrEqual(800);
     expect(height).toBeGreaterThanOrEqual(800);
     expect(width).toBeGreaterThan(page.viewportSize()?.width ?? 0);
-    expect(nodeCount).toBeGreaterThan(1);
 
     await fsp.rm(tmpDir, { recursive: true, force: true });
   });

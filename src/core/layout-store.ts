@@ -12,9 +12,19 @@ const bendSchema = z.object({
   snap: z.enum(["source-x", "target-x"]).nullable(),
 }).strict();
 
+const viewEnum = z.enum(["flow", "wrap", "line"]);
+const slotEnum = z.enum(["flow", "wrap", "line", "flow:compact", "wrap:compact", "line:compact", "flow:wide", "wrap:wide", "line:wide"]);
+const viewGeometrySchema = z.object({
+  nodePositions: z.record(z.string(), pointSchema),
+  edgeBends: z.record(z.string(), bendSchema),
+}).strict();
+
 export const workflowCanvasLayoutSchema: z.ZodType<WorkflowCanvasLayout> = z.object({
   nodePositions: z.record(z.string(), pointSchema),
   edgeBends: z.record(z.string(), bendSchema),
+  view: viewEnum.exactOptional(),
+  cardSize: z.enum(["compact", "wide"]).exactOptional(),
+  otherViews: z.partialRecord(slotEnum, viewGeometrySchema).exactOptional(),
 }).strict();
 
 const layoutFileSchema = z.object({
