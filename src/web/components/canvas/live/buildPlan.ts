@@ -81,11 +81,13 @@ export const CARD_PHASE = { MOVE: 0.08, DRAG: 0.42, HOP: 0.46, WEAVE: 0.9 } as c
 export const WEAVE_SWING = 0.32;
 const WEAVE_SAMPLES = 12;
 
-/** A full build lands in a few seconds however many cards arrive at once. */
-const BUILD_BUDGET_MS = 5600;
-const MIN_SLOT_MS = 560;
-const MAX_SLOT_MS = 1500;
-const EDGE_SHARE = 0.3;
+/** Every card takes the same time, so a big build takes longer instead of rushing each card. */
+const CARD_MS = 1050;
+/** A short card-to-card edge takes EDGE_MS. A longer edge takes longer, by the square root of its
+ * length, so the cursor does not race along it; EDGE_MAX_MS caps the longest ones. */
+const EDGE_MS = 450;
+const EDGE_REFERENCE_PX = 124;
+const EDGE_MAX_MS = 2000;
 /** One more cursor for every this many new cards, up to MAX_CURSORS. */
 const CARDS_PER_CURSOR = 4;
 const MAX_CURSORS = 4;
@@ -181,21 +183,24 @@ export function planBuild(
 
   const cursorCount = Math.min(MAX_CURSORS, Math.max(1, Math.ceil(added.length / CARDS_PER_CURSOR)));
   const lanes = runs(added, cursorCount);
-  const perLane = Math.max(1, ...lanes.map((lane) => lane.length));
-  const slot = Math.min(MAX_SLOT_MS, Math.max(MIN_SLOT_MS, BUILD_BUDGET_MS / perLane));
-  const edgePhase = slot * EDGE_SHARE;
-  const cardPhase = slot - edgePhase;
+  const cardPhase = CARD_MS;
+
+  /** How long an edge takes to draw. Its length is estimated as the horizontal plus the vertical
+   * distance between the facing sides, because the real path is drawn only after this plan. */
+  const edgeTime = (source: string, target: string): number => {
+    const [leave, enter] = facingSides(boxes.get(source)!, boxes.get(target)!);
+    const a = sidePoint(boxes.get(source)!, leave);
+    const b = sidePoint(boxes.get(target)!, enter);
+    const length = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+    return Math.min(EDGE_MAX_MS, EDGE_MS * Math.sqrt(Math.max(1, length / EDGE_REFERENCE_PX)));
+  };
 
   const laneOf = new Map<string, number>();
-  const slotStart = new Map<string, number>();
+  const indexOf = new Map<string, number>();
   lanes.forEach((lane, laneIndex) => lane.forEach((nodeId, index) => {
     laneOf.set(nodeId, laneIndex);
-    slotStart.set(nodeId, laneIndex * CURSOR_STAGGER_MS + index * slot);
+    indexOf.set(nodeId, index);
   }));
-  const cardStart = (nodeId: string) => slotStart.get(nodeId)! + edgePhase;
-  /** When a card is on the canvas: at once for old cards, when the border closes for new ones. */
-  const readyAt = (nodeId: string) => (slotStart.has(nodeId) ? cardStart(nodeId) + cardPhase * CARD_PHASE.WEAVE : 0);
-  const laneEnd = Math.max(0, ...lanes.map((lane, laneIndex) => laneIndex * CURSOR_STAGGER_MS + lane.length * slot));
 
   // The edge each new card's cursor rides in on: one from an old card, or from an earlier card in
   // the same run.
@@ -206,13 +211,33 @@ export function planBuild(
         return false;
       }
       const sourceLane = laneOf.get(edge.source);
-      return sourceLane === undefined || (sourceLane === laneOf.get(nodeId) && slotStart.get(edge.source)! < slotStart.get(nodeId)!);
+      return sourceLane === undefined || (sourceLane === laneOf.get(nodeId) && indexOf.get(edge.source)! < indexOf.get(nodeId)!);
     });
     if (incoming !== undefined) {
       ridden.set(nodeId, incoming.id);
     }
   }
   const riddenIds = new Set(ridden.values());
+
+  // Each card's slot is its lead-in edge, then the card itself.
+  const slotStart = new Map<string, number>();
+  const leadIn = new Map<string, number>();
+  let laneEnd = 0;
+  lanes.forEach((lane, laneIndex) => {
+    let t = laneIndex * CURSOR_STAGGER_MS;
+    for (const nodeId of lane) {
+      const edgeId = ridden.get(nodeId);
+      const edge = edgeId === undefined ? undefined : layout.edges.find((candidate) => candidate.id === edgeId)!;
+      const lead = edge === undefined ? EDGE_MS : edgeTime(edge.source, nodeId);
+      slotStart.set(nodeId, t);
+      leadIn.set(nodeId, lead);
+      t += lead + cardPhase;
+    }
+    laneEnd = Math.max(laneEnd, t);
+  });
+  const cardStart = (nodeId: string) => slotStart.get(nodeId)! + leadIn.get(nodeId)!;
+  /** When a card is on the canvas: at once for old cards, when the border closes for new ones. */
+  const readyAt = (nodeId: string) => (slotStart.has(nodeId) ? cardStart(nodeId) + cardPhase * CARD_PHASE.WEAVE : 0);
 
   const edges = new Map<string, EdgeDraw>();
   // Edges that link two runs are drawn last, by the cursor whose run they leave from.
@@ -221,15 +246,15 @@ export function planBuild(
     const sourceLane = laneOf.get(edge.source);
     const targetLane = laneOf.get(edge.target);
     if (riddenIds.has(edge.id)) {
-      edges.set(edge.id, { delay: slotStart.get(edge.target)!, duration: edgePhase });
+      edges.set(edge.id, { delay: slotStart.get(edge.target)!, duration: leadIn.get(edge.target)! });
     } else if (sourceLane !== undefined && targetLane !== undefined && sourceLane !== targetLane && edge.source !== edge.target) {
       joins[sourceLane]!.push(edge);
     } else if (sourceLane === undefined && targetLane === undefined) {
       // A new link between two old cards: drawn once the runs are done.
-      edges.set(edge.id, { delay: laneEnd, duration: edgePhase });
+      edges.set(edge.id, { delay: laneEnd, duration: edgeTime(edge.source, edge.target) });
     } else {
       // Fan-ins, outcomes, retries: drawn on their own once both ends are on the canvas.
-      edges.set(edge.id, { delay: Math.max(readyAt(edge.source), readyAt(edge.target)), duration: edgePhase });
+      edges.set(edge.id, { delay: Math.max(readyAt(edge.source), readyAt(edge.target)), duration: edgeTime(edge.source, edge.target) });
     }
   }
 
@@ -256,7 +281,7 @@ export function planBuild(
       const edgeId = ridden.get(nodeId);
       if (edgeId !== undefined) {
         const edge = layout.edges.find((candidate) => candidate.id === edgeId)!;
-        rideEdge(laneIndex, edgeId, edge.source, nodeId, start, edgePhase);
+        rideEdge(laneIndex, edgeId, edge.source, nodeId, start, leadIn.get(nodeId)!);
       }
       const delay = cardStart(nodeId);
       const at = (share: number) => delay + cardPhase * share;
@@ -279,13 +304,15 @@ export function planBuild(
   });
 
   joins.forEach((list, laneIndex) => {
+    let delay = laneEnd;
     list.forEach((edge, index) => {
-      const delay = laneEnd + index * (edgePhase + JOIN_GAP_MS);
-      edges.set(edge.id, { delay, duration: edgePhase });
+      const duration = edgeTime(edge.source, edge.target);
+      edges.set(edge.id, { delay, duration });
       if (index === 0) {
         labels.push({ t: delay, text: "Connecting", cursor: laneIndex });
       }
-      rideEdge(laneIndex, edge.id, edge.source, edge.target, delay, edgePhase);
+      rideEdge(laneIndex, edge.id, edge.source, edge.target, delay, duration);
+      delay += duration + JOIN_GAP_MS;
     });
   });
 
