@@ -2,6 +2,7 @@
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
@@ -32,7 +33,7 @@ test.afterAll(async () => {
 test("persists geometry across restart while resetting temporary view state", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 
   const node = page.locator(`.react-flow__node[data-id="${NODE_ID}"]`);
   const edgePath = page.locator(`.react-flow__edge[data-id="${EDGE_ID}"] path.react-flow__edge-path`);

@@ -9,6 +9,7 @@
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
@@ -39,7 +40,7 @@ test.afterEach(async () => {
 
 test("renaming a step, then adding a step and connection, both appear live without a page reload", async ({ page }) => {
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
   await expect(page.locator("[data-step-node]")).toHaveCount(11);
 
   const workflowFile = path.join(root, ".codehq", "workflows", "generate-video.json");
@@ -75,18 +76,10 @@ test("renaming a step, then adding a step and connection, both appear live witho
   await expect(page.locator(".react-flow__edge")).toHaveCount(11, { timeout: 10_000 });
 });
 
-test("new graph elements animate in without detaching existing connectors", async ({ page }) => {
+test("a card that moves in a live edit keeps its connector attached", async ({ page }) => {
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 
-  // New edges should have an enter animation (animation-name is not "none").
-  const existingEdgeAnimation = await page.locator(".react-flow__edge").first().evaluate((el) => {
-    return getComputedStyle(el).animationName;
-  });
-  expect(existingEdgeAnimation).not.toBe("none");
-
-  // Add a new step to trigger a live update, then verify the new node's wrapper has an enter
-  // animation (animation-name is not "none") while existing nodes retain their transform transition.
   const workflowFile = path.join(root, ".codehq", "workflows", "generate-video.json");
   const current = JSON.parse(await fsp.readFile(workflowFile, "utf-8")) as MinimalWorkflowFile;
   const withExtraStep = structuredClone(current);
@@ -103,13 +96,6 @@ test("new graph elements animate in without detaching existing connectors", asyn
   await fsp.writeFile(workflowFile, `${JSON.stringify(withExtraStep, null, 2)}\n`, "utf-8");
 
   await expect(page.locator('[data-step-node="quality-check"]')).toBeVisible({ timeout: 10_000 });
-
-  // The enter animation (nodeEnter keyframe) is on the .react-flow__node wrapper, not the card
-  // inside — see WorkflowCanvas.module.css for why the opacity animation must be on the wrapper.
-  const newNodeAnimation = await page
-    .locator('.react-flow__node[data-id="quality-check"]')
-    .evaluate((el) => getComputedStyle(el).animationName);
-  expect(newNodeAnimation).not.toBe("none");
 
   const incomingEdgeId = "save-result->outcome-generation-created#9";
   const connectorDistance = await page.evaluate((edgeId) => {

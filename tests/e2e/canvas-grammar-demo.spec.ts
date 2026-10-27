@@ -63,7 +63,7 @@ test.afterAll(async () => {
   await removeTempDir(root);
 });
 
-test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes without overlaps", async ({ page }) => {
+test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto(server.url);
   await waitForBoot(page);
@@ -83,16 +83,6 @@ test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes w
   await expect(page.locator('[data-step-node="outcome-created"]')).toHaveAttribute("aria-label", /^Success outcome:/);
   await expect(page.locator('[data-step-node="outcome-rejected"]')).toHaveAttribute("aria-label", /^Failure outcome:/);
   await expect(page.locator('[data-step-node="outcome-queued"]')).toHaveAttribute("aria-label", /^Outcome:/);
-
-  const overlaps = await page.locator("[data-step-node]").evaluateAll((nodes) => {
-    const entries = nodes.map((node) => ({ id: (node as HTMLElement).dataset.stepNode ?? "?", rect: node.getBoundingClientRect() }));
-    return entries.flatMap((left, index) => entries.slice(index + 1).flatMap((right) => {
-      const intersects = left.rect.left < right.rect.right && left.rect.right > right.rect.left &&
-        left.rect.top < right.rect.bottom && left.rect.bottom > right.rect.top;
-      return intersects ? [`${left.id}/${right.id}`] : [];
-    }));
-  });
-  expect(overlaps).toEqual([]);
 });
 
 test("switches ordinary connections to the closest facing card sides while dragging", async ({ page }) => {

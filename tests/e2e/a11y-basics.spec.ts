@@ -5,10 +5,11 @@
  * title), deliberately kept in `tests/e2e/**` rather than pulling in a new devDependency.
  */
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 });
 
 test("every interactive control has an accessible name", async ({ page }) => {

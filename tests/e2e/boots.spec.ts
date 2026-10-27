@@ -3,6 +3,7 @@
  * serves a private temp copy of the test project — never the committed fixture itself.
  */
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 
 test("loads the test project, auto-selects the default workflow, and renders its board with no console errors", async ({
   page,
@@ -19,7 +20,7 @@ test("loads the test project, auto-selects the default workflow, and renders its
   });
 
   await page.goto("/");
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 
   // Repository name (from .codehq/project.json's project.name) appears in the identity island.
   await expect(page.getByRole("banner").getByText("MotionA", { exact: true })).toBeVisible();
@@ -38,21 +39,8 @@ test("loads the test project, auto-selects the default workflow, and renders its
   // split out of the single "Save Result" catch-all so each real failure mode (invalid request,
   // over quota, unreachable site) reads as its own named result (contract mandate: honest
   // outcome nodes, not a shared error sink).
+  // Connector geometry is checked in edges-without-measurement.spec.ts.
   await expect(page.locator("[data-step-node]")).toHaveCount(11);
-
-  // Its 10 connectors render, each with non-zero rendered geometry.
-  const edges = page.locator(".react-flow__edge");
-  await expect(edges).toHaveCount(10);
-
-  const edgePathLengths = await page.evaluate(() =>
-    Array.from(document.querySelectorAll(".react-flow__edge path.react-flow__edge-path")).map((el) =>
-      (el as SVGPathElement).getTotalLength(),
-    ),
-  );
-  expect(edgePathLengths).toHaveLength(10);
-  for (const length of edgePathLengths) {
-    expect(length).toBeGreaterThan(0);
-  }
 
   expect(consoleErrors, `Unexpected browser console errors during load:\n${consoleErrors.join("\n")}`).toEqual([]);
   expect(pageErrors, `Unexpected uncaught page errors during load:\n${pageErrors.join("\n")}`).toEqual([]);
