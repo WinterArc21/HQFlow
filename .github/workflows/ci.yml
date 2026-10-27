@@ -54,7 +54,7 @@ jobs:
         run: pnpm run test:ci
 
       - name: Install browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --only-shell chromium
 
       - name: End-to-end tests
         run: pnpm run test:e2e
