@@ -454,7 +454,7 @@ export function buildFlowEdges(
         branch: targetNode?.isOutcome === true,
         ...(parallelOffset !== 0 ? { parallelOffset } : {}),
         ...(outcomeBand !== undefined ? { outcomeBand } : {}),
-        ...(!lineView && !isRetryLoop ? { routing: "step" as const } : {}),
+        ...(!isRetryLoop ? { routing: "step" as const } : {}),
         ...(turnY !== undefined ? { turnY } : {}),
         ...(sideReturnX !== undefined ? { returnX: sideReturnX } : {}),
         dimmed,

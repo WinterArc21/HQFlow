@@ -61,7 +61,7 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * a successful terminal is dashed green while an ordinary success connection stays neutral
    * solid. */
   outcomeBand?: OutcomeBand;
-  /** Flow and wrap views draw ordinary connections as rounded right-angle lines. */
+  /** Every view draws ordinary connections as rounded right-angle lines. */
   routing?: "step";
   /** Wrap view: a connection into a later row runs right, down to this y under its row, back
    * left past the start of the next row, then into the target's left side. */
