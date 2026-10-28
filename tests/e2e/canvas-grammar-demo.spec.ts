@@ -32,18 +32,22 @@ async function edgeEndpointDistance(
     const path = document.querySelector<SVGPathElement>(
       `.react-flow__edge[data-id="${edgeId}"] path.react-flow__edge-path`,
     );
-    const handle = document.querySelector<HTMLElement>(
-      `[data-nodeid="${nodeId}"][data-handleid="${handleId}"]`,
-    );
-    if (path === null || handle === null) {
+    // A side shared by an arrival and a departure moves both to its split ports (`id@1`, `id@2`),
+    // which are still on the same side.
+    const handles = [...document.querySelectorAll<HTMLElement>(
+      `[data-nodeid="${nodeId}"][data-handleid="${handleId}"], [data-nodeid="${nodeId}"][data-handleid^="${handleId}@"]`,
+    )];
+    if (path === null || handles.length === 0) {
       return Number.POSITIVE_INFINITY;
     }
     const point = path.getPointAtLength(endpoint === "source" ? 0 : path.getTotalLength());
     const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM() ?? new DOMMatrix());
-    const rect = handle.getBoundingClientRect();
-    const dx = Math.max(rect.left - screenPoint.x, 0, screenPoint.x - rect.right);
-    const dy = Math.max(rect.top - screenPoint.y, 0, screenPoint.y - rect.bottom);
-    return Math.hypot(dx, dy);
+    return Math.min(...handles.map((handle) => {
+      const rect = handle.getBoundingClientRect();
+      const dx = Math.max(rect.left - screenPoint.x, 0, screenPoint.x - rect.right);
+      const dy = Math.max(rect.top - screenPoint.y, 0, screenPoint.y - rect.bottom);
+      return Math.hypot(dx, dy);
+    }));
   }, { edgeId, nodeId, handleId, endpoint });
 }
 
