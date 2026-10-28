@@ -228,9 +228,11 @@
 
 /* ---- micro-interactions ---- */
 
-/* A soft light in the card's own colour follows the pointer across it, and the card lifts a hair.
+/* A soft light in the card's own colour follows the pointer across it.
    The light is a pseudo-element over the body, so it never touches the gradient that encodes the
-   category; it fades in and out with hover. */
+   category; it fades in and out with hover. The card itself never moves on hover: React Flow
+   anchors edges to the node's layout position, so a transform would pull the ports off their
+   edges. */
 .card::after {
   content: "";
   position: absolute;
@@ -248,19 +250,6 @@
 
 .card:hover::after {
   opacity: 1;
-}
-
-.card:hover {
-  translate: 0 -2px;
-}
-
-.card {
-  transition:
-    border-color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard),
-    box-shadow var(--dur-fast) var(--ease-standard),
-    opacity var(--dur-fast) var(--ease-standard),
-    translate var(--dur-base) var(--ease-spring);
 }
 
 /* The selected card wears a ring of light that slowly orbits it, in the selection blue fading into
@@ -313,9 +302,5 @@
 @media (prefers-reduced-motion: reduce) {
   .selected::before {
     animation: none;
-  }
-
-  .card:hover {
-    translate: none;
   }
 }
