@@ -8,8 +8,8 @@ import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { layoutCardSize, useCodeHQStore } from "../../store/useCodeHQStore";
-import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
-import { CanvasLegend } from "./CanvasLegend";
+import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions, splitSharedSides } from "./buildFlowElements";
+import { CanvasLegend, legendRows } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
 import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
@@ -32,7 +32,6 @@ import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
 import { AgentCursor, BuildToast } from "./live/AgentCursor";
 import { useLiveBuild } from "./live/useLiveBuild";
 import type { FitInsets } from "./fitViewport";
-import type { GridPlacement } from "../shell/dotGrid";
 import styles from "./WorkflowCanvas.module.css";
 
 /** A minimap only earns its screen space once a graph is big enough to get lost in. Counted over
@@ -59,13 +58,15 @@ const EDGE_TYPES = { workflow: WorkflowEdge };
 /**
  * Hands the canvas's title and controls to an outer shell instead of the built-in title strip:
  * the title renders into `titleTarget`, the controls into `controlsTarget` (both through portals,
- * so they keep this canvas's React Flow context), the legend snaps to `legendPlacement`, and
- * fitting keeps `fitInsets` clear.
+ * so they keep this canvas's React Flow context) with the connection key in the controls' menu,
+ * fitting keeps `fitInsets` clear, and cues near the bottom stay above `dockClearance`. `onCanvasMove` hears when the
+ * reader starts and stops panning, zooming or dragging.
  */
 export interface CanvasChrome {
   titleTarget: HTMLElement | null;
   controlsTarget: HTMLElement | null;
-  legendPlacement: GridPlacement;
+  dockClearance: number;
+  onCanvasMove: (moving: boolean) => void;
   fitInsets: FitInsets;
 }
 
@@ -177,6 +178,8 @@ function WorkflowCanvasInner({
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [imageExporting, setImageExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // The legend row under the pointer: its edges stay, the rest fade.
+  const [legendFocus, setLegendFocus] = useState<string | null>(null);
   const realStepIds = useMemo(() => new Set(workflow.steps.map((step) => step.id)), [workflow]);
   const visualSelectedStepId = imageExporting ? null : selectedStepId;
   const candidateTraceAnchorId = imageExporting ? null : hoveredStepId;
@@ -380,7 +383,7 @@ function WorkflowCanvasInner({
       }
     }
 
-    return baseEdges.map((edge) => {
+    return splitSharedSides(baseEdges.map((edge) => {
       if (edge.data?.retry === true || edge.data?.returnEdge === true) {
         return edge;
       }
@@ -408,7 +411,7 @@ function WorkflowCanvasInner({
       return edge.sourceHandle === handles.sourceHandle && edge.targetHandle === handles.targetHandle
         ? edge
         : { ...edge, ...handles };
-    });
+    }), nodeBounds);
   }, [baseEdges, layout, nodes]);
 
   const live = useLiveBuild(canvasId, workflow, workflowRevision, layout, nodes, reducedMotion);
@@ -419,6 +422,21 @@ function WorkflowCanvasInner({
     handleSelectNode(node.id);
     setRovingId(node.id);
   };
+
+  // The overflow cues pan most of a screen toward the hidden part of the map.
+  const panCanvas = useCallback((direction: "right" | "bottom") => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect === undefined) {
+      return;
+    }
+    const viewport = reactFlowInstance.getViewport();
+    void reactFlowInstance.setViewport(
+      direction === "right"
+        ? { ...viewport, x: viewport.x - rect.width * 0.6 }
+        : { ...viewport, y: viewport.y - rect.height * 0.6 },
+      { duration: reducedMotion ? 0 : 300 },
+    );
+  }, [containerRef, reactFlowInstance, reducedMotion]);
 
   const handleExport = useCallback(() => setExportDialogOpen(true), []);
   const downloadExport = useCallback(async (hideFilePaths: boolean): Promise<void> => {
@@ -509,9 +527,11 @@ function WorkflowCanvasInner({
   const toolbarProps = {
     onZoomIn: () => void reactFlowInstance.zoomIn({ duration: reducedMotion ? 0 : 150 }),
     onZoomOut: () => void reactFlowInstance.zoomOut({ duration: reducedMotion ? 0 : 150 }),
+    onFit: () => fitToViewport(reducedMotion ? 0 : 300),
     onResetLayout: () => resetLayout(canvasId),
     ...(exportMode === null ? { onReplay: live.replay } : {}),
     viewSwitch: { view, autoView: suggestedView, onViewChange: changeView },
+    legend: { rows: legendRows(workflow), onHighlight: setLegendFocus },
     ...(exportMode === null && exportEnabled ? { onExport: handleExport } : {}),
     ...(exportMode === null && onDeleteWorkflow !== undefined && state !== "stale"
       ? { onDelete: () => setDeleteDialogOpen(true) }
@@ -528,7 +548,7 @@ function WorkflowCanvasInner({
           {chrome.controlsTarget !== null ? createPortal(<CanvasDockControls {...toolbarProps} />, chrome.controlsTarget) : null}
         </>
       )}
-      <div className={styles.stage} ref={containerRef}>
+      <div className={styles.stage} ref={containerRef} data-legend-focus={legendFocus ?? undefined}>
         {stageOverlay}
         <EdgeMarkers />
         <ReactFlow
@@ -548,7 +568,14 @@ function WorkflowCanvasInner({
           maxZoom={2}
           onlyRenderVisibleElements={!imageExporting && nodes.length > VIRTUALIZE_NODE_THRESHOLD}
           onMove={(_event, viewport) => updateOverflow(viewport)}
-          onNodeDragStop={(_event, node) => saveNodePosition(canvasId, node.id, node.position)}
+          // Only the reader's own gestures count; a programmatic fit or pan has no event.
+          onMoveStart={(event) => { if (event !== null) chrome?.onCanvasMove(true); }}
+          onMoveEnd={(event) => { if (event !== null) chrome?.onCanvasMove(false); }}
+          onNodeDragStart={() => chrome?.onCanvasMove(true)}
+          onNodeDragStop={(_event, node) => {
+            chrome?.onCanvasMove(false);
+            saveNodePosition(canvasId, node.id, node.position);
+          }}
           onNodeClick={handleNodeClick}
           onNodesChange={onNodesChange}
           onPaneClick={handleClearSelection}
@@ -581,7 +608,7 @@ function WorkflowCanvasInner({
             />
           ) : null}
         </ReactFlow>
-        <CanvasLegend workflow={workflow} dimmed={tracePath !== null} {...(chrome !== undefined ? { placement: chrome.legendPlacement } : {})} />
+        {chrome === undefined ? <CanvasLegend workflow={workflow} dimmed={tracePath !== null} /> : null}
         {showViewHint ? (
           <CanvasViewHint
             view={view}
@@ -592,8 +619,10 @@ function WorkflowCanvasInner({
           />
         ) : null}
         {live.plan !== null ? <BuildToast key={live.plan.id} plan={live.plan} fileName={`${workflow.id}.json`} /> : null}
-        {overflowsRight ? <CanvasOverflowIndicator direction="right" /> : null}
-        {overflowsBottom ? <CanvasOverflowIndicator direction="bottom" /> : null}
+        {overflowsRight ? <CanvasOverflowIndicator direction="right" onPan={panCanvas} /> : null}
+        {overflowsBottom ? (
+          <CanvasOverflowIndicator direction="bottom" onPan={panCanvas} {...(chrome !== undefined ? { bottomInset: chrome.dockClearance } : {})} />
+        ) : null}
       </div>
       {exportDialogOpen ? (
         <ExportDialog

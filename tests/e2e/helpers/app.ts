@@ -12,7 +12,7 @@ export function workflowNavItem(page: Page, workflowName: string): Locator {
   return page.locator("button[data-workflow-item]").filter({ hasText: workflowName });
 }
 
-/** Opens the workflow tree from the dock (it rises above it) and picks a workflow; picking closes it. */
+/** Opens the workflow tree from the title card and picks a workflow; picking closes it. */
 export async function selectWorkflowByName(page: Page, workflowName: string): Promise<void> {
   const item = workflowNavItem(page, workflowName);
   if (!(await item.isVisible())) {

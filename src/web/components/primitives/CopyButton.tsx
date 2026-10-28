@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, type ButtonProps } from "./Button";
 import { copyToClipboard, type ClipboardOutcome } from "./clipboard";
 import styles from "./CopyButton.module.css";
@@ -11,6 +11,8 @@ export interface CopyButtonProps {
   label?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
+  /** Shown in place of the label, which then becomes the button's accessible name only. */
+  icon?: ReactNode;
 }
 
 const RESET_DELAY_MS = 1800;
@@ -28,7 +30,7 @@ function statusText(status: CopyStatus): string | null {
   }
 }
 
-export function CopyButton({ value, label = "Copy", variant = "secondary", size = "sm" }: CopyButtonProps) {
+export function CopyButton({ value, label = "Copy", variant = "secondary", size = "sm", icon }: CopyButtonProps) {
   const [status, setStatus] = useState<CopyStatus>("idle");
   const timeoutRef = useRef<number | undefined>(undefined);
 
@@ -53,9 +55,15 @@ export function CopyButton({ value, label = "Copy", variant = "secondary", size 
 
   return (
     <span>
-      <Button variant={variant} size={size} onClick={handleClick} data-copied={status === "copied" ? "true" : undefined}>
+      <Button
+        variant={variant}
+        size={size}
+        onClick={handleClick}
+        data-copied={status === "copied" ? "true" : undefined}
+        {...(icon !== undefined ? { "aria-label": label, title: label } : {})}
+      >
         <span className={styles.labelSwap}>
-          <span className={styles.label}>{label}</span>
+          <span className={styles.label} aria-hidden={icon !== undefined ? "true" : undefined}>{icon ?? label}</span>
           <svg className={styles.tick} viewBox="0 0 16 16" aria-hidden="true">
             <path d="M3 8.5 L6.5 12 L13 4.5" pathLength={1} />
           </svg>

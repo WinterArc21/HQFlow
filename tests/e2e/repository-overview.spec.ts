@@ -97,6 +97,8 @@ test.describe("initialized but no workflow files", () => {
       }, null, 2),
     );
 
+    // The drags above folded the title to a pill; hovering it shows the details again.
+    await page.getByRole("banner").hover();
     await expect(page.getByText("1 of 2 workflows mapped")).toBeVisible();
     await checkoutCard.click();
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();

@@ -158,8 +158,7 @@
 
 /* Quiet overflow affordances (contract mandate: a user must never believe they're seeing the
  * whole graph when they aren't). Shown when the fitted graph still extends below or to the right
- * of the stage. These are fades plus small labels, not scrollbars or buttons: panning already
- * works, and these only say that panning further is worth doing. */
+ * of the stage: a fade along that edge, and a small tab on it that pans the map that way. */
 .overflowFade {
   position: absolute;
   display: flex;
@@ -184,17 +183,7 @@
   width: 112px;
   align-items: center;
   justify-content: flex-end;
-  padding-right: var(--space-2);
   background-image: linear-gradient(to right, transparent, var(--overflow-fade) 60%);
-}
-
-/* Narrow shells stack the title island down the middle of the stage (IslandShell's
-   NARROW_COLUMNS), so the cue sits in the free corner above the dock instead. */
-@media (max-width: 685px) {
-  .overflowFadeRight {
-    align-items: flex-end;
-    padding-bottom: calc(6 * 28px);
-  }
 }
 
 .overflowLabel {
@@ -211,4 +200,47 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  pointer-events: auto;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
+}
+
+.overflowLabel:hover {
+  color: var(--text-primary);
+}
+
+.overflowFadeBottom .overflowLabel:hover {
+  transform: translateY(2px);
+}
+
+.overflowLabel:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The right cue is a tab fastened to the window's edge, not a box floating near it. */
+.overflowLabelRight {
+  padding-right: var(--space-3);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.overflowLabelRight:hover {
+  transform: translateX(-2px);
+}
+
+/* A legend row under the pointer keeps its own edges and fades the rest. */
+.stage[data-legend-focus] :global([data-edge-kind]) {
+  opacity: 0.12;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.stage[data-legend-focus="success"] :global([data-edge-kind="success"]),
+.stage[data-legend-focus="failure"] :global([data-edge-kind="failure"]),
+.stage[data-legend-focus="conditional"] :global([data-edge-kind="conditional"]),
+.stage[data-legend-focus="async"] :global([data-edge-kind="async"]),
+.stage[data-legend-focus="success-outcome"] :global([data-edge-kind="success-outcome"]),
+.stage[data-legend-focus="retry"] :global([data-edge-kind="retry"]) {
+  opacity: 1;
 }

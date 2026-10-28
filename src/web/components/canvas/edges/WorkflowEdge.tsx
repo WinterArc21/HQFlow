@@ -63,13 +63,16 @@ function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Excl
 
 /** The live build's ink easing (liveBuild.css `hqEdgeDraw`); the riding cursor uses it too. */
 export const INK_EASING = "cubic-bezier(0.65, 0, 0.35, 1)";
-const INK_DROP_SAMPLES = 24;
+/** The drop follows the edge through one point for every this many pixels, like the riding cursor. */
+const INK_DROP_STEP_PX = 30;
+const MIN_INK_DROP_SAMPLES = 24;
 
 /**
  * The ink drop: a glowing bead that runs along the edge while its ink line draws in behind it,
- * swelling mid-way like a drop of ink. Timed from when it mounts, like the CSS that draws the line.
+ * swelling mid-way like a drop of ink. It runs on its ink line's clock: it wears the build's set
+ * class, so AgentCursor moves it with the build, and a later restart copies the line's start time.
  */
-function InkDrop({ path, delay, duration, color }: { path: string; delay: number; duration: number; color: string }) {
+function InkDrop({ id, set, path, delay, duration, color }: { id: string; set: string; path: string; delay: number; duration: number; color: string }) {
   const trackRef = useRef<SVGPathElement>(null);
   const dropRef = useRef<SVGCircleElement>(null);
   const mountedAt = useRef(0);
@@ -83,23 +86,32 @@ function InkDrop({ path, delay, duration, color }: { path: string; delay: number
       mountedAt.current = performance.now();
     }
     const length = track.getTotalLength();
+    const samples = Math.max(MIN_INK_DROP_SAMPLES, Math.ceil(length / INK_DROP_STEP_PX));
     const frames: Keyframe[] = [];
-    for (let k = 0; k <= INK_DROP_SAMPLES; k += 1) {
-      const share = k / INK_DROP_SAMPLES;
+    for (let k = 0; k <= samples; k += 1) {
+      const share = k / samples;
       const point = track.getPointAtLength(length * share);
       frames.push({
         offset: share,
         transform: `translate(${point.x}px, ${point.y}px) scale(${0.65 + 0.55 * Math.sin(share * Math.PI)})`,
-        opacity: k === INK_DROP_SAMPLES ? 0 : 1,
+        opacity: k === samples ? 0 : 1,
       });
     }
     const animation = drop.animate(frames, { duration, delay, easing: INK_EASING, fill: "forwards" });
-    // A re-render with a new path keeps the drop where it was in time instead of restarting it.
-    animation.currentTime = performance.now() - mountedAt.current;
+    const ink = drop.ownerDocument
+      .querySelector(`[data-edge-ink="${CSS.escape(id)}"]`)
+      ?.getAnimations()
+      .find((candidate) => candidate instanceof CSSAnimation && candidate.animationName === "hqEdgeDraw");
+    if (ink?.startTime != null) {
+      animation.startTime = ink.startTime;
+    } else {
+      // A re-render with a new path keeps the drop where it was in time instead of restarting it.
+      animation.currentTime = performance.now() - mountedAt.current;
+    }
     return () => animation.cancel();
-  }, [delay, duration, path]);
+  }, [delay, duration, id, path]);
   return (
-    <g pointerEvents="none" aria-hidden="true">
+    <g className={set} pointerEvents="none" aria-hidden="true">
       <path ref={trackRef} d={path} fill="none" stroke="none" />
       <circle ref={dropRef} r={4.5} style={{ fill: color, opacity: 0, filter: `drop-shadow(0 0 6px ${color})` }} />
     </g>
@@ -595,6 +607,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       ) : null}
       <g
         data-workflow-edge={id}
+        data-edge-kind={markerVariant ?? "success"}
         data-edge-source={source}
         data-edge-target={target}
         data-traveling-orb={showTravelingOrb ? "true" : undefined}
@@ -620,7 +633,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
           style={{ ...buildTiming, stroke: `var(${visual.varName})`, color: `var(${visual.varName})`, strokeWidth: strokeWidth + 1 }}
         />
       ) : null}
-      {build !== undefined ? <InkDrop path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
+      {build !== undefined ? <InkDrop id={id} set={build.set} path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
       {showLabel ? (
         <EdgeLabelRenderer>
           {bendable ? (
@@ -630,6 +643,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               type="button"
               className={`${labelClassName} ${styles.labelHandle}`}
               data-edge-label={id}
+              data-edge-kind={markerVariant ?? "success"}
               data-edge-bend-handle={id}
               data-active={dragging}
               aria-label={`Bend edge ${id}`}
@@ -644,6 +658,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
               ref={labelRef}
               className={`${labelClassName} ${styles.labelHoverable}`}
               data-edge-label={id}
+              data-edge-kind={markerVariant ?? "success"}
               title={labelText}
               style={labelStyle}
             >

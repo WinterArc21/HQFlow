@@ -22,17 +22,6 @@
   padding: var(--space-2);
 }
 
-/* Island shell: the key becomes one more island, its box rounded to whole dot steps. */
-.onGrid {
-  z-index: 10;
-  border-radius: 12px;
-  background: var(--bg-surface);
-}
-
-.onGrid .rows {
-  padding: var(--space-2) var(--space-3);
-}
-
 .dimmed {
   opacity: 0.35;
 }
@@ -57,11 +46,4 @@
   width: 22px;
   height: 0;
   flex: none;
-}
-
-/* On a phone the key would sit on the map; the dock needs the room. */
-@media (max-width: 685px) {
-  .onGrid {
-    display: none;
-  }
 }
