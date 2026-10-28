@@ -26,6 +26,77 @@ const SOURCE_HANDLE_SIZE = 7;
 export const RETRY_IN_FRACTION = 0.28;
 export const RETRY_OUT_FRACTION = 0.72;
 
+/**
+ * Each side of a work card has one arrival port and one departure port, both at the side's middle.
+ * When a moved card makes one edge arrive and another leave on the same side, the arrowhead would
+ * land on the departure square, so both ports move to these split slots instead (see
+ * `splitSharedSides`). The id of a split port is its middle port's id plus `@1` or `@2`.
+ */
+const SPLIT_FRACTIONS = [0.35, 0.65] as const;
+const MIDDLE_PORTS = [
+  { id: "in", type: "target", position: Position.Left },
+  { id: "in-right", type: "target", position: Position.Right },
+  { id: "in-top", type: "target", position: Position.Top },
+  { id: "in-bottom", type: "target", position: Position.Bottom },
+  { id: "out", type: "source", position: Position.Right },
+  { id: "out-left", type: "source", position: Position.Left },
+  { id: "out-top", type: "source", position: Position.Top },
+  { id: "out-bottom", type: "source", position: Position.Bottom },
+] as const;
+export const SPLIT_PORTS = MIDDLE_PORTS.flatMap((port) =>
+  SPLIT_FRACTIONS.map((fraction, slot) => ({ ...port, id: `${port.id}@${slot + 1}`, fraction })),
+);
+
+function splitPortHandles(width: number, height: number): NodeHandle[] {
+  return SPLIT_PORTS.map(({ id, type, position, fraction }) => {
+    const size = type === "source" ? SOURCE_HANDLE_SIZE : HANDLE_SIZE;
+    const vertical = position === Position.Left || position === Position.Right;
+    const x = vertical ? (position === Position.Left ? 0 : width) : width * fraction;
+    const y = vertical ? height * fraction : position === Position.Top ? 0 : height;
+    return { id, type, position, x: x - size / 2, y: y - size / 2, width: size, height: size };
+  });
+}
+
+/**
+ * Moves the arrival and the departure on a shared card side apart. The role whose other cards sit
+ * nearer the start of the side (the top, or the left) takes the first slot, so the two lines do not
+ * cross at the card. Edges that need no change keep their identity.
+ */
+export function splitSharedSides(edges: WorkflowFlowEdge[], bounds: ReadonlyMap<string, Box>): WorkflowFlowEdge[] {
+  const sideOf = new Map<string, Position>(MIDDLE_PORTS.map((port) => [port.id, port.position]));
+  const peerCenter = (nodeId: string, side: Position): number => {
+    const box = bounds.get(nodeId);
+    if (box === undefined) return 0;
+    return side === Position.Left || side === Position.Right ? box.y + box.height / 2 : box.x + box.width / 2;
+  };
+  const arrivals = new Map<string, number[]>();
+  const departures = new Map<string, number[]>();
+  const add = (map: Map<string, number[]>, key: string, value: number) => map.set(key, [...(map.get(key) ?? []), value]);
+  for (const edge of edges) {
+    const sourceSide = sideOf.get(edge.sourceHandle ?? "");
+    const targetSide = sideOf.get(edge.targetHandle ?? "");
+    if (sourceSide !== undefined) add(departures, `${edge.source}:${sourceSide}`, peerCenter(edge.target, sourceSide));
+    if (targetSide !== undefined) add(arrivals, `${edge.target}:${targetSide}`, peerCenter(edge.source, targetSide));
+  }
+  const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const arrivalsFirst = new Map<string, boolean>();
+  for (const [key, arrivalPeers] of arrivals) {
+    const departurePeers = departures.get(key);
+    if (departurePeers !== undefined) arrivalsFirst.set(key, average(arrivalPeers) <= average(departurePeers));
+  }
+  if (arrivalsFirst.size === 0) return edges;
+  return edges.map((edge) => {
+    const sourceFirst = arrivalsFirst.get(`${edge.source}:${sideOf.get(edge.sourceHandle ?? "")}`);
+    const targetFirst = arrivalsFirst.get(`${edge.target}:${sideOf.get(edge.targetHandle ?? "")}`);
+    if (sourceFirst === undefined && targetFirst === undefined) return edge;
+    return {
+      ...edge,
+      ...(sourceFirst !== undefined ? { sourceHandle: `${edge.sourceHandle}@${sourceFirst ? 2 : 1}` } : {}),
+      ...(targetFirst !== undefined ? { targetHandle: `${edge.targetHandle}@${targetFirst ? 1 : 2}` } : {}),
+    };
+  });
+}
+
 /** The four target-side ports shared by work cards and terminal outcome pills. The default
  * "in" id is the left-facing port; the other ids name their physical side explicitly. */
 function cardinalTargetHandles(width: number, height: number): NodeHandle[] {
@@ -73,6 +144,7 @@ function stepHandles(
     { id: "out-left", type: "source", position: Position.Left, x: -SOURCE_HANDLE_SIZE / 2, y: height / 2 - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
     { id: "out-top", type: "source", position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
     { id: "out-bottom", type: "source", position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    ...splitPortHandles(width, height),
     ...(failure ? [{ id: "failure", type: "source" as const, position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(success ? [{ id: "success", type: "source" as const, position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(returnIn ? [{ id: "return-in", type: "target" as const, position: Position.Top, x: width * 0.3 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),

@@ -4,6 +4,7 @@ import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/re
 import { categoryToken } from "../../../design/semantics";
 import { Badge } from "../../primitives";
 import type { StepFlowNode } from "../types";
+import { SPLIT_PORTS } from "../buildFlowElements";
 import { useCodeHQStore } from "../../../store/useCodeHQStore";
 import styles from "./StepNode.module.css";
 
@@ -88,6 +89,17 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       <Handle id="out-left" type="source" position={Position.Left} className={sourceHandleClassName("out-left")} aria-hidden="true" />
       <Handle id="out-top" type="source" position={Position.Top} className={sourceHandleClassName("out-top")} aria-hidden="true" />
       <Handle id="out-bottom" type="source" position={Position.Bottom} className={sourceHandleClassName("out-bottom")} aria-hidden="true" />
+      {SPLIT_PORTS.map(({ id: handleId, type, position, fraction }) => (
+        <Handle
+          key={handleId}
+          id={handleId}
+          type={type}
+          position={position}
+          className={type === "source" ? sourceHandleClassName(handleId) : styles.handleHidden}
+          style={position === Position.Left || position === Position.Right ? { top: `${fraction * 100}%` } : { left: `${fraction * 100}%` }}
+          aria-hidden="true"
+        />
+      ))}
       {hasFailureOutcome ? <Handle id="failure" type="source" position={Position.Top} className={`${styles.handle} ${styles.failureHandle}`} aria-hidden="true" /> : null}
       {hasSuccessOutcome ? <Handle id="success" type="source" position={Position.Bottom} className={`${styles.handle} ${styles.successHandle}`} aria-hidden="true" /> : null}
       {hasReturnIn ? <Handle id="return-in" type="target" position={Position.Top} className={styles.handleHidden} aria-hidden="true" /> : null}

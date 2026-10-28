@@ -8,7 +8,7 @@ import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
 import { layoutCardSize, useCodeHQStore } from "../../store/useCodeHQStore";
-import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions } from "./buildFlowElements";
+import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions, splitSharedSides } from "./buildFlowElements";
 import { CanvasLegend, legendRows } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
@@ -383,7 +383,7 @@ function WorkflowCanvasInner({
       }
     }
 
-    return baseEdges.map((edge) => {
+    return splitSharedSides(baseEdges.map((edge) => {
       if (edge.data?.retry === true || edge.data?.returnEdge === true) {
         return edge;
       }
@@ -411,7 +411,7 @@ function WorkflowCanvasInner({
       return edge.sourceHandle === handles.sourceHandle && edge.targetHandle === handles.targetHandle
         ? edge
         : { ...edge, ...handles };
-    });
+    }), nodeBounds);
   }, [baseEdges, layout, nodes]);
 
   const live = useLiveBuild(canvasId, workflow, workflowRevision, layout, nodes, reducedMotion);
