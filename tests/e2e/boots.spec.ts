@@ -26,7 +26,7 @@ test("loads the test project, auto-selects the default workflow, and renders its
   await expect(page.getByRole("banner").getByText("MotionA", { exact: true })).toBeVisible();
 
   // The default workflow (settings.defaultWorkflowId === "generate-video") is auto-selected: the
-  // dock names it, and the workflow tree that rises from the dock marks it current.
+  // title card names it, and the workflow tree that opens under the title marks it current.
   const workflowsButton = page.getByRole("button", { name: "Workflows: Generate Video Prompt" });
   await expect(workflowsButton).toBeVisible();
   await workflowsButton.click();

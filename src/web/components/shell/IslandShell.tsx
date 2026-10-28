@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CaretUp, ClipboardText, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
+import { CaretDown, ClipboardText, MagnifyingGlass, Palette, TreeStructure } from "@phosphor-icons/react";
 import type { CanvasChrome } from "../canvas";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import { AppearancePanel } from "../appearance";
-import { CopyButton, IconButton, Kbd } from "../primitives";
+import { CopyButton, IconButton, Tooltip } from "../primitives";
 import { DOT_ORIGIN, DOT_STEP, useDotGrid } from "./dotGrid";
 import { Island } from "./Island";
 import { StatusIndicator, type CodeHQStatus } from "./StatusIndicator";
@@ -31,13 +31,12 @@ export interface IslandShellProps {
   children: (chrome: CanvasChrome) => ReactNode;
 }
 
-const DOCK_WIDTH = 26;
-const DOCK_HEIGHT = 4;
-/** On a phone the dock is one row: search icon, workflow, zoom level and the actions menu. */
-const NARROW_DOCK_HEIGHT = 2;
+/** The dock is one row, the search icon then the canvas controls, about this many dots wide. */
+const DOCK_WIDTH = 14;
+const DOCK_HEIGHT = 2;
 const DRAWER_WIDTH = 15;
-/** Dots kept clear above the grown dock, so the workflow tree never reaches the title island. */
-const TREE_TOP_CLEARANCE = 5;
+/** Dots the open title card takes above the workflow tree, plus one dot of air over the dock. */
+const TREE_CLEARANCE = 8;
 /** Below this many dot columns the title and status islands can't share the top row. */
 const NARROW_COLUMNS = 24;
 /** In the narrow layout the title island starts under the two-dot status island. */
@@ -49,9 +48,10 @@ const DOCK_RETURN_MS = 350;
 
 /**
  * The app frame: the canvas fills the window and every piece of chrome floats over it as an
- * island on the canvas's own dot grid. Top left names the repository and the open workflow; top
- * right carries status, the agent prompt and theme; the bottom dock carries search, the canvas
- * controls, and the workflow tree, which opens by growing the dock upward.
+ * island on the canvas's own dot grid. Top left names the repository and the open workflow, and
+ * holds the workflow tree, which opens by growing the title card downward; top right carries
+ * status, the agent prompt and theme; the one-row bottom dock carries search and the canvas
+ * controls.
  */
 export function IslandShell({ repositoryName, onSelectRepository, locationLabel, status, errorCount, pulseKey, navigator, notice, overlays, children }: IslandShellProps) {
   const grid = useDotGrid();
@@ -66,15 +66,14 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const treeToggleRef = useRef<HTMLButtonElement>(null);
   const treeId = useId();
 
-  // The title card opens in full for a newly opened workflow on a wide window, and folds to a pill
-  // once the reader starts moving the canvas. Hover, focus or a tap open it again.
+  // On a wide window the title card always shows in full, description included. On a narrow one it
+  // is a pill that hover, focus or a tap opens. The open workflow tree keeps it open.
   const identityRef = useRef<HTMLDivElement>(null);
   const [titleHover, setTitleHover] = useState(false);
   const [titleFocus, setTitleFocus] = useState(false);
   const [titleTapped, setTitleTapped] = useState(false);
-  const [movedIn, setMovedIn] = useState<string | null>(null);
   const compactTitle = grid.width < COMPACT_TITLE_WIDTH;
-  const titleOpen = titleHover || titleFocus || titleTapped || (!compactTitle && movedIn !== locationLabel);
+  const titleOpen = treeOpen || titleHover || titleFocus || titleTapped || !compactTitle;
   const titleOpenRef = useRef(titleOpen);
   useEffect(() => {
     titleOpenRef.current = titleOpen;
@@ -128,9 +127,8 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
     setCanvasActive(moving);
     if (moving) {
       setCanvasMoving(true);
-      setMovedIn(locationLabel);
     }
-  }, [locationLabel]);
+  }, []);
   useEffect(() => {
     if (canvasActive || !canvasMoving) {
       return;
@@ -144,10 +142,10 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
   const identityWidth = narrow ? lastColumn : Math.min(16, Math.max(8, lastColumn - 12));
   const identityTop = narrow ? NARROW_IDENTITY_TOP : 0;
   const dockWidth = Math.min(DOCK_WIDTH, lastColumn);
-  const dockHeight = narrow ? NARROW_DOCK_HEIGHT : DOCK_HEIGHT;
+  const dockHeight = DOCK_HEIGHT;
   const dockLeft = Math.max(0, Math.floor((lastColumn - dockWidth) / 2));
   const drawerMeetsDock = dockLeft + dockWidth > lastColumn - DRAWER_WIDTH;
-  const treeMaxHeight = Math.max(2, lastRow - dockHeight - TREE_TOP_CLEARANCE) * DOT_STEP;
+  const treeMaxHeight = Math.max(2, lastRow - identityTop - dockHeight - TREE_CLEARANCE) * DOT_STEP;
   // Pixels from the window's bottom edge up to the dock's top edge.
   const dockClearance = grid.height - (DOT_ORIGIN + (lastRow - dockHeight) * DOT_STEP);
 
@@ -194,12 +192,12 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
     dockClearance,
     onCanvasMove,
     fitInsets: {
-      top: DOT_ORIGIN + (identityTop + (narrow ? 3 : 4)) * DOT_STEP,
+      top: DOT_ORIGIN + (identityTop + (compactTitle ? 3 : 7)) * DOT_STEP,
       right: DOT_ORIGIN,
       bottom: DOT_ORIGIN + (dockHeight + 1) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, dockClearance, dockHeight, identityTop, narrow, onCanvasMove, titleTarget]);
+  }), [compactTitle, controlsTarget, dockClearance, dockHeight, identityTop, onCanvasMove, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.
@@ -233,8 +231,26 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
             )}
             <span className={styles.slash} aria-hidden="true">/</span>
           </div>
+          <button
+            ref={treeToggleRef}
+            type="button"
+            className={styles.switcher}
+            aria-label={`Workflows: ${locationLabel}`}
+            aria-expanded={treeOpen}
+            aria-controls={treeOpen ? treeId : undefined}
+            data-open={treeOpen ? "true" : undefined}
+            onClick={() => setTreeOpen((open) => !open)}
+          >
+            <TreeStructure size={14} aria-hidden="true" />
+            <CaretDown size={12} className={styles.caret} aria-hidden="true" />
+          </button>
           <div ref={setTitleTarget} className={styles.title} />
         </div>
+        {treeOpen ? (
+          <div ref={treeRef} id={treeId} className={styles.tree} style={{ maxHeight: treeMaxHeight }}>
+            {navigator(() => setTreeOpen(false))}
+          </div>
+        ) : null}
         {notice}
       </Island>
 
@@ -256,43 +272,18 @@ export function IslandShell({ repositoryName, onSelectRepository, locationLabel,
       </Island>
 
       <Island
-        placement={{ l: dockLeft, b: 0, w: dockWidth, h: "auto" }}
+        placement={{ cx: true, b: 0, w: "auto", h: "auto" }}
         className={styles.dock}
         role="region"
         aria-label="Search and canvas controls"
-        data-receded={canvasMoving && !treeOpen ? "true" : undefined}
+        data-receded={canvasMoving ? "true" : undefined}
       >
-        {treeOpen ? (
-          <div ref={treeRef} id={treeId} className={styles.tree} style={{ maxHeight: treeMaxHeight }}>
-            {navigator(() => setTreeOpen(false))}
-          </div>
-        ) : null}
         <div className={styles.dockBody}>
-          <button type="button" className={styles.search} onClick={openSearch}>
-            <MagnifyingGlass size={16} aria-hidden="true" />
-            <span className={styles.searchLabel}>Search steps, files and workflows…</span>
-            <Kbd>{searchShortcutLabel()}</Kbd>
-          </button>
-          <div className={styles.dockRow}>
-            <span className={styles.searchIcon}>
-              <IconButton label="Search" icon={<MagnifyingGlass size={16} />} size="sm" onClick={openSearch} />
-            </span>
-            <button
-              ref={treeToggleRef}
-              type="button"
-              className={styles.location}
-              aria-label={`Workflows: ${locationLabel}`}
-              aria-expanded={treeOpen}
-              aria-controls={treeOpen ? treeId : undefined}
-              data-open={treeOpen ? "true" : undefined}
-              onClick={() => setTreeOpen((open) => !open)}
-            >
-              <TreeStructure size={14} aria-hidden="true" />
-              <span className={styles.locationName}>{locationLabel}</span>
-              <CaretUp size={12} className={styles.caret} aria-hidden="true" />
-            </button>
-            <div ref={setControlsTarget} className={styles.controls} />
-          </div>
+          <Tooltip content={`Search (${searchShortcutLabel()})`}>
+            <IconButton label="Search" icon={<MagnifyingGlass size={16} />} size="sm" onClick={openSearch} />
+          </Tooltip>
+          <span className={styles.divider} aria-hidden="true" />
+          <div ref={setControlsTarget} className={styles.controls} />
         </div>
       </Island>
 

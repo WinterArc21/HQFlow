@@ -20,13 +20,32 @@
     height var(--dur-base) var(--ease-standard);
 }
 
+/* The full card: repository and the workflow switcher share the top row, the title spans the
+   card under them. */
 .identity {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   min-width: 0;
   max-width: var(--identity-max-width);
+}
+
+.identity .title {
+  grid-column: 1 / -1;
+}
+
+/* The whole purpose shows, wrapped, with the freshness on its own line under it. */
+.identity:not([data-collapsed]) .title :global(div[data-title-detail]) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.identity:not([data-collapsed]) .title :global(div[data-title-detail] > p) {
+  white-space: normal;
+  text-wrap: pretty;
 }
 
 .identity:not([data-collapsed]) .title {
@@ -43,9 +62,14 @@
 /* The pill: mark, repository and workflow on one line. The size, purpose and freshness wait for
    hover, focus or a tap. */
 .identity[data-collapsed] {
-  flex-direction: row;
+  display: flex;
   align-items: center;
   padding: var(--space-2) var(--space-3);
+}
+
+/* In the pill the switcher follows the title instead of the repository. */
+.identity[data-collapsed] .switcher {
+  order: 1;
 }
 
 .identity[data-collapsed] .repository {
@@ -156,90 +180,36 @@
 
 .dockBody {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-}
-
-.search {
-  display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  height: 44px;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background-color: var(--bg-inset);
-  color: var(--text-secondary);
-  font-size: var(--fs-base);
-  text-align: left;
-  transition:
-    border-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+  padding: var(--space-2);
 }
 
-.search:hover {
-  border-color: var(--text-tertiary);
+.dockBody > .divider {
+  margin: 0;
+}
+
+/* The workflow switcher in the title card. */
+.switcher {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  color: var(--text-secondary);
+}
+
+.switcher:hover,
+.switcher[data-open="true"] {
+  background-color: var(--bg-inset);
   color: var(--text-primary);
 }
 
-.search:focus-visible,
-.location:focus-visible {
+.switcher:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-}
-
-/* Touch screens have no shortcut key to press. */
-@media (pointer: coarse) {
-  .search :global(kbd) {
-    display: none;
-  }
-}
-
-/* The dock's own search icon stands in for the search bar on a phone. */
-.searchIcon {
-  display: none;
-  flex: none;
-}
-
-.searchLabel {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dockRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.location {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  height: 30px;
-  padding: 0 var(--space-3);
-  border-radius: 999px;
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
-}
-
-.location:hover,
-.location[data-open="true"] {
-  background-color: var(--bg-inset);
-}
-
-.locationName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .caret {
@@ -247,14 +217,13 @@
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 
-.location[data-open="true"] .caret {
+.switcher[data-open="true"] .caret {
   transform: rotate(180deg);
 }
 
 .controls {
   display: flex;
   flex: none;
-  margin-left: auto;
 }
 
 /* On a phone the status island is wider than the screen; tighten it so the theme button fits. */
@@ -269,31 +238,10 @@
   }
 }
 
-/* Matches IslandShell's NARROW_COLUMNS: on a phone the dock is a single row, and the search bar
-   becomes the icon at its start. */
-@media (max-width: 685px) {
-  .search {
-    display: none;
-  }
-
-  .searchIcon {
-    display: inline-flex;
-  }
-
-  .dockBody {
-    padding: var(--space-2);
-  }
-
-  .location {
-    flex: 1 1 auto;
-    padding: 0 var(--space-2);
-  }
-}
-
-/* ---- workflow tree: the dock grows upward to hold it, one surface with the search bar ---- */
+/* ---- workflow tree: the title card grows downward to hold it ---- */
 .tree {
   overflow-y: auto;
-  border-bottom: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* ---- the step drawer, inset onto the grid like every other island ---- */
