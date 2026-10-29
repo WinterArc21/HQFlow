@@ -239,6 +239,7 @@ function initSpine() {
    ========================================================================== */
 
 const TOUR_INSTRUCTIONS = {
+  draw: "Your agent saves the workflow file. HQFlow draws each step as it lands.",
   details: "Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.",
   trace: "Hover “Agent Maps Code.” HQFlow strengthens its visible path and quiets everything else.",
   arrange: "Drag a card to reshape the flow. Then drag the dot on a solid edge to bend or snap it.",
@@ -306,17 +307,24 @@ async function downloadInteractiveDemo() {
 
 function initWalkthrough() {
   const tabs = Array.from(document.querySelectorAll("[data-tour-step]"));
+  const instructionLabel = document.querySelector("#tourInstruction span");
   const instruction = document.querySelector("#tourInstruction strong");
   const exportPreview = document.getElementById("tourExport");
   const frame = document.querySelector(".tour-frame");
   const formatInputs = Array.from(document.querySelectorAll('input[name="tour-export-format"]'));
   const downloadButton = document.getElementById("tourExportDownload");
   const error = document.getElementById("tourExportError");
-  if (!tabs.length || !instruction || !exportPreview || !frame || !formatInputs.length || !downloadButton || !error) return;
+  if (!tabs.length || !instructionLabel || !instruction || !exportPreview || !frame || !formatInputs.length || !downloadButton || !error) return;
+
+  /* The one canvas draws itself first (tab "draw"), then hosts the feature tour. */
+  const tell = (command) => frame.contentWindow?.postMessage({ type: "hqflow-demo", command }, window.location.origin);
+  const tabFor = (step) => tabs.find((tab) => tab.dataset.tourStep === step);
 
   const activate = (tab) => {
     const step = tab.dataset.tourStep;
     if (!step || !(step in TOUR_INSTRUCTIONS)) return;
+    tell(step === "draw" ? "replay" : "finish");
+    instructionLabel.textContent = step === "draw" ? "Live" : "Try it";
     for (const candidate of tabs) {
       const active = candidate === tab;
       candidate.classList.toggle("is-active", active);
@@ -329,6 +337,12 @@ function initWalkthrough() {
     exportPreview.setAttribute("aria-hidden", String(!showExport));
     if (showExport) exportPreview.querySelector("input:checked")?.focus();
   };
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== frame.contentWindow || event.data?.type !== "hqflow-demo") return;
+    if (event.data.event === "export") activate(tabFor("export"));
+    else if (event.data.event === "drawn" && tabFor("draw")?.classList.contains("is-active")) activate(tabFor("details"));
+  });
 
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activate(tab));
@@ -351,7 +365,7 @@ function initWalkthrough() {
   formatInputs.forEach((input) => input.addEventListener("change", updateFormat));
 
   document.querySelectorAll("[data-export-close]").forEach((button) => {
-    button.addEventListener("click", () => activate(tabs[0]));
+    button.addEventListener("click", () => activate(tabFor("details")));
   });
 
   downloadButton.addEventListener("click", async () => {
