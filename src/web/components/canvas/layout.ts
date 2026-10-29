@@ -4,8 +4,7 @@ import type { Workflow, WorkflowConnection } from "@schema/workflow";
 import { outcomeTone } from "../../design/semantics";
 import { connectionLabelText, estimateEdgeLabelWidth } from "./edgeLabel";
 import { computeBackEdgeIds, computeOutcomeStepIds, computeTopologicalOrder } from "./graph";
-import type { CardSize } from "@schema/wire";
-import { CARD_SIZES, computeOutcomeNodeWidth, OUTCOME_NODE_HEIGHT } from "./nodeContent";
+import { CARD_SIZE, computeOutcomeNodeWidth, OUTCOME_NODE_HEIGHT } from "./nodeContent";
 
 export const LAYOUT_RANK_SEP = 132;
 export const LAYOUT_MARGIN_X = 48;
@@ -64,8 +63,6 @@ export interface LayoutBounds {
 export interface ComputeLayoutOptions {
   /** Defaults to `line`. */
   view?: CanvasView;
-  /** Defaults to `standard`. */
-  cardSize?: CardSize;
 }
 export interface LayoutResult {
   view: CanvasView;
@@ -95,7 +92,7 @@ function mainlinePriority(connection: WorkflowConnection): number {
 }
 
 export function computeLayout(workflow: Workflow, opts: ComputeLayoutOptions): LayoutResult {
-  const { width: nodeWidth, height: nodeHeight } = CARD_SIZES[opts.cardSize ?? "standard"];
+  const { width: nodeWidth, height: nodeHeight } = CARD_SIZE;
   const ids = new Set(workflow.steps.map((step) => step.id));
   const valid = workflow.connections
     .map((connection, index) => ({ connection, index, id: edgeId(connection, index) }))

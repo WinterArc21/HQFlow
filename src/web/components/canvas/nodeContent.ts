@@ -1,21 +1,15 @@
 /**
  * Pure, framework-free helpers describing what a `StepNode` shows at each depth level, and how
- * big a card is. `layout.ts` sizes nodes from `CARD_SIZES`; `StepNode.tsx` uses
+ * big a card is. `layout.ts` sizes nodes from `CARD_SIZE`; `StepNode.tsx` uses
  * the list-building helpers to render exactly the same rows it was sized for — one source of
  * truth, so the deterministic layout in `layout.ts` can never drift from what actually renders.
  */
 import type { SourceReference, WorkflowStep } from "@schema/workflow";
-import type { CardSize, SourceStatus } from "../../api/types";
+import type { SourceStatus } from "../../api/types";
 
-/** Step card formats. Every card in a format has one fixed box, so cards in a row line up and
- * layout never depends on measuring wrapped text (contract §11). Standard (about 2.3 : 1) is the
- * default; Compact shows one purpose line to fit more of a large map; Wide gives long names and
- * purposes room. `StepNode.module.css` clamps the purpose to `purposeLines`. */
-export const CARD_SIZES: Record<CardSize, { width: number; height: number; purposeLines: 1 | 3 }> = {
-  compact: { width: 280, height: 104, purposeLines: 1 },
-  standard: { width: 310, height: 136, purposeLines: 3 },
-  wide: { width: 360, height: 136, purposeLines: 3 },
-};
+/** Fixed step card box. Layout never depends on measuring wrapped text (contract §11).
+ * `StepNode.module.css` clamps the purpose to three lines. */
+export const CARD_SIZE = { width: 310, height: 136 };
 
 /** Fixed height for every outcome pill — always collapsed to a name + one purpose line, never
  * growing with expand (contract: outcome nodes are "clearly not units of work", so they don't
@@ -35,7 +29,7 @@ const OUTCOME_NAME_CHAR_WIDTH = 8;
 /**
  * A terminal ("outcome") step's pill sizes to its own name — long enough to read "429 Too Many"
  * without clipping, capped so one long name can't blow the outcome column out to spine width.
- * A step card's width is fixed per format (`CARD_SIZES`) instead because a work-step's card
+ * A step card's width is fixed (`CARD_SIZE`) instead because a work-step's card
  * carries file paths, counts, and I/O tags whose layout genuinely depends on a stable width; an
  * outcome pill carries only a glyph and two lines of text, so sizing it to content is both safe
  * and the fix the mockup review flagged ("text slightly overran its pill border").

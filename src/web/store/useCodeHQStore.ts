@@ -5,34 +5,22 @@ import type {
   CanvasBend,
   CanvasPoint,
   CanvasSlot,
-  CardSize,
   WorkflowCanvasLayout,
 } from "@schema/wire";
 
-export type { CanvasBend, CanvasBendSnap, CanvasPoint, CardSize, WorkflowCanvasLayout } from "@schema/wire";
+export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
 
 type CanvasViewName = NonNullable<WorkflowCanvasLayout["view"]>;
 
-function slotOf(view: CanvasViewName, size: CardSize): CanvasSlot {
-  return size === "standard" ? view : `${view}:${size}`;
-}
-
-/** The card format a layout's live positions belong to. */
-export function layoutCardSize(layout: WorkflowCanvasLayout | undefined): CardSize {
-  return layout?.cardSize ?? "standard";
-}
-
 /** Sets the live positions and bends aside under `from` and brings back the ones saved under
- * `to`, so each view and card format keeps what the user dragged in it. */
-function moveToSlot(layout: WorkflowCanvasLayout, from: CanvasSlot, to: CanvasSlot, size: CardSize): WorkflowCanvasLayout {
+ * `to`, so each view keeps what the user dragged in it. */
+function moveToSlot(layout: WorkflowCanvasLayout, from: CanvasSlot, to: CanvasSlot): WorkflowCanvasLayout {
   const { [to]: restored, ...others } = layout.otherViews ?? {};
-  const { cardSize: _previous, ...rest } = layout;
   return {
-    ...rest,
+    ...layout,
     nodePositions: restored?.nodePositions ?? {},
     edgeBends: restored?.edgeBends ?? {},
     otherViews: { ...others, [from]: { nodePositions: layout.nodePositions, edgeBends: layout.edgeBends } },
-    ...(size !== "standard" ? { cardSize: size } : {}),
   };
 }
 
@@ -51,7 +39,7 @@ export interface StepPanRequest {
 }
 
 /** Persist schema version — bump when migrating stored UI preferences. */
-const PERSIST_VERSION = 7;
+const PERSIST_VERSION = 8;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
@@ -71,7 +59,6 @@ interface CodeHQUiState {
   darkScene: string;
   lightScene: string;
   motion: MotionLevel;
-  cardSize: CardSize;
   appearanceOpen: boolean;
 }
 
@@ -87,9 +74,6 @@ interface CodeHQUiActions {
   /** Picks a view for one workflow. Dragged positions and bends belong to the view they were
    * made in: they are set aside under `from` and come back when the user returns to it. */
   setCanvasView: (workflowId: string, view: CanvasViewName, from: CanvasViewName) => void;
-  /** Brings one workflow's saved geometry in line with the current card format, setting the
-   * positions dragged in the previous format aside the same way `setCanvasView` does. */
-  matchCardSize: (workflowId: string, view: CanvasViewName) => void;
   setSearchQuery: (query: string) => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -99,7 +83,6 @@ interface CodeHQUiActions {
   /** Shows a scene: switches to its theme family and remembers it for that family. */
   setScene: (sceneId: string, base: Theme) => void;
   setMotion: (motion: MotionLevel) => void;
-  setCardSize: (cardSize: CardSize) => void;
   setAppearanceOpen: (open: boolean) => void;
 }
 
@@ -160,7 +143,6 @@ const INITIAL_STATE: CodeHQUiState = {
   darkScene: "abyss-mesh",
   lightScene: "sorbet",
   motion: "full",
-  cardSize: "standard",
   appearanceOpen: false,
 };
 
@@ -264,24 +246,10 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setCanvasView: (workflowId, view, from) => set((state) => {
         const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
-        const size = layoutCardSize(layout);
         return {
           canvasLayouts: {
             ...state.canvasLayouts,
-            [workflowId]: { ...moveToSlot(layout, slotOf(from, size), slotOf(view, size), size), view },
-          },
-        };
-      }),
-
-      matchCardSize: (workflowId, view) => set((state) => {
-        const layout = state.canvasLayouts[workflowId];
-        if (layout === undefined || layoutCardSize(layout) === state.cardSize) {
-          return state;
-        }
-        return {
-          canvasLayouts: {
-            ...state.canvasLayouts,
-            [workflowId]: moveToSlot(layout, slotOf(view, layoutCardSize(layout)), slotOf(view, state.cardSize), state.cardSize),
+            [workflowId]: { ...moveToSlot(layout, from, view), view },
           },
         };
       }),
@@ -306,8 +274,6 @@ export const useCodeHQStore = create<CodeHQStore>()(
 
       setMotion: (motion) => set({ motion }),
 
-      setCardSize: (cardSize) => set({ cardSize }),
-
       setAppearanceOpen: (appearanceOpen) => set({ appearanceOpen }),
     }),
     {
@@ -319,13 +285,13 @@ export const useCodeHQStore = create<CodeHQStore>()(
         darkScene: state.darkScene,
         lightScene: state.lightScene,
         motion: state.motion,
-        cardSize: state.cardSize,
       }),
       /**
        * v0/v1 stored a canvas depth preference. The board is story-only now, so drop it.
        * v5 added appearance fields; older states simply take their defaults from the initial state.
        * v6 dropped the per-scene card colour overrides: each scene now owns its card colours.
        * v7 dropped the grid and card-surface overrides: each scene owns those too.
+       * v8 dropped card sizes: all cards use the standard box.
        */
       migrate: (persisted) => {
         if (persisted === undefined || persisted === null || typeof persisted !== "object") {
@@ -337,6 +303,7 @@ export const useCodeHQStore = create<CodeHQStore>()(
         delete state.categoryColors;
         delete state.gridMode;
         delete state.cardSurface;
+        delete state.cardSize;
         return state as unknown as CodeHQUiState;
       },
     },

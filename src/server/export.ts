@@ -10,7 +10,7 @@
  * `sourceChecks` status map.
  */
 import type { Workflow } from "@schema/workflow";
-import type { CardSize, ExportPayload, SourceStatus } from "@schema/wire";
+import type { ExportPayload, SourceStatus } from "@schema/wire";
 import type { WorkflowRecord } from "@core/types";
 
 export type { ExportPayload } from "@schema/wire";
@@ -18,7 +18,6 @@ export type { ExportPayload } from "@schema/wire";
 export interface SanitizeExportPayloadOptions {
   exportedAt?: string;
   hideFilePaths?: boolean;
-  cardSize?: CardSize;
 }
 
 const REDACTED_FILE_PREFIX = "redacted-file-";
@@ -141,7 +140,6 @@ export function sanitizeExportPayload(
     workflowId: record.id,
     exportedAt: options.exportedAt ?? new Date().toISOString(),
     repositoryName,
-    ...(options.cardSize !== undefined && options.cardSize !== "standard" ? { cardSize: options.cardSize } : {}),
   };
 }
 

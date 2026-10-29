@@ -179,8 +179,8 @@
   color: var(--accent-blue);
 }
 
-/* Up to three lines (one in the compact format); the card's height is fixed per format
-   (`CARD_SIZES` in `../nodeContent.ts`), so the footer is pushed to the bottom and a short
+/* Up to three lines; the card's height is fixed
+   (`CARD_SIZE` in `../nodeContent.ts`), so the footer is pushed to the bottom and a short
    purpose leaves the space below it, not above. */
 .purpose {
   flex-shrink: 0;
@@ -193,11 +193,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 12px 12px 0;
-}
-
-.card[data-card-size="compact"] .purpose {
-  max-height: 16px;
-  -webkit-line-clamp: 1;
 }
 
 .footer {

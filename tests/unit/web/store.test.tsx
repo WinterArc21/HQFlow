@@ -70,7 +70,7 @@ describe("useCodeHQStore", () => {
     expect(raw).not.toBeNull();
     const parsed: { version: number; state: Record<string, unknown> } = JSON.parse(raw as string);
 
-    expect(parsed.version).toBe(7);
+    expect(parsed.version).toBe(8);
     expect(parsed.state.theme).toBe("light");
     expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
@@ -79,7 +79,7 @@ describe("useCodeHQStore", () => {
       },
     });
     expect(Object.keys(parsed.state).sort()).toEqual(
-      ["cardSize", "darkScene", "lightScene", "motion", "theme"],
+      ["darkScene", "lightScene", "motion", "theme"],
     );
   });
 
@@ -156,25 +156,14 @@ describe("useCodeHQStore", () => {
     expect(reset?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
   });
 
-  it("keeps dragged positions per card format and restores them when switching back", () => {
-    const store = useCodeHQStore.getState();
-    store.setCanvasView("wf", "flow", "line");
-    store.saveNodePosition("wf", "a", { x: 10, y: 20 });
-
-    store.setCardSize("wide");
-    store.matchCardSize("wf", "flow");
-    let layout = useCodeHQStore.getState().canvasLayouts.wf;
-    // Standard positions would overlap at the wide size, so they are set aside, not reused.
-    expect(layout?.cardSize).toBe("wide");
-    expect(layout?.nodePositions).toEqual({});
-    store.saveNodePosition("wf", "a", { x: 50, y: 60 });
-
-    store.setCardSize("standard");
-    store.matchCardSize("wf", "flow");
-    layout = useCodeHQStore.getState().canvasLayouts.wf;
-    expect(layout?.cardSize).toBeUndefined();
-    expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
-    expect(layout?.otherViews?.["flow:wide"]?.nodePositions).toEqual({ a: { x: 50, y: 60 } });
+  it("drops the removed card size preference while keeping other appearance settings", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ state: { theme: "light", motion: "calm", cardSize: "wide" }, version: 7 }),
+    );
+    const { useCodeHQStore: freshStore } = await loadFreshStore();
+    expect(freshStore.getState()).toMatchObject({ theme: "light", motion: "calm" });
+    expect(freshStore.getState()).not.toHaveProperty("cardSize");
   });
 
 });

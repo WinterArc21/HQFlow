@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus, WorkflowRecord } from "../../api/types";
 import { usePrefersReducedMotion } from "../../lib/usePrefersReducedMotion";
-import { layoutCardSize, useCodeHQStore } from "../../store/useCodeHQStore";
+import { useCodeHQStore } from "../../store/useCodeHQStore";
 import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNodePositions, splitSharedSides } from "./buildFlowElements";
 import { CanvasLegend, legendRows } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
@@ -124,14 +124,7 @@ function WorkflowCanvasInner({
   const workflowRevision = useMemo(() => JSON.stringify(workflow), [workflow]);
 
   const theme = useCodeHQStore((state) => state.theme);
-  const storedLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
-  const cardSize = useCodeHQStore((state) => state.cardSize);
-  const matchCardSize = useCodeHQStore((state) => state.matchCardSize);
-  // Positions dragged in another card format would overlap at this size: ignore them until
-  // `matchCardSize` below has set them aside and restored this format's own.
-  const canvasLayout = storedLayout !== undefined && layoutCardSize(storedLayout) !== cardSize
-    ? { ...storedLayout, nodePositions: {}, edgeBends: {} }
-    : storedLayout;
+  const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
   const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
   const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
@@ -160,11 +153,7 @@ function WorkflowCanvasInner({
     }
   }, [canvasId, setCanvasView, view]);
 
-  useLayoutEffect(() => {
-    matchCardSize(canvasId, view);
-  }, [canvasId, cardSize, matchCardSize, view]);
-
-  const layout = useMemo(() => computeLayout(workflow, { view, cardSize }), [workflow, view, cardSize]);
+  const layout = useMemo(() => computeLayout(workflow, { view }), [workflow, view]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
   const bendResetKey = useMemo(
     () => `${layoutResetRevision}:${JSON.stringify(layout.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })))}`,
@@ -284,7 +273,6 @@ function WorkflowCanvasInner({
   const previousWorkflowId = useRef(canvasId);
   const previousRevision = useRef(workflowRevision);
   const previousView = useRef(view);
-  const previousCardSize = useRef(cardSize);
   const handledLayoutResetRevision = useRef(layoutResetRevision);
   useLayoutEffect(() => {
     const reset = previousWorkflowId.current !== canvasId;
@@ -293,12 +281,10 @@ function WorkflowCanvasInner({
     // Expanding a card keeps positions, so the rest of the map holds still.
     // Switching views re-flows every card too, and the cards glide to their new places.
     const viewChanged = previousView.current !== view;
-    // A new card format changes every card's size, so the old positions would overlap.
-    const reflow = reset || viewChanged || previousCardSize.current !== cardSize || previousRevision.current !== workflowRevision;
+    const reflow = reset || viewChanged || previousRevision.current !== workflowRevision;
     previousWorkflowId.current = canvasId;
     previousRevision.current = workflowRevision;
     previousView.current = view;
-    previousCardSize.current = cardSize;
     const from = new Map<string, { x: number; y: number }>();
     setNodes((current) => {
       const positions = new Map(current.map((node) => [node.id, node.position]));
@@ -337,7 +323,7 @@ function WorkflowCanvasInner({
       cancelAnimationFrame(frame);
       setNodes((current) => current.map((node) => ({ ...node, position: to.get(node.id) ?? node.position })));
     };
-  }, [canvasId, canvasLayout?.nodePositions, cardSize, generatedNodes, reducedMotion, setNodes, view, workflowRevision]);
+  }, [canvasId, canvasLayout?.nodePositions, generatedNodes, reducedMotion, setNodes, view, workflowRevision]);
   // A new view has new bounds: frame it while the cards glide.
   const framedView = useRef(view);
   useLayoutEffect(() => {
@@ -440,7 +426,7 @@ function WorkflowCanvasInner({
 
   const handleExport = useCallback(() => setExportDialogOpen(true), []);
   const downloadExport = useCallback(async (hideFilePaths: boolean): Promise<void> => {
-    const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths, cardSize);
+    const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths);
     const url = URL.createObjectURL(artifact.blob);
     const link = document.createElement("a");
     link.href = url;
@@ -450,7 +436,7 @@ function WorkflowCanvasInner({
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }, [cardSize, workflow.id]);
+  }, [workflow.id]);
   const downloadImage = useCallback(async (): Promise<void> => {
     const viewport = containerRef.current?.querySelector<HTMLElement>(".react-flow__viewport");
     if (viewport === undefined || viewport === null || nodes.length === 0) {
@@ -505,7 +491,7 @@ function WorkflowCanvasInner({
     }
   }, [containerRef, nodes, workflow.name]);
   const shareExport = useCallback(async (hideFilePaths: boolean): Promise<void> => {
-    const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths, cardSize);
+    const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths);
     const file = new File([artifact.blob], artifact.filename, { type: "text/html" });
     const shareData = { files: [file], title: workflow.name, text: "HQFlow workflow export" };
     if (typeof navigator.share === "function" && (typeof navigator.canShare !== "function" || navigator.canShare(shareData))) {
@@ -513,7 +499,7 @@ function WorkflowCanvasInner({
       return;
     }
     await downloadExport(hideFilePaths);
-  }, [cardSize, downloadExport, workflow.id, workflow.name]);
+  }, [downloadExport, workflow.id, workflow.name]);
 
   const stepNodeCount = nodes.filter((node) => node.type === "step").length;
   const showMinimap = stepNodeCount > MINIMAP_NODE_THRESHOLD;

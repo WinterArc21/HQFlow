@@ -30,7 +30,6 @@ recording uses the Flow view and the Sorbet scene.
   workflow and the handoffs between them, then fills each one in as its file arrives.
 - **Search.** Press `Ctrl+K` / `⌘K` to jump to any workflow or step.
 - **Scenes.** Light and dark themes, plus animated backgrounds (Abyss Mesh, Seafoam, Sorbet).
-- **Card sizes.** Pick **Compact**, **Standard**, or **Wide** step cards in the Appearance panel.
 - **Export.** Download a PNG, or a self-contained interactive HTML file that works offline.
   You can hide file paths before you share it.
 - **Validation.** Files that break the contract are reported in the app and in

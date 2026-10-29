@@ -47,7 +47,6 @@ const sourceQuerySchema = z
 const exportQuerySchema = z
   .object({
     hideFilePaths: z.enum(["true", "false"]).default("false"),
-    cardSize: z.enum(["compact", "standard", "wide"]).default("standard"),
   })
   .strict();
 
@@ -179,7 +178,6 @@ function registerExportRoute(app: FastifyInstance, store: CodeHQStore): void {
 
     const payload = sanitizeExportPayload(record, store.getSnapshot().repository.name, {
       hideFilePaths: parsedQuery.data.hideFilePaths === "true",
-      cardSize: parsedQuery.data.cardSize,
     });
     const html = buildExportHtml({ payload, viewerJs: assets.js, viewerCss: assets.css });
 

@@ -55,11 +55,9 @@ export interface CanvasBend {
   snap: CanvasBendSnap;
 }
 
-/** Step card format, picked in Appearance. */
-export type CardSize = "compact" | "standard" | "wide";
 type CanvasViewName = "flow" | "wrap" | "line";
-/** Where a set of dragged positions belongs: a view, plus the card format when it is not standard. */
-export type CanvasSlot = CanvasViewName | `${CanvasViewName}:${Exclude<CardSize, "standard">}`;
+/** The view a set of dragged positions belongs to. */
+export type CanvasSlot = CanvasViewName;
 
 /** Repository-local visual state for one workflow. Never stored in workflow JSON. */
 export interface WorkflowCanvasLayout {
@@ -67,9 +65,7 @@ export interface WorkflowCanvasLayout {
   edgeBends: Record<string, CanvasBend>;
   /** The view the user picked; absent means the canvas picks one from the map's shape. */
   view?: "flow" | "wrap" | "line";
-  /** The card format `nodePositions` and `edgeBends` were set in; absent means standard. */
-  cardSize?: Exclude<CardSize, "standard">;
-  /** Positions and bends the user set in the views and card formats they have left, so coming
+  /** Positions and bends the user set in the views they have left, so coming
    * back restores them. */
   otherViews?: Partial<Record<CanvasSlot, { nodePositions: Record<string, CanvasPoint>; edgeBends: Record<string, CanvasBend> }>>;
 }
@@ -92,6 +88,4 @@ export interface ExportPayload {
   workflowId: string;
   exportedAt: string;
   repositoryName: string;
-  /** The card format active when the export was made; absent means standard. */
-  cardSize?: CardSize;
 }

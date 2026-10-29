@@ -1,4 +1,4 @@
-import type { CodeHQSnapshot, SourceLookup, WorkflowCanvasLayout, CardSize } from "./types";
+import type { CodeHQSnapshot, SourceLookup, WorkflowCanvasLayout } from "./types";
 
 /** Base URL is empty: Vite proxies `/api` to the local server (contract §8). */
 const BASE_URL = "";
@@ -57,8 +57,8 @@ function exportFilename(contentDisposition: string | null, fallback: string): st
 }
 
 /** Fetches a self-contained export artifact with its privacy choice applied. */
-export async function fetchWorkflowExport(workflowId: string, hideFilePaths: boolean, cardSize: CardSize = "standard"): Promise<WorkflowExportArtifact> {
-  const path = `/api/export/${encodeURIComponent(workflowId)}?hideFilePaths=${String(hideFilePaths)}&cardSize=${cardSize}`;
+export async function fetchWorkflowExport(workflowId: string, hideFilePaths: boolean): Promise<WorkflowExportArtifact> {
+  const path = `/api/export/${encodeURIComponent(workflowId)}?hideFilePaths=${String(hideFilePaths)}`;
   const response = await safeFetch(path);
   await ensureOk(path, response);
   return {

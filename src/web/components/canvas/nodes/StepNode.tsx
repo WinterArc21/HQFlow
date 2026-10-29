@@ -5,7 +5,6 @@ import { categoryToken } from "../../../design/semantics";
 import { Badge } from "../../primitives";
 import type { StepFlowNode } from "../types";
 import { SPLIT_PORTS } from "../buildFlowElements";
-import { useCodeHQStore } from "../../../store/useCodeHQStore";
 import styles from "./StepNode.module.css";
 
 /**
@@ -54,7 +53,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
 
   // The open step card sits on this node's corner; the selection ring would peek out around it.
   const underCard = selected;
-  const cardSize = useCodeHQStore((state) => state.cardSize);
   const cardClassName = [styles.card, selected ? styles.selected : "", underCard ? styles.underCard : "", dimmed ? styles.dimmed : ""]
     .filter(Boolean)
     .join(" ");
@@ -67,7 +65,6 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     <div
       className={cardClassName}
       data-step-node={step.id}
-      data-card-size={cardSize}
       role="button"
       tabIndex={tabIndex}
       aria-label={accessibleName}
