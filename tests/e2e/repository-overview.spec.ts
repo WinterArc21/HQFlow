@@ -66,13 +66,7 @@ test.describe("initialized but no workflow files", () => {
     await page.mouse.move(cardBox!.x + cardBox!.width / 2 + 80, cardBox!.y + cardBox!.height / 2 + 50, { steps: 4 });
     await page.mouse.up();
 
-    const bendHandle = page.getByRole("button", { name: "Bend edge repository-handoff-0" });
-    const bendBox = await bendHandle.boundingBox();
-    expect(bendBox).not.toBeNull();
-    await page.mouse.move(bendBox!.x + bendBox!.width / 2, bendBox!.y + bendBox!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(bendBox!.x + bendBox!.width / 2 + 45, bendBox!.y + bendBox!.height / 2 + 45, { steps: 4 });
-    await page.mouse.up();
+    await expect(page.getByRole("button", { name: /^Bend edge / })).toHaveCount(0);
 
     await expect.poll(async () => {
       const raw = await fsp.readFile(path.join(root, ".codehq", ".runtime", "layout.json"), "utf-8").catch(() => "{}");
@@ -81,9 +75,6 @@ test.describe("initialized but no workflow files", () => {
       workflows: {
         "__repository-map__": {
           nodePositions: { checkout: { x: expect.any(Number), y: expect.any(Number) } },
-          edgeBends: {
-            "repository-handoff-0": { point: { x: expect.any(Number), y: expect.any(Number) } },
-          },
         },
       },
     });

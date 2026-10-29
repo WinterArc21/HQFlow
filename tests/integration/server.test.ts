@@ -189,7 +189,6 @@ describe("createCodeHQServer — /api/source", () => {
 describe("createCodeHQServer — /api/workflows/:id/layout", () => {
   const layout = {
     nodePositions: { "step-1": { x: 12, y: 34 } },
-    edgeBends: { "step-1->done#0": { point: { x: 56, y: 78 }, snap: null } },
   };
 
   it("writes, reads, and deletes the complete layout", async () => {

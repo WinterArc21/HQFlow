@@ -113,13 +113,14 @@ you can run it in CI or ask your agent to run it before handoff.
 
 ### Canvas layouts
 
-HQFlow automatically saves node positions after you move a card and edge bends after you adjust
-a connection. Each view (Flow, Wrap, Line) keeps its own positions and bends. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
+HQFlow automatically saves node positions after you move a card.
+Each view (Flow, Wrap, Line) keeps its own positions. The geometry is stored in `.codehq/.runtime/layout.json`, so it remains available
 after you close the browser, stop HQFlow, or restart your computer. The file stays local to the
 repository and is ignored by Git.
 
-Pan and zoom reset when you reopen HQFlow. **Reset layout** deletes the saved node positions and
-edge bends of the current view and restores its generated layout.
+Connections follow automatic paths and cannot be bent manually.
+Pan and zoom reset when you reopen HQFlow. **Reset layout** deletes the saved node positions
+of the current view and restores its generated layout.
 
 Also available: `--help`, `--version`, `--debug` (or `HQFLOW_DEBUG=1`) for full stack
 traces on error.
@@ -134,7 +135,7 @@ traces on error.
 ├── workflows/
 │   └── <id>.json           # one workflow per file
 └── .runtime/                # local, gitignored runtime state
-    └── layout.json           # automatically saved node positions and edge bends
+    └── layout.json           # automatically saved node positions
 ```
 
 A workflow is a directed graph of steps an agent has read against the real code — no

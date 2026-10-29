@@ -48,13 +48,6 @@ export interface CanvasPoint {
   y: number;
 }
 
-export type CanvasBendSnap = "source-x" | "target-x" | null;
-
-export interface CanvasBend {
-  point: CanvasPoint;
-  snap: CanvasBendSnap;
-}
-
 type CanvasViewName = "flow" | "wrap" | "line";
 /** The view a set of dragged positions belongs to. */
 export type CanvasSlot = CanvasViewName;
@@ -62,12 +55,11 @@ export type CanvasSlot = CanvasViewName;
 /** Repository-local visual state for one workflow. Never stored in workflow JSON. */
 export interface WorkflowCanvasLayout {
   nodePositions: Record<string, CanvasPoint>;
-  edgeBends: Record<string, CanvasBend>;
   /** The view the user picked; absent means the canvas picks one from the map's shape. */
   view?: "flow" | "wrap" | "line";
-  /** Positions and bends the user set in the views they have left, so coming
+  /** Positions the user set in the views they have left, so coming
    * back restores them. */
-  otherViews?: Partial<Record<CanvasSlot, { nodePositions: Record<string, CanvasPoint>; edgeBends: Record<string, CanvasBend> }>>;
+  otherViews?: Partial<Record<CanvasSlot, { nodePositions: Record<string, CanvasPoint> }>>;
 }
 
 /** `GET /api/source` response shape. It contains metadata only, never file contents. */

@@ -64,7 +64,6 @@ describe("useCodeHQStore", () => {
   it("keeps canvas state in memory while persisting only appearance preferences", () => {
     useCodeHQStore.getState().setTheme("light");
     useCodeHQStore.getState().saveNodePosition("workflow-a", "step-1", { x: 12, y: 34 });
-    useCodeHQStore.getState().saveEdgeBend("workflow-a", "edge-1", { point: { x: 56, y: 78 }, snap: null });
 
     const raw = window.localStorage.getItem(STORAGE_KEY);
     expect(raw).not.toBeNull();
@@ -75,7 +74,6 @@ describe("useCodeHQStore", () => {
     expect(useCodeHQStore.getState().canvasLayouts).toEqual({
       "workflow-a": {
         nodePositions: { "step-1": { x: 12, y: 34 } },
-        edgeBends: { "edge-1": { point: { x: 56, y: 78 }, snap: null } },
       },
     });
     expect(Object.keys(parsed.state).sort()).toEqual(
@@ -87,7 +85,6 @@ describe("useCodeHQStore", () => {
     useCodeHQStore.getState().selectWorkflow("workflow-a");
     useCodeHQStore.getState().hydrateCanvasLayout("workflow-a", {
       nodePositions: { "step-1": { x: 12, y: 34 } },
-      edgeBends: {},
     });
 
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]?.nodePositions).toEqual({
@@ -95,21 +92,17 @@ describe("useCodeHQStore", () => {
     });
   });
 
-  it("prunes visual state for removed nodes and edges without touching known entries", () => {
+  it("prunes visual state for removed nodes without touching known entries", () => {
     useCodeHQStore.getState().saveNodePosition("workflow-a", "known", { x: 1, y: 2 });
     useCodeHQStore.getState().saveNodePosition("workflow-a", "removed", { x: 3, y: 4 });
-    useCodeHQStore.getState().saveEdgeBend("workflow-a", "known-edge", { point: { x: 5, y: 6 }, snap: "source-x" });
-    useCodeHQStore.getState().saveEdgeBend("workflow-a", "removed-edge", { point: { x: 7, y: 8 }, snap: null });
 
     useCodeHQStore.getState().reconcileCanvasLayout(
       "workflow-a",
       new Set(["known"]),
-      new Set(["known-edge"]),
     );
 
     expect(useCodeHQStore.getState().canvasLayouts["workflow-a"]).toMatchObject({
       nodePositions: { known: { x: 1, y: 2 } },
-      edgeBends: { "known-edge": { point: { x: 5, y: 6 }, snap: "source-x" } },
     });
   });
 
@@ -137,17 +130,15 @@ describe("useCodeHQStore", () => {
     }
   });
 
-  it("restores dragged positions and bends when switching back to a view", () => {
+  it("restores dragged positions when switching back to a view", () => {
     const store = useCodeHQStore.getState();
     store.saveNodePosition("wf", "a", { x: 10, y: 20 });
-    store.saveEdgeBend("wf", "e", { point: { x: 1, y: 2 }, snap: null });
     store.setCanvasView("wf", "wrap", "flow");
     expect(useCodeHQStore.getState().canvasLayouts.wf?.nodePositions).toEqual({});
     store.saveNodePosition("wf", "a", { x: 99, y: 99 });
     store.setCanvasView("wf", "flow", "wrap");
     const layout = useCodeHQStore.getState().canvasLayouts.wf;
     expect(layout?.nodePositions).toEqual({ a: { x: 10, y: 20 } });
-    expect(layout?.edgeBends).toEqual({ e: { point: { x: 1, y: 2 }, snap: null } });
     expect(layout?.otherViews?.wrap?.nodePositions).toEqual({ a: { x: 99, y: 99 } });
 
     store.resetLayout("wf");

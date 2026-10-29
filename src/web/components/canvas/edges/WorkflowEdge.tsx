@@ -1,10 +1,9 @@
-import { useCallback, useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useNodesData, useReactFlow, type EdgeProps } from "@xyflow/react";
+import { useCallback, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, Position, useNodesData, type EdgeProps } from "@xyflow/react";
 import { categoryToken, connectionStyle, outcomeEdgeStyle, RETRY_EDGE_VISUAL } from "../../../design/semantics";
 import { RETRY_IN_FRACTION, RETRY_OUT_FRACTION } from "../buildFlowElements";
 import { connectionLabelText } from "../edgeLabel";
 import type { CanvasFlowNode, WorkflowFlowEdge } from "../types";
-import type { CanvasBendSnap } from "../../../store/useCodeHQStore";
 import { edgeMarkerId } from "./EdgeMarkers";
 import styles from "./WorkflowEdge.module.css";
 
@@ -15,25 +14,12 @@ const RETRY_LABEL_LIFT = 12;
 const RETRY_LABEL_INSET = 36;
 const PARALLEL_EDGE_SPACING = 34;
 const RETURN_EDGE_LIFT = 84;
-const BEND_SNAP_DISTANCE_PX = 30;
-const BEND_ENDPOINT_LEAD = 18;
+const PARALLEL_ENDPOINT_LEAD = 18;
 /** The last stretch of a default curve is a straight run along the target port, longer than the
  * 10px arrowhead. The marker is oriented by the path's final tangent, which a bezier always makes
  * port-aligned; but when source and target nearly line up across the port axis, the curve only
  * turns in its last few pixels and the visible line cuts through one of the arrowhead's arms. */
 const ARROW_LEAD = 14;
-
-type BendSnap = CanvasBendSnap;
-interface BendState {
-  point: { x: number; y: number };
-  snap: BendSnap;
-  resetKey: string | undefined;
-}
-
-interface EdgeEndpoint {
-  point: { x: number; y: number };
-  position: Position;
-}
 
 function portControlPoint(point: { x: number; y: number }, position: Position, reach: number): { x: number; y: number } {
   switch (position) {
@@ -46,19 +32,6 @@ function portControlPoint(point: { x: number; y: number }, position: Position, r
     case Position.Bottom:
       return { x: point.x, y: point.y + reach };
   }
-}
-
-function snappedBendRoute(source: EdgeEndpoint, target: EdgeEndpoint, snap: Exclude<BendSnap, null>): { point: { x: number; y: number }; path: string } {
-  const sourceLead = portControlPoint(source.point, source.position, BEND_ENDPOINT_LEAD);
-  const targetLead = portControlPoint(target.point, target.position, BEND_ENDPOINT_LEAD);
-  const point = snap === "source-x"
-    ? { x: sourceLead.x, y: targetLead.y }
-    : { x: targetLead.x, y: sourceLead.y };
-
-  return {
-    point,
-    path: `M${source.point.x},${source.point.y} L${sourceLead.x},${sourceLead.y} L${point.x},${point.y} L${targetLead.x},${targetLead.y} L${target.point.x},${target.point.y}`,
-  };
 }
 
 /** The live build's ink easing (liveBuild.css `hqEdgeDraw`); the riding cursor uses it too. */
@@ -258,7 +231,7 @@ export function arrowSafeBezierPath(
   return [`${path} L${target.x},${target.y}`, labelX, labelY];
 }
 
-function smoothBendPath(
+function parallelEdgePath(
   source: { x: number; y: number },
   sourcePosition: Position,
   bend: { x: number; y: number },
@@ -274,8 +247,8 @@ function smoothBendPath(
     targetDistance,
     length / 2,
   ) * 0.35;
-  const sourceLead = portControlPoint(source, sourcePosition, Math.min(BEND_ENDPOINT_LEAD, sourceDistance / 3));
-  const targetLead = portControlPoint(target, targetPosition, Math.min(BEND_ENDPOINT_LEAD, targetDistance / 3));
+  const sourceLead = portControlPoint(source, sourcePosition, Math.min(PARALLEL_ENDPOINT_LEAD, sourceDistance / 3));
+  const targetLead = portControlPoint(target, targetPosition, Math.min(PARALLEL_ENDPOINT_LEAD, targetDistance / 3));
   const sourceControl = portControlPoint(
     sourceLead,
     sourcePosition,
@@ -327,10 +300,6 @@ function edgeCarriesTravelingOrb(variant: string | undefined): boolean {
  * handle coordinates, so every path remains attached while a card is dragged.
  */
 export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps<WorkflowFlowEdge>) {
-  const { screenToFlowPosition, getZoom } = useReactFlow();
-  const [bend, setBend] = useState<BendState | null>(null);
-  const [draggingForKey, setDraggingForKey] = useState<string | undefined | null>(null);
-  const pendingBend = useRef<BendState | null>(null);
   const endpoints = useNodesData<CanvasFlowNode>([source, target]);
   const maskBaseId = `codehq-label-gap${useId()}`;
   // The label's laid-out size in flow units (the label renderer sits inside the viewport
@@ -359,14 +328,7 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   }
 
   const { connection, retry = false, returnEdge = false, branch = false, outcomeBand, dimmed, traced } = data;
-  const activeBend = bend !== null && bend.resetKey === data.bendResetKey
-    ? bend
-    : data.savedBend === undefined
-      ? null
-      : { ...data.savedBend, resetKey: data.bendResetKey };
-  const dragging = draggingForKey === data.bendResetKey;
   const { turnY, returnX } = data;
-  const bendable = !retry && !returnEdge && !branch && turnY === undefined;
   const isRetryLoop = retry;
   const visual = isRetryLoop
     ? RETRY_EDGE_VISUAL
@@ -437,31 +399,10 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
         x: (sourceX + targetX) / 2 - ((targetY - sourceY) / length) * spread,
         y: (sourceY + targetY) / 2 + ((targetX - sourceX) / length) * spread,
       };
-      path = smoothBendPath({ x: sourceX, y: sourceY }, sourcePosition, fanPoint, { x: targetX, y: targetY }, targetPosition);
+      path = parallelEdgePath({ x: sourceX, y: sourceY }, sourcePosition, fanPoint, { x: targetX, y: targetY }, targetPosition);
       labelX = fanPoint.x;
       labelY = fanPoint.y;
     }
-  }
-
-  let bendPoint = activeBend?.point;
-  const sourceEndpoint = { point: { x: sourceX, y: sourceY }, position: sourcePosition };
-  const targetEndpoint = { point: { x: targetX, y: targetY }, position: targetPosition };
-  if (bendable && bendPoint !== undefined) {
-    if (activeBend?.snap === null) {
-      path = smoothBendPath(
-        sourceEndpoint.point,
-        sourceEndpoint.position,
-        bendPoint,
-        targetEndpoint.point,
-        targetEndpoint.position,
-      );
-    } else if (activeBend?.snap !== undefined) {
-      const route = snappedBendRoute(sourceEndpoint, targetEndpoint, activeBend.snap);
-      bendPoint = route.point;
-      path = route.path;
-    }
-    labelX = bendPoint.x;
-    labelY = bendPoint.y;
   }
 
   const strokeWidth = EDGE_STROKE_WIDTH + (traced ? TRACED_STROKE_BOOST : 0);
@@ -500,7 +441,6 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
 
   const labelText = isRetryLoop ? (connectionLabelText(connection) ?? "retry") : connectionLabelText(connection);
   const showLabel = labelText !== undefined;
-  const handlePoint = bendPoint ?? { x: labelX, y: labelY };
   const showTravelingOrb = !dimmed && edgeCarriesTravelingOrb(markerVariant);
   const cometActive = showTravelingOrb && traced && !prefersReducedMotion();
   const cometMaskId = `${maskBaseId}-comet-${id}`.replace(/[^\w-]/g, "_");
@@ -509,58 +449,6 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
   const buildTiming = build !== undefined
     ? ({ "--hq-delay": `${build.delay}ms`, "--hq-dur": `${build.duration}ms` } as CSSProperties)
     : undefined;
-
-  const handleBendMove = (event: ReactPointerEvent<HTMLButtonElement>): void => {
-    if (!dragging) {
-      return;
-    }
-    event.stopPropagation();
-    const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-    const snapDistance = BEND_SNAP_DISTANCE_PX / getZoom();
-    const candidates = ([
-      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "source-x"), snap: "source-x" },
-      { ...snappedBendRoute(sourceEndpoint, targetEndpoint, "target-x"), snap: "target-x" },
-    ] satisfies Array<{ point: { x: number; y: number }; snap: Exclude<BendSnap, null> }>).filter(({ point: corner }) => (
-      Math.hypot(corner.x - sourceX, corner.y - sourceY) > 1
-      && Math.hypot(targetX - corner.x, targetY - corner.y) > 1
-    ));
-    const nearest = candidates
-      .map((candidate) => ({ ...candidate, distance: Math.hypot(point.x - candidate.point.x, point.y - candidate.point.y) }))
-      .sort((a, b) => a.distance - b.distance)[0];
-    const next: BendState = nearest !== undefined && nearest.distance <= snapDistance
-      ? { point: nearest.point, snap: nearest.snap, resetKey: data.bendResetKey }
-      : { point, snap: null, resetKey: data.bendResetKey };
-    setBend(next);
-    pendingBend.current = next;
-  };
-
-  const bendHandlers = {
-    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      pendingBend.current = null;
-      setDraggingForKey(data.bendResetKey);
-    },
-    onPointerMove: handleBendMove,
-    onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>): void => {
-      event.stopPropagation();
-      event.currentTarget.releasePointerCapture?.(event.pointerId);
-      setDraggingForKey(null);
-      const completedBend = pendingBend.current;
-      pendingBend.current = null;
-      if (completedBend !== null) {
-        data.onBendChange?.({ point: completedBend.point, snap: completedBend.snap });
-      }
-    },
-    onPointerCancel: (): void => {
-      pendingBend.current = null;
-      setDraggingForKey(null);
-    },
-  };
-  const bendTitle = activeBend?.snap === "source-x" || activeBend?.snap === "target-x"
-    ? "Snapped to a 90-degree corner; drag to adjust"
-    : "Drag to bend; move near a corner to snap";
 
   // Text-only labels: the line stops at the word and continues after it. The gap is a mask cut the
   // size of the label box, so the halo, the line, and the live-build ink all break around it.
@@ -636,57 +524,17 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
       {build !== undefined ? <InkDrop id={id} set={build.set} path={path} delay={build.delay} duration={build.duration} color={`var(${visual.varName})`} /> : null}
       {showLabel ? (
         <EdgeLabelRenderer>
-          {bendable ? (
-            // On a bendable edge the word is the bend handle: pull the word to bend the edge.
-            <button
-              ref={labelRef}
-              type="button"
-              className={`${labelClassName} ${styles.labelHandle}`}
-              data-edge-label={id}
-              data-edge-kind={markerVariant ?? "success"}
-              data-edge-bend-handle={id}
-              data-active={dragging}
-              aria-label={`Bend edge ${id}`}
-              title={`${labelText}\n${bendTitle}`}
-              style={labelStyle}
-              {...bendHandlers}
-            >
-              {labelText}
-            </button>
-          ) : (
-            <div
-              ref={labelRef}
-              className={`${labelClassName} ${styles.labelHoverable}`}
-              data-edge-label={id}
-              data-edge-kind={markerVariant ?? "success"}
-              title={labelText}
-              style={labelStyle}
-            >
-              {labelText}
-            </div>
-          )}
+          <div
+            ref={labelRef}
+            className={`${labelClassName} ${styles.labelHoverable}`}
+            data-edge-label={id}
+            data-edge-kind={markerVariant ?? "success"}
+            title={labelText}
+            style={labelStyle}
+          >
+            {labelText}
+          </div>
         </EdgeLabelRenderer>
-      ) : null}
-      {bendable && !showLabel ? (
-        <foreignObject
-          className={styles.bendHandleRegion}
-          x={handlePoint.x - 18}
-          y={handlePoint.y - 18}
-          width={36}
-          height={36}
-        >
-          <button
-            type="button"
-            className={styles.bendHandle}
-            data-edge-bend-handle={id}
-            data-active={dragging}
-            data-snapped={activeBend?.snap !== null && activeBend?.snap !== undefined}
-            style={{ color: `var(${visual.varName})` }}
-            aria-label={`Bend edge ${id}`}
-            title={bendTitle}
-            {...bendHandlers}
-          />
-        </foreignObject>
       ) : null}
     </>
   );

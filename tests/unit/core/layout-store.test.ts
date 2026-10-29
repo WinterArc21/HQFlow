@@ -13,7 +13,6 @@ let root: string;
 
 const layout: WorkflowCanvasLayout = {
   nodePositions: { receive: { x: 12, y: 34 } },
-  edgeBends: { "receive->save#0": { point: { x: 56, y: 78 }, snap: "source-x" } },
 };
 
 beforeEach(async () => {
@@ -37,14 +36,29 @@ describe("canvas layout store", () => {
     expect(file).toEqual({ version: 1, workflows: { "generate-video": layout } });
   });
 
+  it("drops saved bends without losing card positions in any view", async () => {
+    const runtime = path.join(root, ".codehq", ".runtime");
+    const oldGeometry = { ...layout, edgeBends: { e: { point: { x: 56, y: 78 }, snap: null } } };
+    await fs.mkdir(runtime, { recursive: true });
+    await fs.writeFile(path.join(runtime, "layout.json"), JSON.stringify({
+      version: 1,
+      workflows: { wf: { ...oldGeometry, view: "flow", otherViews: { wrap: oldGeometry } } },
+    }));
+
+    const restored = await readWorkflowCanvasLayout(root, "wf");
+    expect(restored).toEqual({ ...layout, view: "flow", otherViews: { wrap: layout } });
+    await writeWorkflowCanvasLayout(root, "another", layout);
+    expect(await fs.readFile(path.join(runtime, "layout.json"), "utf-8")).not.toContain("edgeBends");
+  });
+
   it("serializes concurrent writes for different workflows", async () => {
     await Promise.all([
       writeWorkflowCanvasLayout(root, "workflow-a", layout),
-      writeWorkflowCanvasLayout(root, "workflow-b", { ...layout, edgeBends: {} }),
+      writeWorkflowCanvasLayout(root, "workflow-b", { nodePositions: {} }),
     ]);
 
     await expect(readWorkflowCanvasLayout(root, "workflow-a")).resolves.toEqual(layout);
-    await expect(readWorkflowCanvasLayout(root, "workflow-b")).resolves.toEqual({ ...layout, edgeBends: {} });
+    await expect(readWorkflowCanvasLayout(root, "workflow-b")).resolves.toEqual({ nodePositions: {} });
   });
 
   it("deletes only the requested workflow layout", async () => {

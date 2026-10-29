@@ -127,7 +127,6 @@ function WorkflowCanvasInner({
   const canvasLayout = useCodeHQStore((state) => state.canvasLayouts[canvasId]);
   const resetLayout = useCodeHQStore((state) => state.resetLayout);
   const saveNodePosition = useCodeHQStore((state) => state.saveNodePosition);
-  const saveEdgeBend = useCodeHQStore((state) => state.saveEdgeBend);
   const reconcileCanvasLayout = useCodeHQStore((state) => state.reconcileCanvasLayout);
   const layoutResetRevision = useCodeHQStore((state) => state.layoutResetRevision);
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
@@ -155,10 +154,6 @@ function WorkflowCanvasInner({
 
   const layout = useMemo(() => computeLayout(workflow, { view }), [workflow, view]);
   const backEdgeIds = useMemo(() => computeBackEdgeIds(workflow), [workflow]);
-  const bendResetKey = useMemo(
-    () => `${layoutResetRevision}:${JSON.stringify(layout.nodes.map(({ id, x, y, width, height }) => ({ id, x, y, width, height })))}`,
-    [layout, layoutResetRevision],
-  );
 
   // Path tracing follows the pointer only. Focus and selection outlive the gesture that set
   // them (closing a step card hands focus back to its node), so tracing them left the board
@@ -341,21 +336,16 @@ function WorkflowCanvasInner({
     setNodes((current) => restoreGeneratedNodePositions(current, generatedNodes));
     fitToViewport(reducedMotion ? 0 : 400);
   }, [fitToViewport, generatedNodes, layoutResetRevision, reducedMotion, setNodes]);
-  const handleBendChange = useCallback(
-    (edgeId: string, bend: Parameters<typeof saveEdgeBend>[2]) => saveEdgeBend(canvasId, edgeId, bend),
-    [canvasId, saveEdgeBend],
-  );
   const baseEdges = useMemo(
-    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null, bendResetKey, canvasLayout?.edgeBends, handleBendChange),
-    [layout, backEdgeIds, tracePath, bendResetKey, canvasLayout?.edgeBends, handleBendChange],
+    () => buildFlowEdges(layout, backEdgeIds, tracePath?.edgeIds ?? null),
+    [layout, backEdgeIds, tracePath],
   );
   useEffect(() => {
     reconcileCanvasLayout(
       canvasId,
       new Set(layout.nodes.map((node) => node.id)),
-      new Set(layout.edges.map((edge) => edge.id)),
     );
-  }, [canvasId, layout.edges, layout.nodes, reconcileCanvasLayout]);
+  }, [canvasId, layout.nodes, reconcileCanvasLayout]);
   const edges = useMemo(() => {
     const nodeBounds = new Map<string, { x: number; y: number; width: number; height: number }>();
     const initialPositions = new Map(

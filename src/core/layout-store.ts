@@ -7,27 +7,27 @@ import { writeFileAtomic } from "./fs-utils";
 import { codeHQPaths } from "./repository";
 
 const pointSchema = z.object({ x: z.number().finite(), y: z.number().finite() }).strict();
-const bendSchema = z.object({
-  point: pointSchema,
-  snap: z.enum(["source-x", "target-x"]).nullable(),
-}).strict();
 
 const viewEnum = z.enum(["flow", "wrap", "line"]);
 const viewGeometrySchema = z.object({
   nodePositions: z.record(z.string(), pointSchema),
-  edgeBends: z.record(z.string(), bendSchema),
 }).strict();
 
-export const workflowCanvasLayoutSchema: z.ZodType<WorkflowCanvasLayout> = z.object({
+export const workflowCanvasLayoutSchema = z.object({
   nodePositions: z.record(z.string(), pointSchema),
-  edgeBends: z.record(z.string(), bendSchema),
   view: viewEnum.exactOptional(),
   otherViews: z.partialRecord(viewEnum, viewGeometrySchema).exactOptional(),
-}).strict();
+}).strict() satisfies z.ZodType<WorkflowCanvasLayout>;
+
+// Disk state can contain removed fields. Drop them without losing saved card positions;
+// API writes still use the strict schema above.
+const storedLayoutSchema = workflowCanvasLayoutSchema.strip().extend({
+  otherViews: z.partialRecord(viewEnum, viewGeometrySchema.strip()).exactOptional(),
+});
 
 const layoutFileSchema = z.object({
   version: z.literal(1),
-  workflows: z.record(z.string(), workflowCanvasLayoutSchema),
+  workflows: z.record(z.string(), storedLayoutSchema),
 }).strict();
 
 type LayoutFile = z.infer<typeof layoutFileSchema>;

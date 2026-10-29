@@ -50,13 +50,7 @@ test("persists geometry across restart while resetting temporary view state", as
   await page.mouse.move(nodeBox!.x + nodeBox!.width / 2 + 110, nodeBox!.y + nodeBox!.height / 2 + 70, { steps: 5 });
   await page.mouse.up();
 
-  const bendHandle = page.getByRole("button", { name: `Bend edge ${EDGE_ID}` });
-  const bendBox = await bendHandle.boundingBox();
-  expect(bendBox).not.toBeNull();
-  await page.mouse.move(bendBox!.x + bendBox!.width / 2, bendBox!.y + bendBox!.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(bendBox!.x + bendBox!.width / 2 + 45, bendBox!.y + bendBox!.height / 2 + 55, { steps: 4 });
-  await page.mouse.up();
+  await expect(page.getByRole("button", { name: /^Bend edge / })).toHaveCount(0);
 
   const paneBox = await page.locator(".react-flow__pane").boundingBox();
   expect(paneBox).not.toBeNull();
@@ -68,17 +62,12 @@ test("persists geometry across restart while resetting temporary view state", as
 
   await expect.poll(storedLayout).toMatchObject({
     nodePositions: { [NODE_ID]: { x: expect.any(Number), y: expect.any(Number) } },
-    edgeBends: { [EDGE_ID]: { point: { x: expect.any(Number), y: expect.any(Number) }, snap: null } },
   });
-  expect(Object.keys((await storedLayout()) ?? {}).sort()).toEqual(["edgeBends", "nodePositions"]);
+  expect(Object.keys((await storedLayout()) ?? {}).sort()).toEqual(["nodePositions"]);
 
   const persistedNodeTransform = await node.evaluate((element) => (element as HTMLElement).style.transform);
   const persistedEdgePath = await edgePath.getAttribute("d");
   const persistedViewportTransform = await viewport.getAttribute("style");
-  const persistedLayout = await storedLayout() as {
-    edgeBends: Record<string, { point: { x: number; y: number }; snap: null }>;
-  };
-  const persistedBend = persistedLayout.edgeBends[EDGE_ID]!;
   expect(persistedNodeTransform).not.toBe(initialNodeTransform);
   expect(persistedEdgePath).not.toBe(initialEdgePath);
   expect(persistedViewportTransform).not.toBe(initialViewportTransform);
@@ -89,8 +78,7 @@ test("persists geometry across restart while resetting temporary view state", as
   await page.goto(server.url);
   await node.waitFor({ state: "visible", timeout: 15_000 });
   await expect.poll(() => node.evaluate((element) => (element as HTMLElement).style.transform)).toBe(persistedNodeTransform);
-  await expect.poll(async () => (await storedLayout() as typeof persistedLayout).edgeBends[EDGE_ID]).toEqual(persistedBend);
-  await expect.poll(async () => (await edgePath.getAttribute("d")) ?? "").toContain(`${persistedBend.point.x},${persistedBend.point.y}`);
+  await expect(edgePath).toHaveAttribute("d", persistedEdgePath!);
   await expect(viewport).toHaveAttribute("style", initialViewportTransform!);
 
   await page.getByRole("button", { name: "Reset layout" }).click();

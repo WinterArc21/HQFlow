@@ -220,7 +220,7 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
-| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions and edge bends. |
+| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions. |
 | PUT | `/api/workflows/:id/layout` | Replace the workflow's complete canvas layout. Returns 204. |
 | DELETE | `/api/workflows/:id/layout` | Delete the workflow's saved layout. Returns 204. |
 | DELETE | `/api/workflows/:id` | Delete a valid workflow; returns the refreshed snapshot. |

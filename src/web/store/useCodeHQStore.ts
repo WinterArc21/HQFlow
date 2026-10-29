@@ -2,25 +2,23 @@ import { findScene } from "../design/scenes";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type {
-  CanvasBend,
   CanvasPoint,
   CanvasSlot,
   WorkflowCanvasLayout,
 } from "@schema/wire";
 
-export type { CanvasBend, CanvasBendSnap, CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
+export type { CanvasPoint, WorkflowCanvasLayout } from "@schema/wire";
 
 type CanvasViewName = NonNullable<WorkflowCanvasLayout["view"]>;
 
-/** Sets the live positions and bends aside under `from` and brings back the ones saved under
+/** Sets the live positions aside under `from` and brings back the ones saved under
  * `to`, so each view keeps what the user dragged in it. */
 function moveToSlot(layout: WorkflowCanvasLayout, from: CanvasSlot, to: CanvasSlot): WorkflowCanvasLayout {
   const { [to]: restored, ...others } = layout.otherViews ?? {};
   return {
     ...layout,
     nodePositions: restored?.nodePositions ?? {},
-    edgeBends: restored?.edgeBends ?? {},
-    otherViews: { ...others, [from]: { nodePositions: layout.nodePositions, edgeBends: layout.edgeBends } },
+    otherViews: { ...others, [from]: { nodePositions: layout.nodePositions } },
   };
 }
 
@@ -67,11 +65,10 @@ interface CodeHQUiActions {
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
-  saveEdgeBend: (workflowId: string, edgeId: string, bend: CanvasBend) => void;
   hydrateCanvasLayout: (workflowId: string, layout: WorkflowCanvasLayout | null) => void;
-  reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
+  reconcileCanvasLayout: (workflowId: string, nodeIds: ReadonlySet<string>) => void;
   resetLayout: (workflowId?: string) => void;
-  /** Picks a view for one workflow. Dragged positions and bends belong to the view they were
+  /** Picks a view for one workflow. Dragged positions belong to the view they were
    * made in: they are set aside under `from` and come back when the user returns to it. */
   setCanvasView: (workflowId: string, view: CanvasViewName, from: CanvasViewName) => void;
   setSearchQuery: (query: string) => void;
@@ -177,21 +174,11 @@ export const useCodeHQStore = create<CodeHQStore>()(
         }),
 
       saveNodePosition: (workflowId, nodeId, position) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {} };
         return {
           canvasLayouts: {
             ...state.canvasLayouts,
             [workflowId]: { ...layout, nodePositions: { ...layout.nodePositions, [nodeId]: position } },
-          },
-        };
-      }),
-
-      saveEdgeBend: (workflowId, edgeId, bend) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
-        return {
-          canvasLayouts: {
-            ...state.canvasLayouts,
-            [workflowId]: { ...layout, edgeBends: { ...layout.edgeBends, [edgeId]: bend } },
           },
         };
       }),
@@ -206,23 +193,19 @@ export const useCodeHQStore = create<CodeHQStore>()(
         return { canvasLayouts };
       }),
 
-      reconcileCanvasLayout: (workflowId, nodeIds, edgeIds) => set((state) => {
+      reconcileCanvasLayout: (workflowId, nodeIds) => set((state) => {
         const layout = state.canvasLayouts[workflowId];
         if (layout === undefined) {
           return state;
         }
         const nodePositions = Object.fromEntries(Object.entries(layout.nodePositions).filter(([id]) => nodeIds.has(id)));
-        const edgeBends = Object.fromEntries(Object.entries(layout.edgeBends).filter(([id]) => edgeIds.has(id)));
-        if (
-          Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length
-          && Object.keys(edgeBends).length === Object.keys(layout.edgeBends).length
-        ) {
+        if (Object.keys(nodePositions).length === Object.keys(layout.nodePositions).length) {
           return state;
         }
         return {
           canvasLayouts: {
             ...state.canvasLayouts,
-            [workflowId]: { ...layout, nodePositions, edgeBends },
+            [workflowId]: { ...layout, nodePositions },
           },
         };
       }),
@@ -235,17 +218,17 @@ export const useCodeHQStore = create<CodeHQStore>()(
         const canvasLayouts = { ...state.canvasLayouts };
         // Reset clears what the user dragged in the current view; the view they picked and
         // the positions they set in other views stay.
-        const { nodePositions: _positions, edgeBends: _bends, ...kept }: WorkflowCanvasLayout = canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        const { nodePositions: _positions, ...kept }: WorkflowCanvasLayout = canvasLayouts[workflowId] ?? { nodePositions: {} };
         if (kept.view === undefined && kept.otherViews === undefined) {
           delete canvasLayouts[workflowId];
         } else {
-          canvasLayouts[workflowId] = { nodePositions: {}, edgeBends: {}, ...kept };
+          canvasLayouts[workflowId] = { nodePositions: {}, ...kept };
         }
         return { canvasLayouts, layoutResetRevision: state.layoutResetRevision + 1 };
       }),
 
       setCanvasView: (workflowId, view, from) => set((state) => {
-        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {}, edgeBends: {} };
+        const layout = state.canvasLayouts[workflowId] ?? { nodePositions: {} };
         return {
           canvasLayouts: {
             ...state.canvasLayouts,

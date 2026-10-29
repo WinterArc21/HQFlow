@@ -4,7 +4,6 @@ import type { Edge, Node } from "@xyflow/react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkflowConnection, WorkflowStep } from "@schema/workflow";
 import type { OutcomeBand } from "./layout";
-import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export interface StepNodeData extends Record<string, unknown> {
   step: WorkflowStep;
@@ -75,13 +74,8 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
    * anchor. Distinct from `!dimmed` (which is also true when no trace is active at all) so the
    * renderer can strengthen the highlighted edges only while tracing, never on the resting graph. */
   traced: boolean;
-  /** Changes when generated layout is replaced. The edge renderer uses it to discard stale
-   * component state and restore the repository-local bend for this workflow. */
-  bendResetKey?: string;
-  savedBend?: CanvasBend;
   /** Set while a live build draws this edge in (live/useLiveBuild.ts). */
   build?: { delay: number; duration: number; set: string };
-  onBendChange?: (bend: CanvasBend) => void;
 }
 
 export type WorkflowFlowEdge = Edge<WorkflowEdgeData, "workflow">;
