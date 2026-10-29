@@ -87,10 +87,3 @@
     flex-wrap: wrap;
   }
 }
-
-/* The title island shares a phone screen with the map: keep the name, drop the sentence. */
-@media (max-width: 685px) {
-  .purpose {
-    display: none;
-  }
-}

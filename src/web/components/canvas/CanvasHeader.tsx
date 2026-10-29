@@ -20,20 +20,23 @@ export interface CanvasTitleProps {
   state?: WorkflowRecord["state"];
 }
 
-/** The workflow's name, size, purpose and freshness — shared by the title strip and the island shell. */
+/**
+ * The workflow's name, size, purpose and freshness — shared by the title strip and the island shell.
+ * The `data-title` parts let the shell lay them out as its pill and its open card.
+ */
 export function CanvasTitle({ workflow, itemLabel = "step", modifiedAt, state }: CanvasTitleProps) {
   return (
-    <div className={styles.identity}>
-      <div className={styles.titleRow}>
+    <div className={styles.identity} data-title="">
+      <div className={styles.titleRow} data-title="row">
         <h1 className={styles.name}>{workflow.name}</h1>
-        <span className={styles.stepCount} data-title-detail="">{countLabel(workflow.steps.length, itemLabel)}</span>
+        <span className={styles.stepCount} data-title="steps">{countLabel(workflow.steps.length, itemLabel)}</span>
       </div>
-      <div className={styles.detailsRow} data-title-detail="">
-        <p className={styles.purpose}>{workflow.purpose}</p>
-        <div className={styles.trust} aria-label="Workflow freshness">
+      <div className={styles.detailsRow} data-title="details">
+        <p className={styles.purpose} data-title="purpose">{workflow.purpose}</p>
+        <div className={styles.trust} aria-label="Workflow freshness" data-title="trust" data-stale={state === "stale" ? "" : undefined}>
           {state === "stale" ? <Badge tone="amber">Stale</Badge> : null}
           {modifiedAt !== undefined ? (
-            <span className={styles.freshness}>Updated {formatRelativeTime(modifiedAt)}</span>
+            <span className={styles.freshness} data-title="updated">Updated {formatRelativeTime(modifiedAt)}</span>
           ) : null}
         </div>
       </div>

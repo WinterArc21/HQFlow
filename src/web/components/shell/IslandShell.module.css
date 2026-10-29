@@ -12,106 +12,75 @@
 }
 
 /* ---- identity (top left) ---- */
-/* The box glides between the pill and the full card instead of jumping a dot step at a time. */
+/* One island that is a pill when closed and grows into the full card when open. The box glides
+   between the two instead of jumping a dot step at a time. */
 .identityIsland {
+  /* Pin the header to the top-left corner: the slack from rounding up to whole dots goes below and
+     to the right, and while the box glides to a new size the text never spills out of its left edge. */
+  align-items: flex-start;
+  justify-content: flex-start;
   overflow: hidden;
   transition:
-    width var(--dur-base) var(--ease-standard),
-    height var(--dur-base) var(--ease-standard);
+    width var(--dur-slow) var(--ease-out-expo),
+    height var(--dur-slow) var(--ease-out-expo);
 }
 
-/* The full card: repository and the workflow switcher share the top row, the title spans the
-   card under them. */
+/* The header row is mark, repository, "/", workflow name and caret. The portalled title's
+   wrappers dissolve (`display: contents`) so its name, purpose, size and freshness are all items
+   of this one wrapping row, ordered here; the open card breaks the details onto lines below. */
 .identity {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Two dots, less the island's border, so the pill fills its grid box exactly. */
+  --identity-row: 54px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  column-gap: var(--space-2);
   min-width: 0;
   max-width: var(--identity-max-width);
+  padding: 0 var(--space-3);
 }
 
-.identity .title {
-  grid-column: 1 / -1;
+.title,
+.title :global([data-title=""]),
+.title :global([data-title="row"]),
+.title :global([data-title="details"]) {
+  display: contents;
 }
 
-/* The whole purpose shows, wrapped, with the freshness on its own line under it. */
-.identity:not([data-collapsed]) .title :global(div[data-title-detail]) {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+/* The whole header row is the button; its text sits above it and lets clicks through. */
+.trigger {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--identity-row);
+  border-radius: 11px;
 }
 
-.identity:not([data-collapsed]) .title :global(div[data-title-detail] > p) {
-  white-space: normal;
-  text-wrap: pretty;
+.trigger:hover {
+  background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
-.identity:not([data-collapsed]) .title {
-  animation: identity-reveal var(--dur-base) var(--ease-standard);
+.trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
 }
 
-@keyframes identity-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
+.identity[data-open] .trigger {
+  border-radius: 11px 11px 0 0;
 }
 
-/* The pill: mark, repository and workflow on one line. The size, purpose and freshness wait for
-   hover, focus or a tap. */
-.identity[data-collapsed] {
-  display: flex;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-}
-
-/* In the pill the switcher follows the title instead of the repository. */
-.identity[data-collapsed] .switcher {
-  order: 1;
-}
-
-.identity[data-collapsed] .repository {
-  flex: 0 1 auto;
-  max-width: 45%;
-}
-
-.identity[data-collapsed] .title {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.identity[data-collapsed] .title :global(h1) {
-  font-size: var(--fs-base);
-}
-
-.identity[data-collapsed] .title :global([data-title-detail]) {
-  display: none;
-}
-
-.slash {
-  display: none;
-  flex: none;
-  color: var(--text-tertiary);
-}
-
-.identity[data-collapsed] .slash {
-  display: inline;
-}
-
-.title {
-  min-width: 0;
-}
-
-.repository {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
+.mark,
+.repositoryName,
+.slash,
+.caret,
+.title :global(h1),
+.title :global([data-title="trust"]) {
+  position: relative;
+  pointer-events: none;
 }
 
 .mark {
+  order: 1;
   display: inline-grid;
   place-items: center;
   flex: none;
@@ -124,23 +93,131 @@
   letter-spacing: 0.02em;
 }
 
-.repositoryName,
-.repositoryButton {
+.repositoryName {
+  order: 2;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 160px;
   overflow: hidden;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.repositoryButton:hover {
-  color: var(--accent-blue);
+.slash {
+  order: 3;
+  flex: none;
+  color: var(--text-tertiary);
 }
 
-.repositoryButton:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
+.title :global(h1) {
+  order: 4;
+  flex: 0 1 auto;
+  max-width: 260px;
+  font-size: var(--fs-base);
+}
+
+.identity[data-open] .title :global(h1) {
+  flex: 1 1 0;
+  max-width: none;
+}
+
+/* The caret's box sets the header row's height, so the row is the same in both states. */
+.caret {
+  order: 6;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  height: var(--identity-row);
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.identity[data-open] .caret {
+  transform: rotate(180deg);
+}
+
+/* In the pill only a stale workflow keeps its freshness, as an amber dot after the name. */
+.identity:not([data-open]) .title :global([data-title="steps"]),
+.identity:not([data-open]) .title :global([data-title="purpose"]),
+.identity:not([data-open]) .title :global([data-title="updated"]),
+.identity:not([data-open]) .title :global([data-title="trust"]:not([data-stale])),
+.identity:not([data-open]) .rule {
+  display: none;
+}
+
+.identity:not([data-open]) .title :global([data-title="trust"]) {
+  order: 5;
+}
+
+.identity:not([data-open]) .title :global([data-title="trust"] > :first-child) {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--accent-amber);
+  font-size: 0;
+}
+
+/* The open card: a hairline under the header, then the purpose, then size and freshness. */
+.rule {
+  order: 7;
+  flex: 0 0 calc(100% + 2 * var(--space-3));
+  height: 1px;
+  margin: 0 calc(-1 * var(--space-3));
+  background-color: var(--border-subtle);
+}
+
+.identity[data-open] .title :global([data-title="purpose"]) {
+  order: 8;
+  flex: 0 0 100%;
+  margin: var(--space-3) 0 var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+.identity[data-open] .title :global([data-title="steps"]) {
+  order: 9;
+  margin-bottom: var(--space-3);
+}
+
+.identity[data-open] .title :global([data-title="trust"]) {
+  order: 10;
+  margin-bottom: var(--space-3);
+}
+
+.identity[data-open] .title :global([data-title="trust"])::before {
+  content: "·";
+  color: var(--text-tertiary);
+}
+
+/* A notice wraps to the title's width instead of stretching the pill to fit its sentence. */
+.notice {
+  contain: inline-size;
+  white-space: normal;
+}
+
+/* The details and the list arrive just after the card starts to grow. */
+.identity[data-open] .title :global([data-title="purpose"]),
+.identity[data-open] .title :global([data-title="steps"]),
+.identity[data-open] .title :global([data-title="trust"]),
+.tree {
+  animation: identity-reveal var(--dur-base) var(--ease-standard) 60ms backwards;
+}
+
+@keyframes identity-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 /* ---- status (top right) ---- */
@@ -187,38 +264,6 @@
 
 .dockBody > .divider {
   margin: 0;
-}
-
-/* The workflow switcher in the title card. */
-.switcher {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  height: 26px;
-  padding: 0 var(--space-2);
-  border-radius: 999px;
-  color: var(--text-secondary);
-}
-
-.switcher:hover,
-.switcher[data-open="true"] {
-  background-color: var(--bg-inset);
-  color: var(--text-primary);
-}
-
-.switcher:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.caret {
-  flex: none;
-  transition: transform var(--dur-fast) var(--ease-standard);
-}
-
-.switcher[data-open="true"] .caret {
-  transform: rotate(180deg);
 }
 
 .controls {

@@ -7,42 +7,17 @@
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
   flex-shrink: 0;
-  padding: var(--space-4) var(--space-4) var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-1);
 }
 
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: var(--space-6);
-  height: var(--space-6);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition:
-    background-color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
-}
-
-.toggle:hover {
-  background-color: var(--bg-raised);
-  border-color: var(--border-subtle);
-  color: var(--text-primary);
-}
-
-.toggle:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 1px;
-}
-
-.collapsed {
-  display: none;
+.count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
 }
 
 .content {
@@ -53,7 +28,7 @@
 }
 
 .repositoryName {
-  margin: var(--space-2) var(--space-4) var(--space-3);
+  margin: var(--space-2) var(--space-3);
   overflow: hidden;
   color: var(--text-primary);
   font-family: var(--font-mono);
@@ -67,37 +42,34 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: 0 var(--space-2) var(--space-3);
+  padding: 0 var(--space-2) var(--space-2);
 }
 
 .rootItem {
   min-width: 0;
 }
 
+/* The repository row is the way back to the overview. */
 .root {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
   color: var(--text-secondary);
   text-align: left;
 }
 
 .root svg {
   flex-shrink: 0;
-  margin-top: 1px;
   color: var(--accent-blue);
 }
 
-.rootCopy {
+.rootName {
+  flex: 0 1 auto;
   min-width: 0;
-}
-
-.rootCopy strong,
-.leafCopy strong {
-  display: block;
   overflow: hidden;
   color: var(--text-primary);
   font-family: var(--font-mono);
@@ -107,130 +79,58 @@
   white-space: nowrap;
 }
 
-.rootCopy small,
-.leafCopy small {
-  display: block;
-  margin-top: 2px;
+.overviewHint {
+  flex-shrink: 0;
+  margin-left: auto;
   color: var(--text-tertiary);
   font-size: var(--fs-micro);
 }
 
-.overviewHint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  color: var(--text-secondary);
-  font-size: var(--fs-micro);
-}
-
-.overviewHint svg {
-  flex-shrink: 0;
-  margin-top: 0;
-  color: currentColor;
-}
-
-.root:hover,
-.leaf:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
+.root:hover {
+  background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
 .selectedRoot {
-  background: var(--bg-raised);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-blue) 55%, var(--border-subtle));
+  background-color: color-mix(in srgb, var(--text-primary) 7%, transparent);
 }
 
-.selectedRoot .rootCopy strong,
-.selectedLeaf .leafCopy strong {
+.selectedRoot .rootName {
   font-weight: 700;
 }
 
-.root:focus-visible,
-.leaf:focus-visible {
+.root:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
 .branch {
-  margin: 0 0 0 14px;
-  padding: 2px 0 0 12px;
-  border-left: 1px solid var(--border-strong);
+  list-style: none;
+  margin: 0 0 0 15px;
+  padding: 2px 0 0 10px;
+  border-left: 1px solid var(--border-subtle);
 }
 
-.branch > li {
-  position: relative;
-}
-
-.branch > li::before {
-  content: "";
-  position: absolute;
-  top: 16px;
-  left: -12px;
-  width: 10px;
-  height: 1px;
-  background: var(--border-strong);
-}
-
-.leaf,
 .plannedItem {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  text-align: left;
-}
-
-.leaf svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.leafCopy {
-  min-width: 0;
-}
-
-.leafCopy strong {
-  font-family: var(--font-ui);
-  font-size: var(--fs-tiny);
-  font-weight: 500;
-}
-
-.selectedLeaf {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.plannedItem {
-  color: var(--text-secondary);
-}
-
-.plannedItem strong,
-.plannedItem small {
-  display: block;
-}
-
-.plannedItem strong {
-  font-size: var(--fs-tiny);
-  font-weight: 500;
-}
-
-.plannedItem small {
-  margin-top: 2px;
+  min-height: 34px;
+  padding: 0 var(--space-2) 0 var(--space-3);
   color: var(--text-tertiary);
-  font-size: var(--fs-micro);
+  font-size: var(--fs-sm);
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  margin-top: 4px;
-  border: 1px solid var(--text-tertiary);
-  border-radius: 50%;
+.plannedName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannedItem small {
   flex-shrink: 0;
+  font-size: var(--fs-micro);
 }
 
 .mapAnother {
@@ -238,12 +138,13 @@
   align-items: center;
   gap: var(--space-1);
   margin-top: auto;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--border-subtle);
   color: var(--accent-blue);
 }
 
 .empty {
-  padding: var(--space-4);
+  padding: var(--space-3);
   font-size: var(--fs-tiny);
   color: var(--text-tertiary);
 }

@@ -47,7 +47,10 @@ test.describe("initialized but no workflow files", () => {
     );
 
     await expect(page.getByRole("heading", { name: "Repository Overview" })).toBeVisible();
+    // The title is a pill; clicking it opens the card with the overview's details.
+    await page.getByRole("button", { name: "Workflows: Overview" }).click();
     await expect(page.getByText("0 of 2 workflows mapped")).toBeVisible();
+    await page.keyboard.press("Escape");
     const checkoutCard = page.locator('[data-step-node="checkout"]');
     await expect(checkoutCard).toBeVisible();
     await expect(page.locator('[data-step-node="fulfilment"]')).toBeVisible();
@@ -97,9 +100,10 @@ test.describe("initialized but no workflow files", () => {
       }, null, 2),
     );
 
-    // The drags above folded the title to a pill; hovering it shows the details again.
-    await page.getByRole("banner").hover();
+    // The title is a pill; clicking it opens the card with the overview's details.
+    await page.getByRole("button", { name: "Workflows: Overview" }).click();
     await expect(page.getByText("1 of 2 workflows mapped")).toBeVisible();
+    await page.keyboard.press("Escape");
     await checkoutCard.click();
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
     await expect(page.locator('[data-step-node="receive-cart"]')).toBeVisible();

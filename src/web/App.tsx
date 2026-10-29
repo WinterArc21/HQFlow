@@ -97,7 +97,6 @@ export function App() {
   return (
     <IslandShell
       repositoryName={snapshot.repository.name}
-      {...(snapshot.repositoryMap !== null ? { onSelectRepository: () => selectWorkflow(null) } : {})}
       locationLabel={selectedRecord?.workflow.name ?? "Overview"}
       status={connectionStatus}
       pulseKey={snapshot.generatedAt}
@@ -112,8 +111,6 @@ export function App() {
             selectWorkflow(workflowId);
             close();
           }}
-          collapsed={false}
-          onToggleCollapsed={close}
         />
       )}
       notice={
