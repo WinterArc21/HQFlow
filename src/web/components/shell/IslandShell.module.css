@@ -224,8 +224,24 @@
 .status {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   padding: 0 var(--space-2) 0 var(--space-4);
+}
+
+/* The copy control is a text button. Give it the icon buttons' height so the row shares one line,
+   and pull it against the paint icon so the three controls read as one group. */
+.status :global(button) {
+  height: var(--space-8);
+}
+
+.status > :global(span):has(button) {
+  margin-right: calc(-1 * var(--space-2));
+}
+
+/* Button wraps its label in a block span. That puts an icon on the text line, above the other glyphs. */
+.status :global(button) > :global(span) {
+  display: inline-flex;
+  align-items: center;
 }
 
 .divider {

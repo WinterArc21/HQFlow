@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CaretDown, ClipboardText, MagnifyingGlass, Palette } from "@phosphor-icons/react";
+import { CaretDown, Copy, MagnifyingGlass, Palette } from "@phosphor-icons/react";
 import type { CanvasChrome } from "../canvas";
 import { AGENT_PROMPT } from "../../lib/agentPrompt";
 import { searchShortcutLabel } from "../../lib/platform";
@@ -18,7 +18,7 @@ export interface IslandShellProps {
   locationLabel: string;
   status: CodeHQStatus;
   errorCount?: number;
-  /** Changes on every snapshot, so the status dot can ping. */
+  /** Changes on every snapshot, so the status word can wash once. */
   pulseKey?: string;
   /** The workflow navigator, shown in the open title card; `close` folds the card back to a pill. */
   navigator: (close: () => void) => ReactNode;
@@ -181,7 +181,15 @@ export function IslandShell({ repositoryName, locationLabel, status, errorCount,
         <div className={styles.status}>
           <StatusIndicator status={status} {...(errorCount !== undefined ? { errorCount } : {})} {...(pulseKey !== undefined ? { pulseKey } : {})} />
           <span className={styles.divider} aria-hidden="true" />
-          <CopyButton value={AGENT_PROMPT} label="Copy agent prompt" {...(narrow ? { icon: <ClipboardText size={16} /> } : {})} />
+          {narrow ? (
+            <Tooltip content="Map my repository">
+              <span>
+                <CopyButton value={AGENT_PROMPT} label="Map repo" variant="ghost" icon={<Copy size={16} />} />
+              </span>
+            </Tooltip>
+          ) : (
+            <CopyButton value={AGENT_PROMPT} label="Map repo" variant="ghost" leadingIcon={<Copy size={16} />} />
+          )}
           <span data-appearance-toggle="">
             <IconButton
               label="Appearance"

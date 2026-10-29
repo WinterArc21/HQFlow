@@ -13,6 +13,8 @@ export interface CopyButtonProps {
   size?: ButtonProps["size"];
   /** Shown in place of the label, which then becomes the button's accessible name only. */
   icon?: ReactNode;
+  /** Shown before the label. The label stays visible. */
+  leadingIcon?: ReactNode;
 }
 
 const RESET_DELAY_MS = 1800;
@@ -30,7 +32,7 @@ function statusText(status: CopyStatus): string | null {
   }
 }
 
-export function CopyButton({ value, label = "Copy", variant = "secondary", size = "sm", icon }: CopyButtonProps) {
+export function CopyButton({ value, label = "Copy", variant = "secondary", size = "sm", icon, leadingIcon }: CopyButtonProps) {
   const [status, setStatus] = useState<CopyStatus>("idle");
   const timeoutRef = useRef<number | undefined>(undefined);
 
@@ -63,7 +65,10 @@ export function CopyButton({ value, label = "Copy", variant = "secondary", size 
         {...(icon !== undefined ? { "aria-label": label, title: label } : {})}
       >
         <span className={styles.labelSwap}>
-          <span className={styles.label} aria-hidden={icon !== undefined ? "true" : undefined}>{icon ?? label}</span>
+          <span className={styles.label} aria-hidden={icon !== undefined ? "true" : undefined}>
+            {leadingIcon !== undefined ? <span className={styles.leading} aria-hidden="true">{leadingIcon}</span> : null}
+            {icon ?? label}
+          </span>
           <svg className={styles.tick} viewBox="0 0 16 16" aria-hidden="true">
             <path d="M3 8.5 L6.5 12 L13 4.5" pathLength={1} />
           </svg>

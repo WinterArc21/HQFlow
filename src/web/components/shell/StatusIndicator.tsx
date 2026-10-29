@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import styles from "./StatusIndicator.module.css";
 
 /** Connection + validation state, expressed as one indicator (contract §11 shell list). */
@@ -7,7 +8,7 @@ export interface StatusIndicatorProps {
   status: CodeHQStatus;
   /** Rendered alongside the label when `status === "invalid"`. */
   errorCount?: number;
-  /** Changes on every snapshot; each change sends one ping out of the dot. */
+  /** Changes on every snapshot; each change washes the word once. */
   pulseKey?: string;
 }
 
@@ -19,8 +20,8 @@ const STATUS_META: Record<CodeHQStatus, { tone: "green" | "amber" | "red"; label
 };
 
 /**
- * A dot alone never carries the meaning (contract §11: no colour-only signalling) — the text
- * label is always rendered too.
+ * The word is the status. Tone tints it, and a snapshot washes it once. Colour never stands
+ * alone (contract §11).
  */
 export function StatusIndicator({ status, errorCount, pulseKey }: StatusIndicatorProps) {
   const meta = STATUS_META[status];
@@ -28,13 +29,20 @@ export function StatusIndicator({ status, errorCount, pulseKey }: StatusIndicato
     status === "invalid" && errorCount !== undefined
       ? `${meta.label} · ${errorCount} ${errorCount === 1 ? "error" : "errors"}`
       : meta.label;
+  const [seenKey, setSeenKey] = useState(pulseKey);
+  const arrived = pulseKey !== undefined && pulseKey !== seenKey;
+
+  useEffect(() => {
+    if (!arrived) {
+      return;
+    }
+    const timer = window.setTimeout(() => setSeenKey(pulseKey), 700);
+    return () => window.clearTimeout(timer);
+  }, [arrived, pulseKey]);
 
   return (
-    <span className={styles.indicator} role="status">
-      <span className={`${styles.dot} ${styles[meta.tone]} ${status === "live" ? styles.breathing : ""}`} aria-hidden="true">
-        {pulseKey !== undefined ? <span key={pulseKey} className={styles.ping} /> : null}
-      </span>
-      <span className={styles.label}>{label}</span>
+    <span className={`${styles.indicator} ${styles[meta.tone]}`} role="status">
+      <span className={`${styles.label} ${arrived ? styles.wash : ""}`}>{label}</span>
     </span>
   );
 }

@@ -18,8 +18,8 @@ export function buildPaletteActions(onRecheck: () => Promise<void>, onResetLayou
   const actions: PaletteAction[] = [
     {
       id: "action:copy-prompt",
-      label: "Copy agent prompt",
-      detail: "Copies an instruction for your coding agent.",
+      label: "Map repo",
+      detail: "Copies the prompt that maps this repository.",
       run: async () => {
         await copyToClipboard(AGENT_PROMPT);
       },

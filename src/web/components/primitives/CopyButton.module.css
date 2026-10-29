@@ -15,6 +15,12 @@
 
 /* On copy the label lifts away and a tick draws itself in its place, then they swap back. The
    button keeps the label's width throughout, so nothing around it moves. */
+.leading {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--space-2);
+}
+
 .labelSwap {
   position: relative;
   display: inline-grid;
@@ -22,6 +28,8 @@
 }
 
 .label {
+  display: inline-flex;
+  align-items: center;
   transition:
     opacity var(--dur-base) var(--ease-standard),
     transform var(--dur-base) var(--ease-spring);
