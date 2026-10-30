@@ -24,7 +24,7 @@ type Tab = "overview" | "source" | "edges" | "tests";
 export interface StepCardProps {
   workflow: Workflow;
   step: WorkflowStep;
-  /** Position within the walkable flow, for the "Step n of m" footer. */
+  /** The step's position in the workflow, shown on the header chip. */
   stepNumber: number;
   sourceChecks: Record<string, SourceStatus>;
   /** Where the card sits, in flow coordinates (it renders inside the React Flow viewport). */
@@ -32,17 +32,15 @@ export interface StepCardProps {
   /** Grows from the node's right edge toward the left, when the node is at the board's edge. */
   growsLeft: boolean;
   onClose: () => void;
-  onWalk: (direction: -1 | 1) => void;
 }
 
 /**
  * The selected step, opened in place: the card grows out of its node on the canvas instead of a
  * separate panel. It has a fixed size and never reflows the board — it is drawn over it, so
  * neighbouring cards and every arrow stay exactly where they were — and its sections are tabs
- * that scroll inside the card. ← → walks the flow with the current tab kept; the ↗ button hands
- * a long step to the full side panel.
+ * that scroll inside the card.
  */
-export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose, onWalk }: StepCardProps) {
+export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose }: StepCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
@@ -73,7 +71,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
     if (cardRef.current !== null && ringRef.current !== null) {
       void irisReveal(cardRef.current, ringRef.current, { fromRight: growsLeft, closing: false });
     }
-    // Only on open: walking to the next step keeps the card in place.
+    // Only on open: selecting another step keeps the card in place.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -95,12 +93,6 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
     if (event.key === "Escape") {
       event.stopPropagation();
       close();
-      return;
-    }
-    const target = event.target as HTMLElement;
-    if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && target.closest("input, textarea") === null) {
-      event.preventDefault();
-      onWalk(event.key === "ArrowRight" ? 1 : -1);
     }
   };
 
@@ -193,7 +185,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
 
       <footer className={styles.footer}>
         <span className={styles.kicker}>{category.label}</span>
-        <span className={styles.hint} aria-hidden="true"><kbd>←</kbd><kbd>→</kbd> walk the flow <kbd>Esc</kbd> close</span>
+        <span className={styles.hint} aria-hidden="true"><kbd>Esc</kbd> close</span>
       </footer>
     </div>
   );

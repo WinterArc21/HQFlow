@@ -1,10 +1,9 @@
-import { useLayoutEffect, useMemo, type RefObject } from "react";
+import { useLayoutEffect, useState, type RefObject } from "react";
 import { useReactFlow, ViewportPortal } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import type { FitInsets } from "./fitViewport";
-import { computeOutcomeStepIds } from "./graph";
 import type { LayoutBounds } from "./layout";
 import { StepCard, STEP_CARD_HEIGHT, STEP_CARD_WIDTH } from "./StepCard";
 import type { CanvasFlowNode } from "./types";
@@ -16,6 +15,8 @@ const CARD_MAX_ZOOM = 1.1;
 const CARD_FLOOR_ZOOM = 0.5;
 /** Breathing room between the card and the chrome it is fitted between. */
 const CARD_MARGIN = 8;
+/** How long the camera takes to bring an opened card into view. */
+const CAMERA_MS = 300;
 
 export interface StepCardLayerProps {
   workflow: Workflow;
@@ -38,17 +39,19 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const selectStep = useCodeHQStore((state) => state.selectStep);
 
-  // ← → walks the work steps in story order; terminal outcomes are endpoints, not stops.
-  const walk = useMemo(() => {
-    const outcomes = computeOutcomeStepIds(workflow);
-    return workflow.steps.filter((step) => !outcomes.has(step.id)).map((step) => step.id);
-  }, [workflow]);
-
   const step = workflow.steps.find((candidate) => candidate.id === selectedStepId);
   const node = nodes.find((candidate) => candidate.id === selectedStepId);
   const width = node?.measured?.width ?? node?.width ?? 0;
   const growsLeft = node !== undefined && node.position.x + STEP_CARD_WIDTH > bounds.maxX + CARD_MARGIN * 3;
   const origin = node === undefined ? null : { x: growsLeft ? node.position.x + width - STEP_CARD_WIDTH : node.position.x, y: node.position.y };
+
+  // A newly opened card waits for the camera to settle. The first open usually zooms in, and a
+  // zoom redraws the whole board on every frame, so an iris played during it stuttered and was
+  // hard to see. Selecting another step keeps the open card, so it moves with the camera.
+  const [revealed, setRevealed] = useState(false);
+  if (revealed && selectedStepId === null) {
+    setRevealed(false);
+  }
 
   // Pan once per opened step (not on every node drag) so the card lands clear of the chrome.
   useLayoutEffect(() => {
@@ -62,18 +65,30 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
     const fitsZoom = Math.min((freeWidth - CARD_MARGIN * 2) / STEP_CARD_WIDTH, (freeHeight - CARD_MARGIN * 2) / STEP_CARD_HEIGHT);
     const minZoom = Math.max(CARD_FLOOR_ZOOM, Math.min(CARD_MIN_ZOOM, fitsZoom));
     const zoom = Math.min(Math.max(reactFlow.getZoom(), minZoom), CARD_MAX_ZOOM, Math.max(fitsZoom, minZoom));
-    void reactFlow.setViewport(
+    const duration = reducedMotion ? 0 : CAMERA_MS;
+    const moved = reactFlow.setViewport(
       {
         x: insets.left + freeWidth / 2 - (origin.x + STEP_CARD_WIDTH / 2) * zoom,
         y: insets.top + CARD_MARGIN - origin.y * zoom,
         zoom,
       },
-      { duration: reducedMotion ? 0 : 300 },
+      { duration },
     );
+    if (revealed || duration === 0) {
+      return;
+    }
+    // React Flow settles the promise only when the move ends, not when a pan interrupts it.
+    let cancelled = false;
+    void Promise.race([moved, new Promise((resolve) => setTimeout(resolve, duration + 50))]).then(() => {
+      if (!cancelled) setRevealed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStepId]);
 
-  if (step === undefined || origin === null) {
+  if (step === undefined || origin === null || !(revealed || reducedMotion)) {
     return null;
   }
 
@@ -82,12 +97,6 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
     selectStep(null);
     // Hand focus back to the card that opened the step, as the side panel always did.
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-step-node="${CSS.escape(id)}"]`)?.focus());
-  };
-  const walkTo = (direction: -1 | 1) => {
-    const next = walk[walk.indexOf(step.id) + direction];
-    if (next !== undefined) {
-      selectStep(next);
-    }
   };
 
   return (
@@ -100,7 +109,6 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
         origin={origin}
         growsLeft={growsLeft}
         onClose={close}
-        onWalk={walkTo}
       />
     </ViewportPortal>
   );
