@@ -45,3 +45,26 @@ test("loads the test project, auto-selects the default workflow, and renders its
   expect(consoleErrors, `Unexpected browser console errors during load:\n${consoleErrors.join("\n")}`).toEqual([]);
   expect(pageErrors, `Unexpected uncaught page errors during load:\n${pageErrors.join("\n")}`).toEqual([]);
 });
+
+test("off-screen cards do not show edge tags in tall or wide views", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 600 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await waitForBoot(page);
+
+  for (const view of ["Flow", "Line"]) {
+    await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+    for (let i = 0; i < 4; i += 1) {
+      await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    }
+    // Check the graph really extends past this edge, so absence is not just a fully fitted map.
+    await expect.poll(() => page.locator(".react-flow").evaluate((canvas, direction) => {
+      const stage = canvas.getBoundingClientRect();
+      return [...canvas.querySelectorAll(".react-flow__node")].some((node) => {
+        const rect = node.getBoundingClientRect();
+        return direction === "Flow" ? rect.bottom > stage.bottom : rect.right > stage.right;
+      });
+    }, view)).toBe(true);
+    await expect(page.getByRole("button", { name: /Show more (below|to the right)/ })).toHaveCount(0);
+  }
+});

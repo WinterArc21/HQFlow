@@ -55,8 +55,6 @@ export interface BuildPlan {
   labels: Array<{ t: number; text: string; cursor: number }>;
   /** Centres of new cards, for the scene ripple, timed to when each one appears. */
   total: number;
-  added: number;
-  connections: number;
 }
 
 interface Box {
@@ -366,7 +364,5 @@ export function planBuild(
     cursors: cursors.filter((keys) => keys.length > 0),
     labels,
     total: Math.max(lastEdge, laneEnd, changed.size > 0 ? 1200 : 0),
-    added: next.steps.filter((step) => !before.has(step.id)).length,
-    connections: newEdges.length,
   };
 }

@@ -89,8 +89,6 @@ export function IslandShell({ repositoryName, locationLabel, status, errorCount,
   const dockLeft = Math.max(0, Math.floor((lastColumn - dockWidth) / 2));
   const drawerMeetsDock = dockLeft + dockWidth > lastColumn - DRAWER_WIDTH;
   const treeMaxHeight = Math.max(2, lastRow - identityTop - dockHeight - TREE_CLEARANCE) * DOT_STEP;
-  // Pixels from the window's bottom edge up to the dock's top edge.
-  const dockClearance = grid.height - (DOT_ORIGIN + (lastRow - dockHeight) * DOT_STEP);
 
   // The open card folds back on a click outside it or on Escape, which also returns focus to the pill.
   useEffect(() => {
@@ -119,7 +117,6 @@ export function IslandShell({ repositoryName, locationLabel, status, errorCount,
   const chrome = useMemo<CanvasChrome>(() => ({
     titleTarget,
     controlsTarget,
-    dockClearance,
     onCanvasMove,
     fitInsets: {
       top: DOT_ORIGIN + (identityTop + 3) * DOT_STEP,
@@ -127,7 +124,7 @@ export function IslandShell({ repositoryName, locationLabel, status, errorCount,
       bottom: DOT_ORIGIN + (dockHeight + 1) * DOT_STEP,
       left: DOT_ORIGIN,
     },
-  }), [controlsTarget, dockClearance, dockHeight, identityTop, onCanvasMove, titleTarget]);
+  }), [controlsTarget, dockHeight, identityTop, onCanvasMove, titleTarget]);
 
   // The step drawer is one more island: inset to the grid, below the status island, and above
   // the dock only when the two would otherwise overlap.

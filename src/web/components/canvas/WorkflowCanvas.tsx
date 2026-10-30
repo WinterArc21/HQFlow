@@ -12,7 +12,6 @@ import { buildFlowEdges, buildFlowNodes, chooseViewHandles, restoreGeneratedNode
 import { CanvasLegend, legendRows } from "./CanvasLegend";
 import { CanvasDockControls } from "./CanvasDockControls";
 import { CanvasHeader, CanvasTitle } from "./CanvasHeader";
-import { CanvasOverflowIndicator } from "./CanvasOverflowIndicator";
 import { StepCardLayer } from "./StepCardLayer";
 import { EdgeMarkers } from "./edges/EdgeMarkers";
 import { WorkflowEdge } from "./edges/WorkflowEdge";
@@ -29,7 +28,7 @@ import { ExportDialog } from "./ExportDialog";
 import { useCanvasLayoutPersistence } from "./useCanvasLayoutPersistence";
 import { useCanvasFit } from "./useCanvasFit";
 import { useCanvasKeyboardNav } from "./useCanvasKeyboardNav";
-import { AgentCursor, BuildToast } from "./live/AgentCursor";
+import { AgentCursor } from "./live/AgentCursor";
 import { useLiveBuild } from "./live/useLiveBuild";
 import type { FitInsets } from "./fitViewport";
 import styles from "./WorkflowCanvas.module.css";
@@ -59,13 +58,12 @@ const EDGE_TYPES = { workflow: WorkflowEdge };
  * Hands the canvas's title and controls to an outer shell instead of the built-in title strip:
  * the title renders into `titleTarget`, the controls into `controlsTarget` (both through portals,
  * so they keep this canvas's React Flow context) with the connection key in the controls' menu,
- * fitting keeps `fitInsets` clear, and cues near the bottom stay above `dockClearance`. `onCanvasMove` hears when the
+ * fitting keeps `fitInsets` clear. `onCanvasMove` hears when the
  * reader starts and stops panning, zooming or dragging.
  */
 export interface CanvasChrome {
   titleTarget: HTMLElement | null;
   controlsTarget: HTMLElement | null;
-  dockClearance: number;
   onCanvasMove: (moving: boolean) => void;
   fitInsets: FitInsets;
 }
@@ -201,7 +199,7 @@ function WorkflowCanvasInner({
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
   }, [canvasLayout?.nodePositions, layout]);
 
-  const { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow } = useCanvasFit({
+  const { containerRef, fitToViewport } = useCanvasFit({
     layoutBounds: fitBounds,
     workflowId: canvasId,
     workflowRevision,
@@ -432,21 +430,6 @@ function WorkflowCanvasInner({
     setRovingId(node.id);
   };
 
-  // The overflow cues pan most of a screen toward the hidden part of the map.
-  const panCanvas = useCallback((direction: "right" | "bottom") => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect === undefined) {
-      return;
-    }
-    const viewport = reactFlowInstance.getViewport();
-    void reactFlowInstance.setViewport(
-      direction === "right"
-        ? { ...viewport, x: viewport.x - rect.width * 0.6 }
-        : { ...viewport, y: viewport.y - rect.height * 0.6 },
-      { duration: reducedMotion ? 0 : 300 },
-    );
-  }, [containerRef, reactFlowInstance, reducedMotion]);
-
   const handleExport = useCallback(() => setExportDialogOpen(true), []);
   const downloadExport = useCallback(async (hideFilePaths: boolean): Promise<void> => {
     const artifact = await fetchWorkflowExport(workflow.id, hideFilePaths);
@@ -586,7 +569,6 @@ function WorkflowCanvasInner({
           minZoom={0.2}
           maxZoom={2}
           onlyRenderVisibleElements={!imageExporting && nodes.length > VIRTUALIZE_NODE_THRESHOLD}
-          onMove={(_event, viewport) => updateOverflow(viewport)}
           // Only the reader's own gestures count; a programmatic fit or pan has no event.
           onMoveStart={(event) => { if (event !== null) chrome?.onCanvasMove(true); }}
           onMoveEnd={(event) => { if (event !== null) chrome?.onCanvasMove(false); }}
@@ -636,11 +618,6 @@ function WorkflowCanvasInner({
             onDismiss={() => setDismissedHint({ canvasId, view: suggestedView })}
             {...(chrome !== undefined ? { bottomInset: chrome.fitInsets.bottom } : {})}
           />
-        ) : null}
-        {live.plan !== null ? <BuildToast key={live.plan.id} plan={live.plan} fileName={`${workflow.id}.json`} /> : null}
-        {overflowsRight ? <CanvasOverflowIndicator direction="right" onPan={panCanvas} /> : null}
-        {overflowsBottom ? (
-          <CanvasOverflowIndicator direction="bottom" onPan={panCanvas} {...(chrome !== undefined ? { bottomInset: chrome.dockClearance } : {})} />
         ) : null}
       </div>
       {exportDialogOpen ? (

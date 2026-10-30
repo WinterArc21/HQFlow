@@ -132,7 +132,6 @@
   --agent-cursor-fill: #0b0c0e;
   --agent-cursor-line: #ffffff;
   --agent-cursor-shadow: rgb(0 0 0 / 0.4);
-  --overflow-fade: var(--bg-canvas);
   --scene-c0: #0e0f11;
   --scene-c1: #191c20;
   --scene-c2: #5b8def;
@@ -337,7 +336,6 @@
   --card-alpha: 84%;
   --card-filter: blur(12px) saturate(1.4);
   --edge-halo: color-mix(in srgb, var(--bg-canvas) 45%, transparent);
-  --overflow-fade: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

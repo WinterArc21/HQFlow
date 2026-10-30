@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 import { ViewportPortal } from "@xyflow/react";
-import { countLabel } from "../../../lib/pluralize";
 import { CARD_PHASE, WEAVE_SWING, type BuildPlan, type CardDraw, type CursorKey } from "./buildPlan";
 import styles from "./AgentCursor.module.css";
 
@@ -229,22 +228,6 @@ function WeaveTiles({ cards, ref }: { cards: CardDraw[]; ref: Ref<HTMLDivElement
         }
         return tiles;
       })}
-    </div>
-  );
-}
-
-/** What just changed, said once at the top of the stage while the build draws. */
-export function BuildToast({ plan, fileName }: { plan: BuildPlan; fileName: string }) {
-  const parts = [
-    plan.added > 0 ? `${countLabel(plan.added, "step")} added` : null,
-    plan.changed.size > 0 ? `${countLabel(plan.changed.size, "step")} updated` : null,
-    plan.connections > 0 ? countLabel(plan.connections, "connection") : null,
-  ].filter((part): part is string => part !== null);
-  return (
-    <div className={styles.toast} role="status" style={{ animationDuration: `${plan.total + 1500}ms` }}>
-      <span className={styles.toastPulse} aria-hidden="true" />
-      <span className={styles.toastFile}>{plan.cursors.length > 1 ? `${plan.cursors.length} agents · ${fileName}` : fileName}</span>
-      <span className={styles.toastText}>{parts.join(" · ")}</span>
     </div>
   );
 }

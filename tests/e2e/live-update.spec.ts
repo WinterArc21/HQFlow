@@ -74,6 +74,9 @@ test("renaming a step, then adding a step and connection, both appear live witho
   await expect(page.locator("[data-step-node]")).toHaveCount(12, { timeout: 10_000 });
   await expect(page.locator('[data-step-node="post-process-video"]')).toContainText("Post-process Video");
   await expect(page.locator(".react-flow__edge")).toHaveCount(11, { timeout: 10_000 });
+  // Live drawing remains, but the file/count status pill must not return during the build.
+  await expect(page.locator("[data-agent-cursor]").first()).toBeAttached();
+  await expect(page.getByRole("status").filter({ hasText: "generate-video.json" })).toHaveCount(0);
 });
 
 test("a card that moves in a live edit keeps its connector attached", async ({ page }) => {

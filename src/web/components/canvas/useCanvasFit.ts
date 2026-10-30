@@ -6,9 +6,9 @@
  * re-fit on workflow change, and a one-shot fallback for the container's very first real
  * layout).
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
-import { computeFitViewport, computeViewportOverflow, type FitInsets, type Viewport } from "./fitViewport";
+import { computeFitViewport, type FitInsets } from "./fitViewport";
 import type { LayoutBounds } from "./layout";
 
 /** Small margin around the fitted graph — kept tight deliberately: a generous margin here is
@@ -37,39 +37,12 @@ export interface UseCanvasFitParams {
 
 export interface UseCanvasFitResult {
   containerRef: RefObject<HTMLDivElement | null>;
-  overflowsRight: boolean;
-  overflowsBottom: boolean;
   fitToViewport: (duration: number) => void;
-  updateOverflow: (viewport: Pick<Viewport, "x" | "y" | "zoom">) => void;
 }
 
 export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
   const { layoutBounds, workflowId, workflowRevision, reactFlowInstance, reducedMotion, insets } = params;
   const containerRef = useRef<HTMLDivElement>(null);
-  // Whether the fitted graph still has more content below the visible stage — a large
-  // workflow can be taller than even the minimum legible zoom allows. Drives the "more below"
-  // affordance so a reader never mistakes a cut-off last card for the end of the workflow.
-  const [overflowsBottom, setOverflowsBottom] = useState(false);
-  const [overflowsRight, setOverflowsRight] = useState(false);
-
-  const updateOverflow = useCallback(
-    (viewport: Pick<Viewport, "x" | "y" | "zoom">) => {
-      const container = containerRef.current;
-      if (container === null) {
-        return;
-      }
-      const rect = container.getBoundingClientRect();
-      const overflow = computeViewportOverflow({
-        containerWidth: rect.width,
-        containerHeight: rect.height,
-        bounds: layoutBounds,
-        viewport,
-      });
-      setOverflowsRight(overflow.overflowsRight);
-      setOverflowsBottom(overflow.overflowsBottom);
-    },
-    [layoutBounds],
-  );
 
   const fitToViewport = useCallback(
     (duration: number) => {
@@ -89,8 +62,6 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
       });
       if (viewport !== null) {
         void reactFlowInstance.setViewport(viewport, { duration });
-        setOverflowsRight(viewport.overflowsRight);
-        setOverflowsBottom(viewport.overflowsBottom);
       }
     },
     [insets, layoutBounds, reactFlowInstance],
@@ -133,5 +104,5 @@ export function useCanvasFit(params: UseCanvasFitParams): UseCanvasFitResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { containerRef, overflowsRight, overflowsBottom, fitToViewport, updateOverflow };
+  return { containerRef, fitToViewport };
 }
