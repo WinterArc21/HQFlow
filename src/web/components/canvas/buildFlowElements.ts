@@ -28,7 +28,8 @@ export const RETRY_OUT_FRACTION = 0.72;
 /**
  * Each side of a work card has one arrival port and one departure port, both at the side's middle.
  * When a moved card makes one edge arrive and another leave on the same side, the arrowhead would
- * land on the departure square, so both ports move to these split slots instead (see
+ * land on the departure square; when two edges leave on the same side, they would start on one
+ * square. In both cases the ports move to these split slots instead (see
  * `splitSharedSides`). The id of a split port is its middle port's id plus `@1` or `@2`.
  */
 const SPLIT_FRACTIONS = [0.35, 0.65] as const;
@@ -57,9 +58,10 @@ function splitPortHandles(width: number, height: number): NodeHandle[] {
 }
 
 /**
- * Moves the arrival and the departure on a shared card side apart. The role whose other cards sit
- * nearer the start of the side (the top, or the left) takes the first slot, so the two lines do not
- * cross at the card. Edges that need no change keep their identity.
+ * Moves the arrival and the departure on a shared card side apart, and also two departures that
+ * share a side. The role (or departure) whose other cards sit nearer the start of the side (the
+ * top, or the left) takes the first slot, so the lines do not cross at the card. Edges that need
+ * no change keep their identity.
  */
 export function splitSharedSides(edges: WorkflowFlowEdge[], bounds: ReadonlyMap<string, Box>): WorkflowFlowEdge[] {
   const sideOf = new Map<string, Position>(MIDDLE_PORTS.map((port) => [port.id, port.position]));
@@ -68,30 +70,43 @@ export function splitSharedSides(edges: WorkflowFlowEdge[], bounds: ReadonlyMap<
     if (box === undefined) return 0;
     return side === Position.Left || side === Position.Right ? box.y + box.height / 2 : box.x + box.width / 2;
   };
-  const arrivals = new Map<string, number[]>();
-  const departures = new Map<string, number[]>();
-  const add = (map: Map<string, number[]>, key: string, value: number) => map.set(key, [...(map.get(key) ?? []), value]);
-  for (const edge of edges) {
+  type SideUse = { edgeIndex: number; peer: number };
+  const arrivals = new Map<string, SideUse[]>();
+  const departures = new Map<string, SideUse[]>();
+  const add = (map: Map<string, SideUse[]>, key: string, use: SideUse) => map.set(key, [...(map.get(key) ?? []), use]);
+  edges.forEach((edge, edgeIndex) => {
     const sourceSide = sideOf.get(edge.sourceHandle ?? "");
     const targetSide = sideOf.get(edge.targetHandle ?? "");
-    if (sourceSide !== undefined) add(departures, `${edge.source}:${sourceSide}`, peerCenter(edge.target, sourceSide));
-    if (targetSide !== undefined) add(arrivals, `${edge.target}:${targetSide}`, peerCenter(edge.source, targetSide));
+    if (sourceSide !== undefined) add(departures, `${edge.source}:${sourceSide}`, { edgeIndex, peer: peerCenter(edge.target, sourceSide) });
+    if (targetSide !== undefined) add(arrivals, `${edge.target}:${targetSide}`, { edgeIndex, peer: peerCenter(edge.source, targetSide) });
+  });
+  const average = (uses: SideUse[]) => uses.reduce((sum, use) => sum + use.peer, 0) / uses.length;
+  const sourceSlots = new Map<number, 1 | 2>();
+  const targetSlots = new Map<number, 1 | 2>();
+  for (const [key, departureUses] of departures) {
+    const arrivalUses = arrivals.get(key);
+    if (arrivalUses !== undefined) {
+      const arrivalsFirst = average(arrivalUses) <= average(departureUses);
+      arrivalUses.forEach(({ edgeIndex }) => targetSlots.set(edgeIndex, arrivalsFirst ? 1 : 2));
+      departureUses.forEach(({ edgeIndex }) => sourceSlots.set(edgeIndex, arrivalsFirst ? 2 : 1));
+    } else if (departureUses.length > 1) {
+      // Two or more departures and no arrival: they leave from the two slots like an arrival and a
+      // departure do. The departures to cards nearer the start of the side take the first slot.
+      // Arrivals with no departure stay merged on the middle port, so a fan-in reads as one join.
+      const ordered = [...departureUses].sort((a, b) => a.peer - b.peer);
+      const firstSlotCount = Math.ceil(ordered.length / 2);
+      ordered.forEach(({ edgeIndex }, order) => sourceSlots.set(edgeIndex, order < firstSlotCount ? 1 : 2));
+    }
   }
-  const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
-  const arrivalsFirst = new Map<string, boolean>();
-  for (const [key, arrivalPeers] of arrivals) {
-    const departurePeers = departures.get(key);
-    if (departurePeers !== undefined) arrivalsFirst.set(key, average(arrivalPeers) <= average(departurePeers));
-  }
-  if (arrivalsFirst.size === 0) return edges;
-  return edges.map((edge) => {
-    const sourceFirst = arrivalsFirst.get(`${edge.source}:${sideOf.get(edge.sourceHandle ?? "")}`);
-    const targetFirst = arrivalsFirst.get(`${edge.target}:${sideOf.get(edge.targetHandle ?? "")}`);
-    if (sourceFirst === undefined && targetFirst === undefined) return edge;
+  if (sourceSlots.size === 0 && targetSlots.size === 0) return edges;
+  return edges.map((edge, edgeIndex) => {
+    const sourceSlot = sourceSlots.get(edgeIndex);
+    const targetSlot = targetSlots.get(edgeIndex);
+    if (sourceSlot === undefined && targetSlot === undefined) return edge;
     return {
       ...edge,
-      ...(sourceFirst !== undefined ? { sourceHandle: `${edge.sourceHandle}@${sourceFirst ? 2 : 1}` } : {}),
-      ...(targetFirst !== undefined ? { targetHandle: `${edge.targetHandle}@${targetFirst ? 1 : 2}` } : {}),
+      ...(sourceSlot !== undefined ? { sourceHandle: `${edge.sourceHandle}@${sourceSlot}` } : {}),
+      ...(targetSlot !== undefined ? { targetHandle: `${edge.targetHandle}@${targetSlot}` } : {}),
     };
   });
 }

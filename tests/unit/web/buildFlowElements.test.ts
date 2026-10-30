@@ -31,6 +31,24 @@ describe("splitSharedSides", () => {
     expect(swappedDeparture?.sourceHandle).toBe("out-left@1");
   });
 
+  it("splits two departures on one side, ordered by their target cards", () => {
+    // "src" sends to "low" (below) and "high" (above), both from its right side.
+    const bounds = new Map([["src", box(0, 200)], ["low", box(500, 400)], ["high", box(500, 0)]]);
+    const edges = [edge("src", "low", "out", "in"), edge("src", "high", "out", "in")];
+    const [toLow, toHigh] = splitSharedSides(edges, bounds);
+    expect(toHigh?.sourceHandle).toBe("out@1");
+    expect(toLow?.sourceHandle).toBe("out@2");
+    // Each target receives one edge only, so its arrival port stays in the middle.
+    expect(toLow?.targetHandle).toBe("in");
+    expect(toHigh?.targetHandle).toBe("in");
+  });
+
+  it("keeps two arrivals on one side merged, so a fan-in reads as one join", () => {
+    const bounds = new Map([["dst", box(500, 200)], ["low", box(0, 400)], ["high", box(0, 0)]]);
+    const edges = [edge("low", "dst", "out", "in"), edge("high", "dst", "out", "in")];
+    expect(splitSharedSides(edges, bounds)).toBe(edges);
+  });
+
   it("returns the same array when no side is shared", () => {
     const edges = [edge("a", "b", "out", "in")];
     expect(splitSharedSides(edges, new Map([["a", box(0, 0)], ["b", box(400, 0)]]))).toBe(edges);
