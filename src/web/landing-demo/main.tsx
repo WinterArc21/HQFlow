@@ -108,7 +108,9 @@ function LandingDemo() {
 
   useEffect(() => {
     useCodeHQStore.setState({
-      ...(LIVE ? { theme: "dark", darkScene: "abyss-mesh", motion: "full" } : { theme: "light" }),
+      theme: "light",
+      lightScene: "sorbet",
+      ...(LIVE ? { motion: "full" } : {}),
       selectedWorkflowId: workflow.id,
       selectedStepId: null,
     });
