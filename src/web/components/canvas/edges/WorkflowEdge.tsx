@@ -208,13 +208,35 @@ function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string
   );
 }
 
-/** A polyline through `points` with each corner rounded off. */
+/** Round real turns, not the redundant points a router inserts along a straight run. */
 export function roundedPolylinePath(points: Array<{ x: number; y: number }>, radius = EDGE_BORDER_RADIUS): string {
+  const turns: typeof points = [];
+  for (const point of points) {
+    const last = turns.at(-1);
+    if (last?.x === point.x && last.y === point.y) continue;
+    while (turns.length >= 2) {
+      const a = turns[turns.length - 2]!;
+      const b = turns[turns.length - 1]!;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const nextDx = point.x - b.x;
+      const nextDy = point.y - b.y;
+      // Keep reversals: removing them would cut across the route instead of simplifying it.
+      if (dx * nextDy !== dy * nextDx || dx * nextDx + dy * nextDy < 0) break;
+      turns.pop();
+    }
+    turns.push(point);
+  }
+  points = turns;
   let path = `M${points[0]!.x},${points[0]!.y}`;
   for (let i = 1; i < points.length - 1; i += 1) {
     const a = points[i - 1]!;
     const b = points[i]!;
     const c = points[i + 1]!;
+    if ((b.x - a.x) * (c.y - b.y) === (b.y - a.y) * (c.x - b.x)) {
+      path += ` L${b.x},${b.y}`;
+      continue;
+    }
     const l1 = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     const l2 = Math.hypot(c.x - b.x, c.y - b.y) || 1;
     const r = Math.min(radius, l1 / 2, l2 / 2);
@@ -394,19 +416,32 @@ export function WorkflowEdge({ id, data, source, target, sourceX, sourceY, sourc
     labelX = (sourceX + targetX) / 2;
     labelY = liftY;
   } else {
-    const geometry = branch || data.routing === "step"
-      ? getSmoothStepPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-          borderRadius: EDGE_BORDER_RADIUS,
-          offset: 28,
-        })
-      : arrowSafeBezierPath({ x: sourceX, y: sourceY }, sourcePosition, { x: targetX, y: targetY }, targetPosition);
-    [path, labelX, labelY] = geometry;
+    if (branch || data.routing === "step") {
+      const facingGap = sourcePosition === Position.Right && targetPosition === Position.Left ? targetX - sourceX
+        : sourcePosition === Position.Left && targetPosition === Position.Right ? sourceX - targetX
+          : sourcePosition === Position.Bottom && targetPosition === Position.Top ? targetY - sourceY
+            : sourcePosition === Position.Top && targetPosition === Position.Bottom ? sourceY - targetY : 0;
+      [path, labelX, labelY] = getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        // Get the orthogonal route first; apply rounding after removing straight-run points.
+        borderRadius: 0,
+        // Keep the leads apart, even with fractional coordinates, to avoid a backwards kink.
+        offset: facingGap > 0 ? Math.min(28, facingGap / 4) : 28,
+      });
+      // At radius zero, each Q control point equals its endpoint. M/L/Q endpoints therefore
+      // describe the original polyline without needing to approximate or sample the path.
+      path = roundedPolylinePath([...path.matchAll(/[MLQ]([^MLQ]+)/g)].map((match) => {
+        const coordinates = match[1]!.trim().split(/[\s,]+/).map(Number);
+        return { x: coordinates.at(-2)!, y: coordinates.at(-1)! };
+      }));
+    } else {
+      [path, labelX, labelY] = arrowSafeBezierPath({ x: sourceX, y: sourceY }, sourcePosition, { x: targetX, y: targetY }, targetPosition);
+    }
     const parallelOffset = data.parallelOffset ?? 0;
     if (parallelOffset !== 0) {
       const length = Math.hypot(targetX - sourceX, targetY - sourceY) || 1;

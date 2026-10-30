@@ -264,6 +264,41 @@ test("switches outcome connections to facing sides while dragging success and fa
   await page.mouse.up();
 });
 
+test("keeps stepped corners rounded on both sides of the port-lead gap boundary", async ({ page, request }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  try {
+    // These saved positions put the facing ports just below/above the two 28-unit leads,
+    // then farther apart. Only the gap changes; the connection and its vertical span do not.
+    for (const x of [473, 474.6, 478, 540]) {
+      const saved = await request.put(`${server.url}/api/workflows/generate-video/layout`, {
+        data: { nodePositions: { "receive-request": { x: 100, y: 100 }, "validate-request": { x, y: 280 } } },
+      });
+      expect(saved.ok()).toBe(true);
+      await page.goto(server.url);
+      await waitForBoot(page);
+      const edge = page.locator('.react-flow__edge[data-id="receive-request->validate-request#0"] path.react-flow__edge-path');
+      await expect.poll(() => edge.evaluate((element) => {
+        const path = element as SVGPathElement;
+        const start = path.getPointAtLength(0);
+        const end = path.getPointAtLength(path.getTotalLength());
+        const commands = [...path.getAttribute("d")!.matchAll(/([MLQ])([^MLQ]+)/g)].map((match) => ({
+          kind: match[1],
+          values: match[2]!.trim().split(/[\s,]+/).map(Number),
+        }));
+        const radii = commands.flatMap((command, index) => command.kind === "Q"
+          ? [Math.hypot(command.values[0]! - commands[index - 1]!.values.at(-2)!, command.values[1]! - commands[index - 1]!.values.at(-1)!)]
+          : []);
+        // A two-bend route has half the horizontal gap on either side of its vertical run.
+        // Each corner can use half that run, up to the designed 16-unit radius.
+        const expected = Math.min(16, Math.abs(end.x - start.x) / 4, Math.abs(end.y - start.y) / 2);
+        return radii.length === 2 && radii.every((radius) => Math.abs(radius - expected) < 0.01);
+      })).toBe(true);
+    }
+  } finally {
+    await request.delete(`${server.url}/api/workflows/generate-video/layout`);
+  }
+});
+
 for (const view of ["Wrap", "Flow", "Line"] as const) {
   for (const target of ["outcome-quota-exceeded", "check-quota"] as const) {
     test(`keeps trace highlighting stable while dragging ${target} in ${view} view`, async ({ page }) => {
