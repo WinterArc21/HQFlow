@@ -31,7 +31,9 @@
 .identity {
   /* Two dots, less the island's border, so the pill fills its grid box exactly. */
   --identity-row: 54px;
-  position: relative;
+  /* Not a positioning box: the trigger below anchors to the island itself. The island rounds its
+     width up to whole dots, so this row can be narrower than the island, and a trigger sized to
+     the row left that slack unhighlighted on hover. */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
