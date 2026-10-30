@@ -19,30 +19,54 @@
     0 18px 44px color-mix(in srgb, var(--bg-canvas) 55%, transparent);
 }
 
-/* The surface dissolves in first (ditherDissolve.ts); the content then settles out of a soft blur. */
-.card > :not(.glow) {
-  animation: settle var(--dur-slow) var(--ease-out-expo) 260ms backwards;
+/* The surface opens as an iris (irisReveal.ts) by animating this radius; the content then settles in row by row. */
+@property --iris-r {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
+
+.card[data-iris] {
+  mask-image: radial-gradient(circle at var(--iris-x) 0, black calc(var(--iris-r) - 70px), transparent var(--iris-r));
+}
+
+.header,
+.tabs,
+.body,
+.footer {
+  animation: settle var(--dur-slow) var(--ease-out-expo) backwards;
+}
+
+.header { animation-delay: 180ms; }
+.tabs { animation-delay: 225ms; }
+.body { animation-delay: 270ms; }
+.footer { animation-delay: 315ms; }
 
 @keyframes settle {
   from {
     opacity: 0;
-    filter: blur(3px);
+    transform: translateY(5px);
   }
 }
 
-/* The newest dither pixels, lit in the step's accent; one canvas pixel per dither cell. */
-.glow {
+/* The ring of accent riding the iris front; it sits just behind the mask's soft edge. */
+.ring {
   position: absolute;
   inset: 0;
   z-index: 1;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
-  image-rendering: pixelated;
+  background: radial-gradient(
+    circle at var(--iris-x) 0,
+    transparent calc(var(--iris-r) - 90px),
+    color-mix(in srgb, var(--step-accent) 70%, transparent) calc(var(--iris-r) - 50px),
+    transparent calc(var(--iris-r) - 8px)
+  );
 }
 
-:global(:root[data-motion="still"]) .card > * {
+:global(:root[data-motion="still"]) .header,
+:global(:root[data-motion="still"]) .tabs,
+:global(:root[data-motion="still"]) .body,
+:global(:root[data-motion="still"]) .footer {
   animation: none;
 }
 
@@ -196,7 +220,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card > * {
+  .header,
+  .tabs,
+  .body,
+  .footer {
     animation: none;
   }
 }

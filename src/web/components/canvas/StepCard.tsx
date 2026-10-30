@@ -12,7 +12,7 @@ import { SourceReferenceRow } from "../drawer/SourceReferenceRow";
 import { StepDrawerConnections } from "../drawer/StepDrawerConnections";
 import { StepDrawerNotes } from "../drawer/StepDrawerNotes";
 import { TestItem } from "../drawer/TestItem";
-import { ditherDissolve } from "./ditherDissolve";
+import { irisReveal } from "./irisReveal";
 import styles from "./StepCard.module.css";
 
 /** The card's fixed size in flow units: it never grows with its content, which scrolls instead. */
@@ -44,7 +44,7 @@ export interface StepCardProps {
  */
 export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose, onWalk }: StepCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLCanvasElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
   const titleId = useId();
   const [tab, setTab] = useState<Tab>("overview");
@@ -68,27 +68,27 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
     cardRef.current?.focus({ preventScroll: true });
   }, []);
 
-  // The card resolves out of dither pixels from the node's corner, before its first paint.
+  // The card opens as an iris from the node's corner, starting before its first paint.
   useLayoutEffect(() => {
-    if (cardRef.current !== null && glowRef.current !== null) {
-      void ditherDissolve(cardRef.current, glowRef.current, { fromRight: growsLeft, closing: false });
+    if (cardRef.current !== null && ringRef.current !== null) {
+      void irisReveal(cardRef.current, ringRef.current, { fromRight: growsLeft, closing: false });
     }
     // Only on open: walking to the next step keeps the card in place.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Esc and the close button dissolve the card back into its node first.
+  // Esc and the close button fade the card out first.
   const close = () => {
     if (closingRef.current) return;
-    const dissolve = cardRef.current !== null && glowRef.current !== null
-      ? ditherDissolve(cardRef.current, glowRef.current, { fromRight: growsLeft, closing: true })
+    const fade = cardRef.current !== null && ringRef.current !== null
+      ? irisReveal(cardRef.current, ringRef.current, { fromRight: growsLeft, closing: true })
       : null;
-    if (dissolve === null) {
+    if (fade === null) {
       onClose();
       return;
     }
     closingRef.current = true;
-    void dissolve.then(onClose);
+    void fade.then(onClose);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -122,7 +122,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
       data-step-card={step.id}
       onKeyDown={handleKeyDown}
     >
-      <canvas ref={glowRef} className={styles.glow} aria-hidden="true" />
+      <div ref={ringRef} className={styles.ring} aria-hidden="true" />
       <header className={styles.header}>
         <span className={styles.chip} aria-hidden="true">{String(stepNumber).padStart(2, "0")}</span>
         <h2 id={titleId} className={styles.title}>{step.name}</h2>
