@@ -263,3 +263,68 @@ test("switches outcome connections to facing sides while dragging success and fa
   await expect.poll(() => edgeEndpointDistance(page, "review-rejected", "outcome-rejected", "in-top", "target")).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
   await page.mouse.up();
 });
+
+for (const view of ["Wrap", "Flow", "Line"] as const) {
+  for (const target of ["outcome-quota-exceeded", "check-quota"] as const) {
+    test(`keeps trace highlighting stable while dragging ${target} in ${view} view`, async ({ page }) => {
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(server.url);
+      await waitForBoot(page);
+      await selectWorkflowByName(page, "Generate Video Prompt");
+      await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+      await resetCanvasLayout(page);
+
+      const dragged = page.locator(`[data-step-node="${target}"]`);
+      const start = await dragged.boundingBox();
+      const validation = await page.locator('[data-step-node="validate-request"]').boundingBox();
+      const entry = await page.locator('[data-step-node="receive-request"]').boundingBox();
+      expect(start).not.toBeNull();
+      expect(validation).not.toBeNull();
+      expect(entry).not.toBeNull();
+      await page.mouse.move(start!.x + start!.width / 2, start!.y + start!.height / 2);
+      await expect(page.locator('[data-step-node="outcome-invalid-request"]')).toHaveCSS("opacity", "0.35");
+
+      // Sample every painted frame: checking only after each move misses a split-second flash.
+      const monitor = await page.evaluateHandle(() => {
+        const appearance = () => Array.from(document.querySelectorAll("[data-step-node], .react-flow__edge-path"), (element) => {
+          const style = getComputedStyle(element);
+          return `${style.opacity}:${style.strokeWidth}`;
+        }).join("|");
+        const before = appearance();
+        const result = { frames: 0, changed: 0 };
+        let frame = 0;
+        const sample = (): void => {
+          result.frames += 1;
+          if (appearance() !== before) result.changed += 1;
+          frame = requestAnimationFrame(sample);
+        };
+        frame = requestAnimationFrame(sample);
+        return { stop: () => { cancelAnimationFrame(frame); return result; } };
+      });
+      await page.mouse.down();
+      // Cross a card, its edge, another card, and empty canvas without releasing the button.
+      for (const point of [validation!, entry!, { x: entry!.x, y: entry!.y + entry!.height + 50, width: entry!.width, height: 0 }]) {
+        await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
+        await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      }
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const result = await monitor.evaluate((monitor) => monitor.stop());
+      await monitor.dispose();
+      await page.mouse.up();
+      expect(result.frames).toBeGreaterThan(0);
+      expect(result.changed).toBe(0);
+      const end = await dragged.boundingBox();
+      expect(Math.hypot(end!.x - start!.x, end!.y - start!.y)).toBeGreaterThan(50);
+
+      // Hover must work again after release, and leaving the graph must clear all dimming.
+      await page.locator('[data-step-node="receive-request"]').hover();
+      await expect(page.locator('[data-step-node="validate-request"]')).toHaveCSS("opacity", "1");
+      await expect(page.locator('[data-step-node="outcome-quota-exceeded"]')).toHaveCSS("opacity", "0.35");
+      await page.mouse.move(5, 5);
+      await expect.poll(() => page.locator("[data-step-node]").evaluateAll((nodes) => (
+        nodes.every((node) => getComputedStyle(node).opacity === "1")
+      ))).toBe(true);
+    });
+  }
+}

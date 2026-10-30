@@ -25,6 +25,11 @@ afterEach(() => {
 // itself, so it never depends on real measurements — these stubs only need to exist, not
 // measure anything, for React Flow's internals to run without throwing). ---
 
+// jsdom has no layout hit testing. Real pointer-release hover recovery is covered in e2e.
+if (typeof document !== "undefined" && document.elementFromPoint === undefined) {
+  document.elementFromPoint = () => null;
+}
+
 if (typeof globalThis.ResizeObserver === "undefined") {
   class ResizeObserverStub {
     observe(): void {

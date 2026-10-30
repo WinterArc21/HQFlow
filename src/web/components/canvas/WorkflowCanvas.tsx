@@ -159,6 +159,7 @@ function WorkflowCanvasInner({
   // them (closing a step card hands focus back to its node), so tracing them left the board
   // dimmed after the user had moved on.
   const [hoveredStepId, setHoveredStepId] = useState<string | null>(null);
+  const [dragTrace, setDragTrace] = useState<{ pointerId: number; anchorId: string | null } | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [imageExporting, setImageExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -166,7 +167,7 @@ function WorkflowCanvasInner({
   const [legendFocus, setLegendFocus] = useState<string | null>(null);
   const realStepIds = useMemo(() => new Set(workflow.steps.map((step) => step.id)), [workflow]);
   const visualSelectedStepId = imageExporting ? null : selectedStepId;
-  const candidateTraceAnchorId = imageExporting ? null : hoveredStepId;
+  const candidateTraceAnchorId = imageExporting ? null : dragTrace !== null ? dragTrace.anchorId : hoveredStepId;
   const traceAnchorId = candidateTraceAnchorId !== null && realStepIds.has(candidateTraceAnchorId) ? candidateTraceAnchorId : null;
   const tracePath = useMemo(
     () => (traceAnchorId !== null ? computeTracePath(workflow, traceAnchorId) : null),
@@ -208,6 +209,38 @@ function WorkflowCanvasInner({
     reducedMotion,
     ...(chrome !== undefined ? { insets: chrome.fitInsets } : {}),
   });
+
+  // Moving nodes cross cards and edges under the pointer. Hold the starting trace so those
+  // hover changes cannot repeatedly brighten and dim the whole graph during a drag.
+  useEffect(() => {
+    if (dragTrace === null) {
+      return;
+    }
+    const finish = (event: PointerEvent): void => {
+      if (event.pointerId !== dragTrace.pointerId) {
+        return;
+      }
+      const node = event.type === "pointerup"
+        ? document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-step-node]")
+        : null;
+      setHoveredStepId(node !== null && node !== undefined && containerRef.current?.contains(node)
+        ? node.dataset.stepNode ?? null
+        : null);
+      setDragTrace(null);
+    };
+    const cancel = (): void => {
+      setHoveredStepId(null);
+      setDragTrace(null);
+    };
+    window.addEventListener("pointerup", finish, true);
+    window.addEventListener("pointercancel", finish, true);
+    window.addEventListener("blur", cancel);
+    return () => {
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      window.removeEventListener("blur", cancel);
+    };
+  }, [containerRef, dragTrace]);
 
   const { getTabIndex, handleNodeKeyDown, setRovingId, panToNode } = useCanvasKeyboardNav({
     workflow,
@@ -524,7 +557,17 @@ function WorkflowCanvasInner({
           {chrome.controlsTarget !== null ? createPortal(<CanvasDockControls {...toolbarProps} />, chrome.controlsTarget) : null}
         </>
       )}
-      <div className={styles.stage} ref={containerRef} data-legend-focus={legendFocus ?? undefined}>
+      <div
+        className={styles.stage}
+        ref={containerRef}
+        data-legend-focus={legendFocus ?? undefined}
+        onPointerDownCapture={(event) => {
+          if (event.button === 0 && event.target instanceof Element
+            && event.target.closest("[data-step-node]") !== null) {
+            setDragTrace({ pointerId: event.pointerId, anchorId: traceAnchorId });
+          }
+        }}
+      >
         {stageOverlay}
         <EdgeMarkers />
         <ReactFlow
