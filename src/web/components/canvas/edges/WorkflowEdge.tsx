@@ -118,6 +118,7 @@ function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string
   const headRef = useRef<SVGCircleElement>(null);
   const cutRef = useRef<SVGCircleElement>(null);
   const tailRefs = useRef<Array<SVGCircleElement | null>>([]);
+  const playback = useRef<{ time: number; travel: number } | null>(null);
   useLayoutEffect(() => {
     const track = trackRef.current;
     if (track === null || typeof track.getTotalLength !== "function") {
@@ -166,7 +167,22 @@ function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string
       const lag = ((index + 1) * COMET_TAIL_STEP / COMET_SPEED) * 1000;
       animations.push(circle.animate(frames(0.15 + 0.75 * tailShare, false), { ...timing, delay: lag }));
     });
-    return () => animations.forEach((animation) => animation.cancel());
+    const previous = playback.current;
+    if (previous !== null) {
+      // Rerouting changes the travel time. Keep the fraction already travelled, or the
+      // elapsed rest, rather than restarting at the source (or wrapping on a shorter path).
+      const previousDuration = previous.travel + COMET_REST;
+      const cycle = Math.floor(previous.time / previousDuration);
+      const phase = previous.time % previousDuration;
+      const time = cycle * duration + (phase < previous.travel
+        ? (phase / previous.travel) * travel
+        : travel + phase - previous.travel);
+      animations.forEach((animation) => { animation.currentTime = time; });
+    }
+    return () => {
+      playback.current = { time: Number(animations[0]?.currentTime ?? 0), travel };
+      animations.forEach((animation) => animation.cancel());
+    };
   }, [path, from, to]);
   return (
     <>

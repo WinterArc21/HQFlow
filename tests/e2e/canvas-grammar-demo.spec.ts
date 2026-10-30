@@ -148,6 +148,66 @@ test("switches ordinary connections to the closest facing card sides while dragg
   await page.mouse.up();
 });
 
+test("keeps outgoing comets along their connections when cards move", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(server.url);
+  await waitForBoot(page);
+  // Keep software-rendered background shaders out of this animation timing check.
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page.getByRole("radio", { name: "Plain", exact: true }).click();
+  await page.getByRole("button", { name: "Close appearance" }).click();
+  await selectWorkflowByName(page, "Generate Video Prompt");
+  await resetCanvasLayout(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  for (const nodeId of ["receive-request", "validate-request"]) {
+    const card = page.locator(`[data-step-node="${nodeId}"]`);
+    await card.hover();
+    const comet = page.locator(`[data-edge-source="${nodeId}"] [data-handoff-comet]`).first();
+    await expect(comet).toBeAttached();
+    const box = await card.boundingBox();
+    expect(box).not.toBeNull();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 5, y + 5, { steps: 2 });
+
+    for (const direction of [1, -1]) {
+      const previousPath = await comet.locator("path").getAttribute("d");
+      // Put the bead halfway through a run, not at a loop boundary. A second cycle also
+      // ensures its delayed tail has started. Check the rendered position after rerouting.
+      await comet.evaluate((group) => {
+        const head = group.querySelector("circle:last-child")!;
+        const animation = head.getAnimations()[0]!;
+        const duration = Number(animation.effect!.getTiming().duration);
+        animation.currentTime = duration + (duration - 700) * 0.45;
+      });
+      await page.mouse.move(x + direction * 35, y + direction * 15);
+      await expect(comet.locator("path")).not.toHaveAttribute("d", previousPath!);
+      const progress = await comet.evaluate((group) => {
+        const path = group.querySelector("path")!;
+        const head = group.querySelector("circle:last-child")!;
+        const matrix = new DOMMatrix(getComputedStyle(head).transform);
+        const length = path.getTotalLength();
+        let nearest = 0;
+        let distance = Infinity;
+        for (let sample = 0; sample <= 100; sample += 1) {
+          const point = path.getPointAtLength(length * sample / 100);
+          const next = Math.hypot(point.x - matrix.e, point.y - matrix.f);
+          if (next < distance) {
+            distance = next;
+            nearest = sample / 100;
+          }
+        }
+        return nearest;
+      });
+      expect(progress, `${nodeId}, direction ${direction}`).toBeGreaterThan(0.35);
+    }
+    await page.mouse.up();
+  }
+});
+
 test("switches outcome connections to facing sides while dragging success and failure outcomes", async ({ page }) => {
   // This demo's semantic outcome bands extend beyond the default 1280px test viewport. Keep the
   // source and target within the real pointer event region so this exercises a drag, not an
