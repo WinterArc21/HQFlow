@@ -187,14 +187,15 @@ test("keeps outgoing comets along their connections when cards move", async ({ p
       await expect(comet.locator("path")).not.toHaveAttribute("d", previousPath!);
       const progress = await comet.evaluate((group) => {
         const path = group.querySelector("path")!;
-        const head = group.querySelector("circle:last-child")!;
-        const matrix = new DOMMatrix(getComputedStyle(head).transform);
+        const head = group.querySelector("circle:last-child")!.getBoundingClientRect();
+        const toScreen = path.getScreenCTM() ?? new DOMMatrix();
         const length = path.getTotalLength();
         let nearest = 0;
         let distance = Infinity;
         for (let sample = 0; sample <= 100; sample += 1) {
-          const point = path.getPointAtLength(length * sample / 100);
-          const next = Math.hypot(point.x - matrix.e, point.y - matrix.f);
+          const { x: pathX, y: pathY } = path.getPointAtLength(length * sample / 100);
+          const point = new DOMPoint(pathX, pathY).matrixTransform(toScreen);
+          const next = Math.hypot(point.x - (head.x + head.width / 2), point.y - (head.y + head.height / 2));
           if (next < distance) {
             distance = next;
             nearest = sample / 100;

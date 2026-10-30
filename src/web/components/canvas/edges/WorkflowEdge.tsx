@@ -96,6 +96,11 @@ const COMET_SPEED = 150;
 const COMET_REST = 700;
 const COMET_TAIL = 8;
 const COMET_TAIL_STEP = 3.1;
+/** The comet fades in over the first and out over the last this share of its run. */
+const COMET_FADE = 0.05;
+/** A route that changes length by more than this share retimes the comet to keep its speed;
+ * smaller changes, such as a card dragged a little, only move its route. */
+const COMET_RETIME_SHARE = 0.25;
 
 /** Where along the edge the comet switches from the source colour to the target colour: it
  * holds the source colour, crossfades over a short stretch, then holds the target colour, so the
@@ -118,45 +123,51 @@ function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string
   const headRef = useRef<SVGCircleElement>(null);
   const cutRef = useRef<SVGCircleElement>(null);
   const tailRefs = useRef<Array<SVGCircleElement | null>>([]);
-  const playback = useRef<{ time: number; travel: number } | null>(null);
+  const run = useRef<{ animations: Animation[]; travel: number; from: string; to: string } | null>(null);
   useLayoutEffect(() => {
     const track = trackRef.current;
     if (track === null || typeof track.getTotalLength !== "function") {
       return;
     }
+    // The circles ride the route as a CSS motion path, so a dragged card only swaps the route:
+    // the running animations keep their place, and nothing is sampled or rebuilt per move.
+    const circles = [headRef.current, cutRef.current, ...tailRefs.current];
+    circles.forEach((circle) => circle?.style.setProperty("offset-path", `path("${path}")`));
+    const length = track.getTotalLength();
+    const travel = (length / COMET_SPEED) * 1000;
+    const previous = run.current;
+    if (previous !== null && previous.from === from && previous.to === to
+      && Math.abs(travel - previous.travel) <= previous.travel * COMET_RETIME_SHARE) {
+      return;
+    }
+
     const style = getComputedStyle(track);
     const resolve = (name: string): string => style.getPropertyValue(name).trim() || "currentColor";
     const fromColor = resolve(from);
     const toColor = resolve(to);
-    const length = track.getTotalLength();
-    const travel = (length / COMET_SPEED) * 1000;
     const duration = travel + COMET_REST;
     const share = travel / duration;
-    const samples = Math.max(12, Math.ceil(length / 8));
-    const frames = (peak: number, cut: boolean): Keyframe[] => {
-      const list: Keyframe[] = [];
-      // Exact keyframes at both ends of the switch keep it crisp on short edges too.
-      const shares = [...Array.from({ length: samples + 1 }, (_, k) => k / samples), COMET_SWITCH_START, COMET_SWITCH_END]
-        .sort((a, b) => a - b);
-      for (const s of shares) {
-        const point = track.getPointAtLength(length * s);
-        const fade = Math.max(0, Math.min(1, s / 0.05, (1 - s) / 0.05));
-        list.push(cut
-          ? { offset: s * share, transform: `translate(${point.x}px, ${point.y}px) scale(${fade})` }
+    // Keyframes at the fade ends and across the colour switch; the motion between them is linear.
+    const switchSteps = [0.25, 0.5, 0.75].map((t) => COMET_SWITCH_START + (COMET_SWITCH_END - COMET_SWITCH_START) * t);
+    const stops = [0, COMET_FADE, COMET_SWITCH_START, ...switchSteps, COMET_SWITCH_END, 1 - COMET_FADE, 1];
+    const frames = (peak: number, cut: boolean): Keyframe[] => [
+      ...stops.map((s): Keyframe => {
+        const fade = Math.max(0, Math.min(1, s / COMET_FADE, (1 - s) / COMET_FADE));
+        return cut
+          ? { offset: s * share, offsetDistance: `${s * 100}%`, transform: `scale(${fade})` }
           : {
               offset: s * share,
-              transform: `translate(${point.x}px, ${point.y}px)`,
+              offsetDistance: `${s * 100}%`,
               fill: s <= COMET_SWITCH_START
                 ? fromColor
                 : s >= COMET_SWITCH_END
                   ? toColor
                   : `color-mix(in oklch, ${toColor} ${Math.round(((s - COMET_SWITCH_START) / (COMET_SWITCH_END - COMET_SWITCH_START)) * 100)}%, ${fromColor})`,
               opacity: fade * peak,
-            });
-      }
-      list.push(cut ? { offset: 1, transform: "scale(0)" } : { offset: 1, opacity: 0 });
-      return list;
-    };
+            };
+      }),
+      cut ? { offset: 1, offsetDistance: "100%", transform: "scale(0)" } : { offset: 1, offsetDistance: "100%", opacity: 0 },
+    ];
     const timing = { duration, iterations: Infinity, easing: "linear" } as const;
     const animations: Animation[] = [];
     if (headRef.current !== null) animations.push(headRef.current.animate(frames(1, false), timing));
@@ -167,23 +178,25 @@ function HandoffComet({ path, maskId, from, to }: { path: string; maskId: string
       const lag = ((index + 1) * COMET_TAIL_STEP / COMET_SPEED) * 1000;
       animations.push(circle.animate(frames(0.15 + 0.75 * tailShare, false), { ...timing, delay: lag }));
     });
-    const previous = playback.current;
     if (previous !== null) {
-      // Rerouting changes the travel time. Keep the fraction already travelled, or the
-      // elapsed rest, rather than restarting at the source (or wrapping on a shorter path).
+      // A much longer or shorter route changes the travel time. Keep the fraction already
+      // travelled, or the elapsed rest, rather than restarting at the source.
+      const time = Number(previous.animations[0]?.currentTime ?? 0);
       const previousDuration = previous.travel + COMET_REST;
-      const cycle = Math.floor(previous.time / previousDuration);
-      const phase = previous.time % previousDuration;
-      const time = cycle * duration + (phase < previous.travel
+      const cycle = Math.floor(time / previousDuration);
+      const phase = time % previousDuration;
+      const next = cycle * duration + (phase < previous.travel
         ? (phase / previous.travel) * travel
         : travel + phase - previous.travel);
-      animations.forEach((animation) => { animation.currentTime = time; });
+      animations.forEach((animation) => { animation.currentTime = next; });
+      previous.animations.forEach((animation) => animation.cancel());
     }
-    return () => {
-      playback.current = { time: Number(animations[0]?.currentTime ?? 0), travel };
-      animations.forEach((animation) => animation.cancel());
-    };
+    run.current = { animations, travel, from, to };
   }, [path, from, to]);
+  useLayoutEffect(() => () => {
+    run.current?.animations.forEach((animation) => animation.cancel());
+    run.current = null;
+  }, []);
   return (
     <>
       <defs>
