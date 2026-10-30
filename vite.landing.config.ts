@@ -32,6 +32,7 @@ export default defineConfig({
       input: {
         index: fileURLToPath(new URL("./landing/index.html", import.meta.url)),
         demo: fileURLToPath(new URL("./landing/demo.html", import.meta.url)),
+        changelog: fileURLToPath(new URL("./landing/changelog.html", import.meta.url)),
       },
     },
   },

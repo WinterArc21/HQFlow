@@ -450,8 +450,37 @@ function initUI() {
     document.querySelectorAll(".section .reveal").forEach((el) => io.observe(el));
   }
 
+  initStarCount();
+
   const progress = document.querySelector(".progress");
   if (progress && REDUCED) progress.remove();
+}
+
+/* The star count beside the GitHub link. It is a nicety: on any failure (offline, rate
+   limited) the button simply reads "Star" without a number. Cached for the session so
+   moving between pages does not spend the 60-per-hour anonymous API budget. */
+async function initStarCount() {
+  const slots = document.querySelectorAll("[data-stars]");
+  if (!slots.length) return;
+  const KEY = "hqflow.stars";
+  let stars = Number(sessionStorage.getItem(KEY));
+  if (!stars) {
+    try {
+      const response = await fetch("https://api.github.com/repos/WinterArc21/HQFlow", { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) return;
+      stars = Number((await response.json()).stargazers_count);
+      if (!Number.isFinite(stars) || stars <= 0) return;
+      sessionStorage.setItem(KEY, String(stars));
+    } catch {
+      return;
+    }
+  }
+  const label = stars >= 1000 ? `${(stars / 1000).toFixed(stars >= 10000 ? 0 : 1)}k` : String(stars);
+  for (const slot of slots) {
+    slot.textContent = label;
+    slot.hidden = false;
+    slot.closest("a")?.setAttribute("aria-label", `Star HQFlow on GitHub (${stars} stars)`);
+  }
 }
 
 /* ---- boot ---- */

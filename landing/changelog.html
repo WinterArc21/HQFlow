@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Changelog · HQFlow</title>
+  <meta name="description" content="Every HQFlow release: what changed on the canvas, the CLI, and the workflow contract." />
+  <meta property="og:title" content="Changelog · HQFlow" />
+  <meta property="og:description" content="Every HQFlow release: what changed on the canvas, the CLI, and the workflow contract." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://hqflow.vercel.app/changelog" />
+  <meta property="og:image" content="https://hqflow.vercel.app/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://hqflow.vercel.app/og.jpg" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23111111'/%3E%3Ctext x='16' y='21' font-family='ui-monospace,monospace' font-size='11' font-weight='700' fill='%23FFFFFF' text-anchor='middle'%3EHQ%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============ header ============ -->
+  <header class="site-head" id="siteHead">
+    <div class="head-inner">
+      <a class="brand" href="./">
+        <span class="brand-mark" aria-hidden="true">HQ</span>
+        <span class="brand-word">
+          <strong>Flow</strong>
+          <span class="brand-sub">workflow maps</span>
+        </span>
+      </a>
+
+      <nav class="head-nav" aria-label="Primary">
+        <a href="./#canvas">Canvas</a>
+        <a href="./#why">Why</a>
+        <a href="./#loop">The loop</a>
+        <a href="./#principles">Principles</a>
+        <a href="changelog" aria-current="page">Changelog</a>
+      </nav>
+
+      <div class="head-right">
+        <a class="star-link" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer" aria-label="Star HQFlow on GitHub">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span class="star-label">Star</span>
+          <span class="star-count" data-stars hidden></span>
+        </a>
+        <a class="btn btn-solid" href="./#install">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="section changelog">
+      <header class="section-head">
+        <span class="sp-node is-entry" aria-hidden="true"></span>
+        <h2 class="section-title">Changelog</h2>
+        <p class="section-lede">Every release of the canvas, the CLI, and the workflow contract. Install the latest with <code>npx hqflow@latest open</code>.</p>
+        <aside class="star-cta" aria-label="Star HQFlow on GitHub">
+          <div>
+            <h3>Like where this is going?</h3>
+            <p>A star on GitHub helps other people find HQFlow, and tells us to keep shipping.</p>
+          </div>
+          <a class="btn btn-solid" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+            Star on GitHub
+          </a>
+        </aside>
+      </header>
+
+
+      <ol class="releases">
+        <li class="release is-latest" id="v0.7.1">
+          <span class="sp-node is-out" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.7.1">v0.7.1</a>
+            <span class="release-badge">Latest</span>
+            <time datetime="2026-09-07">Sep 7, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>A quieter navigator</h3>
+            <ul>
+              <li><span class="kind">Improved</span><span>The workflow navigator collapses to a thin rail, with a caret on the canvas to open it again.</span></li>
+              <li><span class="kind">Improved</span><span>The empty first-run screen no longer shows a Recheck files button.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.7.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.7.0">v0.7.0</a>
+            <time datetime="2026-09-07">Sep 7, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>Repository maps and layouts that stay put</h3>
+            <ul>
+              <li><span class="kind">New</span><span>Interactive repository maps. The navigator shows your repo as a file tree, and Overview lives in the repository folder card.</span></li>
+              <li><span class="kind">New</span><span>Canvas layouts persist in the repository, so cards you arrange stay where you put them.</span></li>
+              <li><span class="kind">New</span><span>A traveling bead runs along success, async, and conditional edges, so the direction of flow reads at a glance.</span></li>
+              <li><span class="kind">Improved</span><span>Logic cards are cyan and the happy path is ice blue.</span></li>
+              <li><span class="kind">Fixed</span><span>Editor links open correctly under WSL.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.6.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.6.0">v0.6.0</a>
+            <time datetime="2026-08-24">Aug 24, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>Image export</h3>
+            <ul>
+              <li><span class="kind">New</span><span>Export the whole canvas as a PNG for docs and reviews.</span></li>
+              <li><span class="kind">Improved</span><span>Sharper card borders and cleaner right-angle edge routing.</span></li>
+              <li><span class="kind">Removed</span><span>Self-graded confidence and status fields left the workflow contract. A map shows evidence, not a score.</span></li>
+              <li><span class="kind">Removed</span><span>The bundled example workflow and its assets.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.5.1">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.5.1">v0.5.1</a>
+            <time datetime="2026-08-15">Aug 15, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>One canvas, one story</h3>
+            <ul>
+              <li><span class="kind">Improved</span><span>Edges route around cards instead of through them.</span></li>
+              <li><span class="kind">Improved</span><span>Work cards share one standard size, so maps line up.</span></li>
+              <li><span class="kind">Removed</span><span>The separate Code map view. The canvas tells the story, and each card holds its code details.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.5.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.5.0">v0.5.0</a>
+            <time datetime="2026-08-12">Aug 12, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>Smoother navigation</h3>
+            <ul>
+              <li><span class="kind">Improved</span><span>Polished canvas navigation, with clearer guidance on what to do next.</span></li>
+              <li><span class="kind">Improved</span><span>A simpler workflow contract for agents to write.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.4.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.4.0">v0.4.0</a>
+            <time datetime="2026-08-08">Aug 8, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>Edges that follow your cards</h3>
+            <ul>
+              <li><span class="kind">New</span><span>A collapsible workflow navigator.</span></li>
+              <li><span class="kind">New</span><span>Drag a card and its edges switch to the sides that face each other, outcomes included.</span></li>
+              <li><span class="kind">Improved</span><span>Step cards are tinted by category, with a new category palette.</span></li>
+              <li><span class="kind">Fixed</span><span>The copy button copies every install command shown.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.3.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.3.0">v0.3.0</a>
+            <time datetime="2026-08-02">Aug 2, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>A horizontal canvas</h3>
+            <ul>
+              <li><span class="kind">New</span><span>The workflow canvas is redesigned to read left to right.</span></li>
+              <li><span class="kind">Improved</span><span>A refined visual foundation, without the duplicate dots on arrival points.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.2.0">
+          <span class="sp-node" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.2.0">v0.2.0</a>
+            <time datetime="2026-08-01">Aug 1, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>CodeHQ is now HQFlow</h3>
+            <ul>
+              <li><span class="kind">Changed</span><span>New name, same tool. The CLI is <code>hqflow</code>.</span></li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="release" id="v0.1.1">
+          <span class="sp-node is-terminal" aria-hidden="true"></span>
+          <div class="release-meta">
+            <a class="release-version" href="#v0.1.1">v0.1</a>
+            <time datetime="2026-08-01">Aug 1, 2026</time>
+          </div>
+          <div class="release-card">
+            <h3>First public release</h3>
+            <ul>
+              <li><span class="kind">New</span><span>Open source under MIT and published to npm.</span></li>
+              <li><span class="kind">New</span><span>A live canvas that redraws as your agent writes workflow files, with offline exports.</span></li>
+              <li><span class="kind">New</span><span><code>hqflow init</code> scaffolds the <code>.codehq/</code> contract your agent reads.</span></li>
+            </ul>
+          </div>
+        </li>
+      </ol>
+
+
+      <p class="releases-more">Full notes for every version are on <a href="https://github.com/WinterArc21/HQFlow/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>.</p>
+    </section>
+  </main>
+
+  <!-- ============ footer ============ -->
+  <footer class="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="brand-mark" aria-hidden="true">HQ</span>
+        <div>
+          <strong>Flow</strong> <span class="dim">/ workflow maps</span>
+          <p class="foot-tag">built local. stays local.</p>
+        </div>
+      </div>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="./#canvas">Canvas</a>
+        <a href="./#install">Install</a>
+        <a href="changelog">Changelog</a>
+        <a href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+      <p class="foot-c">© 2026 · open source, local-first</p>
+    </div>
+  </footer>
+
+  <script type="module" src="main.js"></script>
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

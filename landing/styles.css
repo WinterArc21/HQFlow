@@ -123,16 +123,23 @@ h1, h2, h3 { font-family: var(--display); }
 .head-nav a { color: var(--ink-2); font-size: var(--small); font-weight: 500; transition: color 160ms; }
 .head-nav a:hover { color: var(--ink); }
 .head-right { display: flex; align-items: center; gap: 18px; margin-left: auto; }
-.github-link {
-  display: inline-grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  color: var(--ink-2);
-  border-radius: var(--r-1);
-  transition: color 160ms;
-}
-.github-link:hover { color: var(--ink); }
+.head-nav a[aria-current="page"] { color: var(--ink); }
+
+/* The GitHub link doubles as the star prompt: icon, "Star", and the live count. */
+.star-link { display: inline-flex; height: 32px; align-items: center; gap: 7px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-2); color: var(--ink-2); background: white; font-size: var(--small); font-weight: 600; transition: color 160ms, border-color 160ms, box-shadow 160ms; }
+.star-link svg { flex: none; }
+.star-link:hover { border-color: var(--ink-3); color: var(--ink); box-shadow: var(--shadow-card); }
+.star-label { padding-right: 6px; }
+.star-count { display: inline-flex; align-items: center; height: 22px; margin-right: 1px; padding: 0 7px; border-radius: var(--r-1); color: var(--ink-2); background: var(--paper-2); font: 11.5px var(--mono); }
+.star-count[hidden] { display: none; }
+.star-count::before { content: "★"; margin-right: 4px; color: var(--amber); }
+.star-link:hover .star-count::before { color: var(--amber-ink); }
+
+.star-inline { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; color: var(--ink-2); font-size: 14px; }
+.star-inline svg { color: var(--amber); transition: transform 220ms var(--ease); }
+.star-inline strong { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; transition: text-decoration-color 160ms; }
+.star-inline:hover strong { text-decoration-color: var(--ink); }
+.star-inline:hover svg { transform: rotate(-14deg) scale(1.15); }
 
 /* ==========================================================================
    THE SPINE
@@ -327,6 +334,43 @@ main { position: relative; }
 .foot-c { width: 100%; text-align: right; }
 
 /* ==========================================================================
+   CHANGELOG: the wire runs down the left, one node per release.
+   ========================================================================== */
+
+.changelog { --node-top: 22px; --release-gap: 40px; --head-gap: clamp(40px, 4.5vw, 60px); }
+.changelog .section-head .sp-node { top: 14px; }
+/* wire segments: head node → first release, then release → release */
+.changelog .section-head::after, .release:not(:last-child)::after { content: ""; position: absolute; z-index: 1; left: calc(var(--sp-x) + 6px); width: 1.5px; background: var(--wire); pointer-events: none; }
+.changelog .section-head::after { top: 27px; bottom: calc(-1 * (var(--head-gap) + var(--node-top))); }
+.release:not(:last-child)::after { top: calc(var(--node-top) + 13px); bottom: calc(-1 * (var(--release-gap) + var(--node-top))); }
+.releases { display: flex; flex-direction: column; gap: var(--release-gap); padding: 0; list-style: none; }
+.release { position: relative; display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 8px clamp(20px, 3vw, 44px); align-items: start; scroll-margin-top: calc(var(--head-h) + 24px); }
+.release .sp-node { top: var(--node-top); }
+.release-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 14px; }
+.release-version { font: 700 15px var(--mono); letter-spacing: -.01em; }
+.release-version:hover { text-decoration: underline; text-underline-offset: 3px; }
+.release-meta time { color: var(--ink-3); font: 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.release-badge { padding: 2px 6px; border-radius: var(--r-1); color: white; background: var(--green); font: 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.release-card { max-width: 680px; padding: 20px 24px 22px; border: 1px solid var(--line-strong); border-radius: var(--r-3); background: white; box-shadow: var(--shadow-card); }
+/* The latest release is the one card washed in green, edge to edge. */
+.release.is-latest .release-card { border-color: color-mix(in srgb, var(--green) 55%, var(--line-strong)); background: color-mix(in srgb, var(--green) 7%, white); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 10%, transparent), var(--shadow-card); }
+.release.is-latest .kind { border-color: color-mix(in srgb, var(--green) 40%, var(--line-strong)); color: color-mix(in srgb, var(--green) 70%, var(--ink-2)); background: white; }
+.release-card h3 { font-size: 19px; font-weight: 680; letter-spacing: -.02em; }
+.release-card ul { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; padding: 0; list-style: none; }
+.release-card li { display: grid; grid-template-columns: 5.6rem minmax(0, 1fr); gap: 12px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
+.release-card code { padding: 1px 5px; border: 1px solid var(--line); border-radius: var(--r-1); background: var(--paper-2); font-size: .85em; }
+.kind { align-self: start; justify-self: start; margin-top: 2px; padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-1); color: var(--ink-3); font: 9.5px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+
+.star-cta { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 32px; max-width: calc(680px + 11rem + clamp(20px, 3vw, 44px)); margin-top: 28px; padding: 20px 24px; border-radius: var(--r-3); color: white; background: var(--dark); box-shadow: var(--shadow-panel); }
+.star-cta h3 { font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+.star-cta p { max-width: 46ch; margin-top: 4px; color: #b8b8b8; font-size: 14.5px; }
+.star-cta .btn-solid { color: var(--ink); background: white; }
+.star-cta .btn-solid:hover { background: var(--paper-2); }
+.star-cta .btn-solid svg { color: var(--amber); }
+.releases-more { margin-top: 24px; color: var(--ink-3); font-size: var(--small); }
+.releases-more a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ==========================================================================
    MOTION
    Every animation reveals structure in the order the page argues it.
    Nothing loops, nothing hijacks the scroll.
@@ -371,6 +415,9 @@ main { position: relative; }
 }
 
 @media (max-width: 960px) {
+  .release { grid-template-columns: 1fr; }
+  .release-meta { flex-direction: row; align-items: center; gap: 10px; padding-top: 0; }
+  .changelog { --node-top: 4px; }
   .cycle-row { grid-template-columns: 1fr; gap: 28px; }
   .sp-node.is-hub { left: var(--sp-x); transform: none; }
   .station .sp-node { left: var(--sp-x); top: 30px; transform: none; }
@@ -399,6 +446,10 @@ main { position: relative; }
   .hero-sub { font-size: 16px; }
   .hero-cta { margin-top: 26px; }
   .head-right .head-note { display: none; }
+  .star-label { display: none; }
+  .star-link { padding-left: 8px; }
+  .release-card { padding: 16px 16px 18px; }
+  .release-card li { grid-template-columns: 1fr; gap: 4px; }
   .cmd { max-width: 100%; }
   .cmd-lg { padding-right: 20px; }
   .cmd-lg .cmd-comment { display: none; }
