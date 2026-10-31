@@ -215,7 +215,7 @@ main { position: relative; }
 .section-head { position: relative; margin-bottom: clamp(40px, 4.5vw, 60px); }
 .section-title { max-width: 24ch; font-size: clamp(2rem, 3.4vw, 3.1rem); font-weight: 740; line-height: 1.04; letter-spacing: -.038em; }
 .section-lede { max-width: 60ch; margin-top: 18px; color: var(--ink-2); font-size: 16.5px; line-height: 1.62; }
-.section-lede code, .station-copy code { padding: 1px 5px; border: 1px solid var(--line); border-radius: var(--r-1); background: white; font-size: .85em; }
+.section-lede code { padding: 1px 5px; border: 1px solid var(--line); border-radius: var(--r-1); background: white; font-size: .85em; }
 
 /* ==========================================================================
    WHY: a fork. two branches dead-end, one continues as a real node.
@@ -238,24 +238,6 @@ main { position: relative; }
 .fork-row.is-live h3 { font-size: 24px; color: var(--ink); }
 .fork-row.is-live p { color: var(--ink-2); font-size: 16px; }
 
-/* ==========================================================================
-   LOOP: a hub above three stations. The spine fans out into each card,
-   then leaves through Observe into the canvas.
-   ========================================================================== */
-
-.cycle { position: relative; padding-top: 96px; }
-.cycle-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 28px); align-items: stretch; }
-.sp-node.is-hub { left: 50%; top: 0; width: 14px; height: 14px; transform: translateX(-50%); --node-c: var(--ink); border-color: var(--ink); }
-.station { position: relative; display: flex; min-width: 0; flex-direction: column; gap: 14px; padding: 28px 22px 20px; border: 1px solid var(--line-strong); border-radius: var(--r-2); background: white; box-shadow: var(--shadow-card); }
-.station .sp-node { left: 50%; top: 0; transform: translate(-50%, -50%); }
-.sp-anchor { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; pointer-events: none; }
-.station-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.station h3 { font-size: 21px; font-weight: 680; letter-spacing: -.02em; }
-.station-copy h3 { margin-bottom: 8px; }
-.cycle-repeat { flex: none; color: var(--amber-ink); font: 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
-.station-copy p { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
-.station-copy p em { color: var(--amber-ink); font-style: normal; padding: 1px 5px; border-radius: var(--r-1); background: color-mix(in oklch, var(--amber) 14%, white); }
-.station .mini { margin-top: auto; width: 100%; overflow: auto; padding: 14px 14px; border: 1px solid var(--line); border-radius: var(--r-2); color: var(--ink-2); background: var(--paper-2); box-shadow: none; font-size: 11px; line-height: 1.7; white-space: pre; }
 
 /* ==========================================================================
    PLAYABLE PRODUCT WALKTHROUGH
@@ -307,14 +289,41 @@ main { position: relative; }
 
 
 /* ==========================================================================
-   PRINCIPLES: the spine runs straight, four taps hang off it.
+   MAP: the map shown as what it is on disk: files that ride along in a pull
+   request.
    ========================================================================== */
 
-.bus { display: flex; flex-direction: column; gap: 34px; }
-.tap { position: relative; display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 8px clamp(20px, 3vw, 44px); align-items: baseline; }
-.tap .sp-node { top: 6px; }
-.tap h3 { font-size: 20px; font-weight: 680; letter-spacing: -.02em; }
-.tap p { max-width: 58ch; color: var(--ink-2); }
+.lives { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(32px, 4vw, 56px); align-items: start; }
+.lives-copy { position: relative; }
+.lives-copy .sp-node { top: 18px; }
+.lives-copy > p { max-width: 46ch; margin-top: 18px; color: var(--ink-2); }
+.lives-list { display: grid; gap: 0; margin-top: 22px; padding: 0; list-style: none; }
+.lives-list li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 16px; padding-block: 11px; border-top: 1px solid var(--line); font-size: 14.5px; line-height: 1.5; }
+.lives-list li:last-child { border-bottom: 1px solid var(--line); }
+.lives-key { padding-top: 2px; color: var(--ink); font: 12px/1.5 var(--mono); }
+.lives-list li > span:last-child { color: var(--ink-2); }
+
+/* a pull request in miniature: the code and its map change together */
+.pr { overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--r-2); background: white; box-shadow: var(--shadow-card); }
+.pr-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.pr-head strong { overflow: hidden; min-width: 0; font-weight: 640; text-overflow: ellipsis; white-space: nowrap; }
+.pr-state { flex: none; padding: 2px 8px; border-radius: 999px; color: white; background: var(--green); font: 600 11px/1.6 var(--sans); }
+.pr-num { flex: none; margin-left: auto; color: var(--ink-3); font: 12px var(--mono); }
+.pr-files { display: grid; }
+.pr-file { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 16px; border-bottom: 1px solid var(--line); font: 12px var(--mono); }
+.pr-name { overflow: hidden; color: var(--ink-2); text-overflow: ellipsis; white-space: nowrap; }
+.pr-file.is-map { background: color-mix(in oklch, var(--blue) 5%, white); }
+.pr-file.is-map .pr-name { color: var(--ink); }
+.pr-stat { flex: none; }
+.pr-stat .add, .pr-diff .add { color: var(--green); }
+.pr-stat .del, .pr-diff .del { color: var(--red); }
+.pr-diff { overflow-x: auto; margin: 0; padding: 12px 0; border-bottom: 1px solid var(--line); background: var(--paper-2); font-size: 11.5px; line-height: 1.75; }
+.pr-diff span { display: block; padding-inline: 16px; white-space: pre; }
+.pr-diff .ctx { color: var(--ink-3); }
+.pr-diff .add { background: color-mix(in oklch, var(--green) 9%, transparent); }
+.pr-diff .del { background: color-mix(in oklch, var(--red) 8%, transparent); }
+.pr-note { padding: 11px 16px; color: var(--ink-2); font-size: 13px; }
+
 
 /* ==========================================================================
    INSTALL
@@ -325,6 +334,15 @@ main { position: relative; }
 .install-cue { margin-bottom: 12px; }
 .install-quote { margin-bottom: 16px; padding-left: 20px; border-left: 2px solid var(--ink); font-size: 17px; line-height: 1.6; }
 .install-compat { text-transform: none; letter-spacing: .02em; }
+
+/* why to trust it, said once, right where people decide */
+.trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 40px); padding-block: clamp(28px, 3vw, 36px); border-block: 1px solid var(--line); }
+.trust-band { padding-block: 0; }
+.trust-item { display: flex; align-items: flex-start; gap: 14px; }
+.trust-icon { display: inline-grid; flex: none; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line-strong); border-radius: var(--r-2); color: var(--ink); background: white; }
+.trust-item h3 { font-size: 17px; font-weight: 660; letter-spacing: -.01em; }
+.install .star-inline { margin-top: 36px; }
+.trust-item p { max-width: 50ch; margin-top: 4px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
 
 .site-foot { position: relative; z-index: 1; border-top: 1px solid var(--line); background: white; }
 .foot-inner { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 24px; padding-block: 40px; }
@@ -412,20 +430,13 @@ main { position: relative; }
 
 @media (max-width: 1080px) {
   :root { --rail-gap: 84px; --branch: 44px; }
-  .tap { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); }
 }
 
 @media (max-width: 960px) {
   .release { grid-template-columns: 1fr; }
   .release-meta { flex-direction: row; align-items: center; gap: 10px; padding-top: 0; }
   .changelog { --node-top: 4px; }
-  .cycle-row { grid-template-columns: 1fr; gap: 28px; }
-  .sp-node.is-hub { left: var(--sp-x); transform: none; }
-  .station .sp-node { left: var(--sp-x); top: 30px; transform: none; }
-  .station { padding: 22px 20px 18px 28px; }
-  .cycle { padding-top: 8px; }
-  .install-grid { grid-template-columns: 1fr; }
-  .tap { grid-template-columns: 1fr; gap: 6px; }
+  .install-grid, .lives, .trust { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -480,3 +491,4 @@ main { position: relative; }
 }
 .hero-lede .hero-cta { flex: 0 1 430px; }
 .hero-lede .cmd { width: 100%; }
+.hero-trust { margin-top: 12px; color: var(--ink-3); font-size: var(--small); }
