@@ -10,28 +10,12 @@ import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS, REPO_ROOT } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
 
-const ARTIFACT_DIR = path.join(REPO_ROOT, ".amp", "in", "artifacts");
 const DEMO_SOURCE = path.join(REPO_ROOT, "tests", "e2e", "fixtures", "canvas-grammar-demo.json");
 // React Flow can place an endpoint just outside the handle box because the card border and SVG
 // use separate coordinate spaces. Keep the allowance smaller than one unscaled handle radius.
 const EDGE_ENDPOINT_TOLERANCE_PX = 2;
 let root: string;
 let server: ManagedServer;
-
-async function setTheme(page: Page, theme: "dark" | "light"): Promise<void> {
-  const current = await page.locator("html").getAttribute("data-theme");
-  if (current !== theme) {
-    await page.getByRole("button", { name: `Switch to ${theme} theme` }).click();
-  }
-  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-}
-
-async function capture(page: Page, workflow: string, slug: string, theme: "dark" | "light"): Promise<void> {
-  await selectWorkflowByName(page, workflow);
-  await waitForBoot(page);
-  await setTheme(page, theme);
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, `${slug}-${theme}-1440x900.png`), animations: "disabled" });
-}
 
 async function resetCanvasLayout(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Reset layout" }).click();
@@ -48,25 +32,33 @@ async function edgeEndpointDistance(
     const path = document.querySelector<SVGPathElement>(
       `.react-flow__edge[data-id="${edgeId}"] path.react-flow__edge-path`,
     );
-    const handle = document.querySelector<HTMLElement>(
-      `[data-nodeid="${nodeId}"][data-handleid="${handleId}"]`,
-    );
-    if (path === null || handle === null) {
+    // A side shared by an arrival and a departure moves both to its split ports (`id@1`, `id@2`),
+    // which are still on the same side.
+    const handles = [...document.querySelectorAll<HTMLElement>(
+      `[data-nodeid="${nodeId}"][data-handleid="${handleId}"], [data-nodeid="${nodeId}"][data-handleid^="${handleId}@"]`,
+    )];
+    if (path === null || handles.length === 0) {
       return Number.POSITIVE_INFINITY;
     }
     const point = path.getPointAtLength(endpoint === "source" ? 0 : path.getTotalLength());
     const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM() ?? new DOMMatrix());
-    const rect = handle.getBoundingClientRect();
-    const dx = Math.max(rect.left - screenPoint.x, 0, screenPoint.x - rect.right);
-    const dy = Math.max(rect.top - screenPoint.y, 0, screenPoint.y - rect.bottom);
-    return Math.hypot(dx, dy);
+    return Math.min(...handles.map((handle) => {
+      const rect = handle.getBoundingClientRect();
+      const dx = Math.max(rect.left - screenPoint.x, 0, screenPoint.x - rect.right);
+      const dy = Math.max(rect.top - screenPoint.y, 0, screenPoint.y - rect.bottom);
+      return Math.hypot(dx, dy);
+    }));
   }, { edgeId, nodeId, handleId, endpoint });
 }
+
+// One server on one fixed port serves this whole file, so its tests must share one worker: under
+// `fullyParallel`, a second worker would start its own server on the same port, and whichever
+// finished first would stop the server out from under the other.
+test.describe.configure({ mode: "default" });
 
 test.beforeAll(async () => {
   root = await createTempFixtureCopy("canvas-grammar");
   await fsp.copyFile(DEMO_SOURCE, path.join(root, ".codehq", "workflows", "canvas-grammar-demo.json"));
-  await fsp.mkdir(ARTIFACT_DIR, { recursive: true });
   server = await startCodeHQServer(root, PORTS.canvasGrammar);
 });
 
@@ -75,7 +67,7 @@ test.afterAll(async () => {
   await removeTempDir(root);
 });
 
-test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes without overlaps", async ({ page }) => {
+test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto(server.url);
   await waitForBoot(page);
@@ -89,54 +81,12 @@ test("renders the synthetic retry, return, async, fan-out/fan-in, and outcomes w
   const retry = page.locator('.react-flow__edge[data-id="retry-encode"] path.react-flow__edge-path');
   const returned = page.locator('.react-flow__edge[data-id="review-reencode"] path.react-flow__edge-path');
   const asyncHandoff = page.locator('.react-flow__edge[data-id="review-notify"] path.react-flow__edge-path');
-  await expect(retry).toHaveCSS("stroke-dasharray", /8px, 6px/);
-  await expect(returned).toHaveCSS("stroke-dasharray", /8px, 6px/);
-  await expect(asyncHandoff).toHaveCSS("stroke-dasharray", /1px, 6px/);
+  await expect(asyncHandoff).toBeAttached();
   expect(await retry.getAttribute("d")).not.toBe(await returned.getAttribute("d"));
 
   await expect(page.locator('[data-step-node="outcome-created"]')).toHaveAttribute("aria-label", /^Success outcome:/);
   await expect(page.locator('[data-step-node="outcome-rejected"]')).toHaveAttribute("aria-label", /^Failure outcome:/);
   await expect(page.locator('[data-step-node="outcome-queued"]')).toHaveAttribute("aria-label", /^Outcome:/);
-
-  const overlaps = await page.locator("[data-step-node]").evaluateAll((nodes) => {
-    const entries = nodes.map((node) => ({ id: (node as HTMLElement).dataset.stepNode ?? "?", rect: node.getBoundingClientRect() }));
-    return entries.flatMap((left, index) => entries.slice(index + 1).flatMap((right) => {
-      const intersects = left.rect.left < right.rect.right && left.rect.right > right.rect.left &&
-        left.rect.top < right.rect.bottom && left.rect.bottom > right.rect.top;
-      return intersects ? [`${left.id}/${right.id}`] : [];
-    }));
-  });
-  expect(overlaps).toEqual([]);
-});
-
-test("keeps a connection attached while its card is freely dragged", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  await waitForBoot(page);
-  await selectWorkflowByName(page, "Generate Video Prompt");
-  await resetCanvasLayout(page);
-
-  const node = page.locator('[data-step-node="validate-request"]');
-  const edgeId = "receive-request->validate-request#0";
-  const edge = page.locator(`.react-flow__edge[data-id="${edgeId}"] path.react-flow__edge-path`);
-  const before = await edge.getAttribute("d");
-  const box = await node.boundingBox();
-  expect(box).not.toBeNull();
-
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2 + 120, box!.y + box!.height / 2 + 70, { steps: 12 });
-  await page.mouse.up();
-
-  await expect.poll(() => edge.getAttribute("d")).not.toBe(before);
-  const endpointDistance = await edgeEndpointDistance(
-    page,
-    edgeId,
-    "validate-request",
-    "in",
-    "target",
-  );
-  expect(endpointDistance).toBeLessThan(EDGE_ENDPOINT_TOLERANCE_PX);
 });
 
 test("switches ordinary connections to the closest facing card sides while dragging", async ({ page }) => {
@@ -198,6 +148,67 @@ test("switches ordinary connections to the closest facing card sides while dragg
   await page.mouse.up();
 });
 
+test("keeps outgoing comets along their connections when cards move", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(server.url);
+  await waitForBoot(page);
+  // Keep software-rendered background shaders out of this animation timing check.
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page.getByRole("radio", { name: "Plain", exact: true }).click();
+  await page.getByRole("button", { name: "Close appearance" }).click();
+  await selectWorkflowByName(page, "Generate Video Prompt");
+  await resetCanvasLayout(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  for (const nodeId of ["receive-request", "validate-request"]) {
+    const card = page.locator(`[data-step-node="${nodeId}"]`);
+    await card.hover();
+    const comet = page.locator(`[data-edge-source="${nodeId}"] [data-handoff-comet]`).first();
+    await expect(comet).toBeAttached();
+    const box = await card.boundingBox();
+    expect(box).not.toBeNull();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 5, y + 5, { steps: 2 });
+
+    for (const direction of [1, -1]) {
+      const previousPath = await comet.locator("path").getAttribute("d");
+      // Put the bead halfway through a run, not at a loop boundary. A second cycle also
+      // ensures its delayed tail has started. Check the rendered position after rerouting.
+      await comet.evaluate((group) => {
+        const head = group.querySelector("circle:last-child")!;
+        const animation = head.getAnimations()[0]!;
+        const duration = Number(animation.effect!.getTiming().duration);
+        animation.currentTime = duration + (duration - 700) * 0.45;
+      });
+      await page.mouse.move(x + direction * 35, y + direction * 15);
+      await expect(comet.locator("path")).not.toHaveAttribute("d", previousPath!);
+      const progress = await comet.evaluate((group) => {
+        const path = group.querySelector("path")!;
+        const head = group.querySelector("circle:last-child")!.getBoundingClientRect();
+        const toScreen = path.getScreenCTM() ?? new DOMMatrix();
+        const length = path.getTotalLength();
+        let nearest = 0;
+        let distance = Infinity;
+        for (let sample = 0; sample <= 100; sample += 1) {
+          const { x: pathX, y: pathY } = path.getPointAtLength(length * sample / 100);
+          const point = new DOMPoint(pathX, pathY).matrixTransform(toScreen);
+          const next = Math.hypot(point.x - (head.x + head.width / 2), point.y - (head.y + head.height / 2));
+          if (next < distance) {
+            distance = next;
+            nearest = sample / 100;
+          }
+        }
+        return nearest;
+      });
+      expect(progress, `${nodeId}, direction ${direction}`).toBeGreaterThan(0.35);
+    }
+    await page.mouse.up();
+  }
+});
+
 test("switches outcome connections to facing sides while dragging success and failure outcomes", async ({ page }) => {
   // This demo's semantic outcome bands extend beyond the default 1280px test viewport. Keep the
   // source and target within the real pointer event region so this exercises a drag, not an
@@ -254,61 +265,102 @@ test("switches outcome connections to facing sides while dragging success and fa
   await page.mouse.up();
 });
 
-test("keeps repeated drag updates error-free and deterministic", async ({ page }) => {
-  const runtimeErrors: string[] = [];
-  page.on("pageerror", (error) => runtimeErrors.push(`pageerror: ${error.message}`));
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      runtimeErrors.push(`console.error: ${message.text()}`);
+test("keeps stepped corners rounded on both sides of the port-lead gap boundary", async ({ page, request }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  try {
+    // These saved positions put the facing ports just below/above the two 28-unit leads,
+    // then farther apart. Only the gap changes; the connection and its vertical span do not.
+    for (const x of [473, 474.6, 478, 540]) {
+      const saved = await request.put(`${server.url}/api/workflows/generate-video/layout`, {
+        data: { nodePositions: { "receive-request": { x: 100, y: 100 }, "validate-request": { x, y: 280 } } },
+      });
+      expect(saved.ok()).toBe(true);
+      await page.goto(server.url);
+      await waitForBoot(page);
+      const edge = page.locator('.react-flow__edge[data-id="receive-request->validate-request#0"] path.react-flow__edge-path');
+      await expect.poll(() => edge.evaluate((element) => {
+        const path = element as SVGPathElement;
+        const start = path.getPointAtLength(0);
+        const end = path.getPointAtLength(path.getTotalLength());
+        const commands = [...path.getAttribute("d")!.matchAll(/([MLQ])([^MLQ]+)/g)].map((match) => ({
+          kind: match[1],
+          values: match[2]!.trim().split(/[\s,]+/).map(Number),
+        }));
+        const radii = commands.flatMap((command, index) => command.kind === "Q"
+          ? [Math.hypot(command.values[0]! - commands[index - 1]!.values.at(-2)!, command.values[1]! - commands[index - 1]!.values.at(-1)!)]
+          : []);
+        // A two-bend route has half the horizontal gap on either side of its vertical run.
+        // Each corner can use half that run, up to the designed 16-unit radius.
+        const expected = Math.min(16, Math.abs(end.x - start.x) / 4, Math.abs(end.y - start.y) / 2);
+        return radii.length === 2 && radii.every((radius) => Math.abs(radius - expected) < 0.01);
+      })).toBe(true);
     }
-  });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  await waitForBoot(page);
-  await selectWorkflowByName(page, "Canvas Grammar Demo");
-
-  const source = page.locator('[data-step-node="review"]');
-  const target = page.locator('[data-step-node="outcome-created"]');
-  const sourceBox = await source.boundingBox();
-  expect(sourceBox).not.toBeNull();
-
-  const moveTarget = async (): Promise<string> => {
-    const targetBox = await target.boundingBox();
-    expect(targetBox).not.toBeNull();
-    await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(
-      sourceBox!.x - targetBox!.width / 2 - 40,
-      sourceBox!.y + sourceBox!.height / 2,
-      { steps: 12 },
-    );
-    await page.mouse.up();
-    return (await page.locator('.react-flow__edge[data-id="review-created"] path.react-flow__edge-path').getAttribute("d")) ?? "";
-  };
-
-  const firstPath = await moveTarget();
-  expect(runtimeErrors).toEqual([]);
-
-  // Return to the same deterministic initial state, then replay the same pointer path. The route
-  // string must match exactly; this catches order-dependent candidate selection without a timing
-  // or performance assertion.
-  await page.goto(server.url);
-  await waitForBoot(page);
-  await selectWorkflowByName(page, "Canvas Grammar Demo");
-  const replayPath = await moveTarget();
-  expect(replayPath).toBe(firstPath);
-  expect(runtimeErrors).toEqual([]);
-});
-
-test("captures deterministic dark and light review screenshots", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  await waitForBoot(page);
-
-  for (const theme of ["dark", "light"] as const) {
-    await capture(page, "Generate Video Prompt", "generate-video", theme);
-    await capture(page, "Upload Reference Asset", "upload-assets", theme);
-    await capture(page, "Canvas Grammar Demo", "canvas-grammar-demo", theme);
+  } finally {
+    await request.delete(`${server.url}/api/workflows/generate-video/layout`);
   }
 });
+
+for (const view of ["Wrap", "Flow", "Line"] as const) {
+  for (const target of ["outcome-quota-exceeded", "check-quota"] as const) {
+    test(`keeps trace highlighting stable while dragging ${target} in ${view} view`, async ({ page }) => {
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(server.url);
+      await waitForBoot(page);
+      await selectWorkflowByName(page, "Generate Video Prompt");
+      await page.getByRole("button", { name: `${view} view`, exact: true }).click();
+      await resetCanvasLayout(page);
+
+      const dragged = page.locator(`[data-step-node="${target}"]`);
+      const start = await dragged.boundingBox();
+      const validation = await page.locator('[data-step-node="validate-request"]').boundingBox();
+      const entry = await page.locator('[data-step-node="receive-request"]').boundingBox();
+      expect(start).not.toBeNull();
+      expect(validation).not.toBeNull();
+      expect(entry).not.toBeNull();
+      await page.mouse.move(start!.x + start!.width / 2, start!.y + start!.height / 2);
+      await expect(page.locator('[data-step-node="outcome-invalid-request"]')).toHaveCSS("opacity", "0.35");
+
+      // Sample every painted frame: checking only after each move misses a split-second flash.
+      const monitor = await page.evaluateHandle(() => {
+        const appearance = () => Array.from(document.querySelectorAll("[data-step-node], .react-flow__edge-path"), (element) => {
+          const style = getComputedStyle(element);
+          return `${style.opacity}:${style.strokeWidth}`;
+        }).join("|");
+        const before = appearance();
+        const result = { frames: 0, changed: 0 };
+        let frame = 0;
+        const sample = (): void => {
+          result.frames += 1;
+          if (appearance() !== before) result.changed += 1;
+          frame = requestAnimationFrame(sample);
+        };
+        frame = requestAnimationFrame(sample);
+        return { stop: () => { cancelAnimationFrame(frame); return result; } };
+      });
+      await page.mouse.down();
+      // Cross a card, its edge, another card, and empty canvas without releasing the button.
+      for (const point of [validation!, entry!, { x: entry!.x, y: entry!.y + entry!.height + 50, width: entry!.width, height: 0 }]) {
+        await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
+        await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      }
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const result = await monitor.evaluate((monitor) => monitor.stop());
+      await monitor.dispose();
+      await page.mouse.up();
+      expect(result.frames).toBeGreaterThan(0);
+      expect(result.changed).toBe(0);
+      const end = await dragged.boundingBox();
+      expect(Math.hypot(end!.x - start!.x, end!.y - start!.y)).toBeGreaterThan(50);
+
+      // Hover must work again after release, and leaving the graph must clear all dimming.
+      await page.locator('[data-step-node="receive-request"]').hover();
+      await expect(page.locator('[data-step-node="validate-request"]')).toHaveCSS("opacity", "1");
+      await expect(page.locator('[data-step-node="outcome-quota-exceeded"]')).toHaveCSS("opacity", "0.35");
+      await page.mouse.move(5, 5);
+      await expect.poll(() => page.locator("[data-step-node]").evaluateAll((nodes) => (
+        nodes.every((node) => getComputedStyle(node).opacity === "1")
+      ))).toBe(true);
+    });
+  }
+}

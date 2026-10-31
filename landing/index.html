@@ -8,7 +8,16 @@
   <meta property="og:title" content="Agents ship the code. HQFlow shows you the system." />
   <meta property="og:description" content="Agents ship faster than you can reread the repo. HQFlow maps what they built, entry point to failure path." />
   <meta property="og:type" content="website" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23111111'/%3E%3Ctext x='16' y='21' font-family='ui-monospace,monospace' font-size='11' font-weight='700' fill='%23FFFFFF' text-anchor='middle'%3EHQ%3C/text%3E%3C/svg%3E" />
+  <meta property="og:url" content="https://hqflow.vercel.app/" />
+  <meta property="og:image" content="https://hqflow.vercel.app/og.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="HQFlow canvas showing a seven-step workflow map drawn by a coding agent" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Agents ship the code. HQFlow shows you the system." />
+  <meta name="twitter:description" content="Agents ship faster than you can reread the repo. HQFlow maps what they built, entry point to failure path." />
+  <meta name="twitter:image" content="https://hqflow.vercel.app/og.jpg" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23111111'/%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='6' width='7.5' height='7.5' rx='1.5'/%3E%3Crect x='18.5' y='18.5' width='7.5' height='7.5' rx='1.5'/%3E%3Cpath d='M9.75 13.5V22.25H18.5'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,32 +28,23 @@
   <header class="site-head" id="siteHead">
     <div class="head-inner">
       <a class="brand" href="#top">
-        <span class="brand-mark" aria-hidden="true">HQ</span>
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1"/><path d="M4.25 6.5V11.75H9.5"/></svg></span>
         <span class="brand-word">
-          <strong>Flow</strong>
+          <strong>HQFlow</strong>
           <span class="brand-sub">workflow maps</span>
         </span>
       </a>
 
       <nav class="head-nav" aria-label="Primary">
-        <a href="#why">Why</a>
-        <a href="#loop">The loop</a>
-        <a href="#canvas">Canvas</a>
-        <a href="#principles">Principles</a>
+        <a href="changelog">Changelog</a>
       </nav>
 
       <div class="head-right">
         <span class="head-note">local / private</span>
-        <a
-          class="github-link"
-          href="https://github.com/WinterArc21/HQFlow"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="HQFlow on GitHub"
-        >
-          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
-            <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
-          </svg>
+        <a class="star-link" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer" aria-label="Star HQFlow on GitHub">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          <span class="star-label">Star</span>
+          <span class="star-count" data-stars hidden></span>
         </a>
         <a class="btn btn-solid" href="#install">Get started</a>
       </div>
@@ -62,6 +62,7 @@
         <h1 class="hero-title">
           <span class="t-dim reveal">Agents ship the code.</span>
           <span class="reveal">HQFlow shows you the system.</span>
+          <span class="sp-node is-entry" data-sp="origin" aria-hidden="true"></span>
         </h1>
 
         <div class="hero-lede">
@@ -75,192 +76,156 @@
                 <span>copy</span>
               </button>
             </div>
+            <p class="hero-trust">Completely free &amp; open source. Runs on localhost. Your code never leaves your machine.</p>
           </div>
-          <span class="sp-node is-entry" data-sp="origin" aria-hidden="true"></span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ canvas: the spine becomes the graph ============ -->
-    <section class="section" id="canvas">
-      <header class="section-head">
-        <h2 class="section-title reveal">See HQFlow explain itself.</h2>
-        <p class="section-lede reveal">This real canvas maps HQFlow's own workflow, from the first CLI command to a live architecture review and export.</p>
-      </header>
-
-      <div class="product-tour reveal" id="productTour" data-sp="canvas-frame">
-        <div class="tour-tabs" role="tablist" aria-label="HQFlow feature walkthrough">
-          <button class="tour-tab is-active" type="button" role="tab" aria-selected="true" data-tour-step="details">
-            <span class="tour-number">01</span>
-            <span><strong>Open the details</strong><small>Click any card</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="trace">
-            <span class="tour-number">02</span>
-            <span><strong>Trace a path</strong><small>Hover any card</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="arrange">
-            <span class="tour-number">03</span>
-            <span><strong>Shape the canvas</strong><small>Drag cards and edges</small></span>
-          </button>
-          <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="export">
-            <span class="tour-number">04</span>
-            <span><strong>Take it with you</strong><small>PNG or interactive HTML</small></span>
-          </button>
         </div>
 
-        <div class="tour-stage">
-          <div class="tour-instruction" id="tourInstruction" role="status">
-            <span>Try it</span>
-            <strong>Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.</strong>
+        <div class="product-tour reveal" id="canvas" data-sp="canvas-frame">
+          <div class="tour-tabs" role="tablist" aria-label="HQFlow feature walkthrough">
+            <button class="tour-tab is-active" type="button" role="tab" aria-selected="true" data-tour-step="draw">
+              <span class="tour-number">01</span>
+              <span><strong>Watch it draw</strong><small>Agent writes, HQFlow draws</small></span>
+            </button>
+            <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="details">
+              <span class="tour-number">02</span>
+              <span><strong>Open the details</strong><small>Click any card</small></span>
+            </button>
+            <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="trace">
+              <span class="tour-number">03</span>
+              <span><strong>Trace a path</strong><small>Hover any card</small></span>
+            </button>
+            <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="arrange">
+              <span class="tour-number">04</span>
+              <span><strong>Shape the canvas</strong><small>Drag any card</small></span>
+            </button>
+            <button class="tour-tab" type="button" role="tab" aria-selected="false" data-tour-step="export">
+              <span class="tour-number">05</span>
+              <span><strong>Take it with you</strong><small>PNG or interactive HTML</small></span>
+            </button>
           </div>
-          <iframe
-            class="tour-frame"
-            src="demo.html"
-            title="Playable HQFlow workflow canvas"
-            loading="lazy"
-          ></iframe>
 
-          <div class="tour-export" id="tourExport" role="dialog" aria-modal="true" aria-labelledby="tourExportTitle" aria-hidden="true">
-            <div class="tour-export-head">
-              <span><small>Prepare export</small><strong id="tourExportTitle">Export How HQFlow Works</strong></span>
-              <button class="tour-export-close" type="button" data-export-close aria-label="Close export dialog">×</button>
+          <div class="tour-stage">
+            <div class="tour-instruction" id="tourInstruction" role="status">
+              <span>Live</span>
+              <strong>Your agent saves the workflow file. HQFlow draws each step as it lands.</strong>
             </div>
-            <p>Take the complete workflow beyond the canvas.</p>
-            <label class="tour-export-option is-selected">
-              <input type="radio" name="tour-export-format" value="image" checked>
-              <span><strong>Image</strong><small>PNG ready for documents and reviews.</small></span>
-            </label>
-            <label class="tour-export-option">
-              <input type="radio" name="tour-export-format" value="html">
-              <span><strong>HTML (interactive)</strong><small>Pan, zoom, and inspect offline.</small></span>
-            </label>
-            <p class="tour-export-error" id="tourExportError" role="alert" hidden></p>
-            <div class="tour-export-actions">
-              <button type="button" data-export-close>Cancel</button>
-              <button class="tour-export-download" id="tourExportDownload" type="button">Download image</button>
+            <iframe
+              class="tour-frame"
+              src="demo.html?live"
+              title="HQFlow drawing a workflow map live, then playable"
+            ></iframe>
+
+            <div class="tour-export" id="tourExport" role="dialog" aria-modal="true" aria-labelledby="tourExportTitle" aria-hidden="true">
+              <div class="tour-export-head">
+                <span><small>Prepare export</small><strong id="tourExportTitle">Export How HQFlow Works</strong></span>
+                <button class="tour-export-close" type="button" data-export-close aria-label="Close export dialog">×</button>
+              </div>
+              <p>Take the complete workflow beyond the canvas.</p>
+              <label class="tour-export-option is-selected">
+                <input type="radio" name="tour-export-format" value="image" checked>
+                <span><strong>Image</strong><small>PNG ready for documents and reviews.</small></span>
+              </label>
+              <label class="tour-export-option">
+                <input type="radio" name="tour-export-format" value="html">
+                <span><strong>HTML (interactive)</strong><small>Pan, zoom, and inspect offline.</small></span>
+              </label>
+              <p class="tour-export-error" id="tourExportError" role="alert" hidden></p>
+              <div class="tour-export-actions">
+                <button type="button" data-export-close>Cancel</button>
+                <button class="tour-export-download" id="tourExportDownload" type="button">Download image</button>
+              </div>
             </div>
           </div>
         </div>
-
-        <footer class="tour-foot">
-          <span><span class="live-dot" aria-hidden="true"></span> Real production canvas</span>
-          <span>7 stages · 1 outcome · local data only</span>
-        </footer>
       </div>
-
-      <p class="tour-caption reveal">Move around freely. Nothing in this example leaves your browser.</p>
     </section>
 
     <!-- ============ why: the spine forks, two branches die ============ -->
     <section class="section" id="why">
       <header class="section-head">
-        <h2 class="section-title reveal">Reading isn't enough.</h2>
-        <p class="section-lede reveal">In an AI-native codebase the scarce resource isn't generation. It's keeping the architecture in view after every feature ships.</p>
+        <h2 class="section-title reveal">Ship with agents. Still understand the architecture.</h2>
+        <p class="section-lede reveal">Every feature your agent ships moves the architecture a little. A diff shows you lines. It does not show you the system.</p>
       </header>
 
       <div class="fork">
         <article class="fork-row is-dead reveal">
           <span class="sp-node is-dead" data-sp="why-1" aria-hidden="true"></span>
           <h3>Read the code</h3>
-          <p>Agents ship features faster than you can re-absorb the architecture.</p>
+          <p>The agent wrote it in an afternoon. Reading it back takes a week.</p>
         </article>
-
         <article class="fork-row is-dead reveal">
           <span class="sp-node is-dead" data-sp="why-2" aria-hidden="true"></span>
           <h3>Read the docs</h3>
-          <p>Walls of markdown and HTML. Accurate maybe, but no shape.</p>
+          <p>Walls of markdown. Accurate maybe, but no shape, and out of date by the next merge.</p>
         </article>
-
         <article class="fork-row is-live reveal">
           <span class="sp-node is-out" data-sp="why-3" aria-hidden="true"></span>
           <h3>See the system</h3>
-          <p>A sourced map of real workflows: entry, decisions, side effects, outputs.</p>
+          <p>A map of the real workflows: where each one starts, where it branches, what it touches, and where it can fail.</p>
         </article>
       </div>
     </section>
 
-    <!-- ============ loop: hub above three stations ============ -->
-    <section class="section" id="loop">
-      <header class="section-head">
-        <h2 class="section-title reveal">One loop, three moves.</h2>
-        <p class="section-lede reveal">Your agent writes. HQFlow watches and draws. You read the result and ask for the next workflow.</p>
-      </header>
+    <!-- ============ map: the map is files that ride along in a pull request ============ -->
+    <section class="section" id="map">
+      <div class="lives">
+        <div class="lives-copy reveal">
+          <span class="sp-node" data-sp="map-node" aria-hidden="true"></span>
+          <h2 class="section-title">The map lives in your repo.</h2>
+          <p>No database and no account. It is plain JSON next to the code it explains, so it moves through the same review as the code.</p>
+          <ul class="lives-list">
+            <li><span class="lives-key">.codehq/</span><span>One JSON file per workflow, next to the code.</span></li>
+            <li><span class="lives-key">git commit</span><span>Ship the map in the same pull request as the change.</span></li>
+            <li><span class="lives-key">any agent</span><span>Cursor today, Claude Code tomorrow. They all read the same files.</span></li>
+            <li><span class="lives-key">missing file</span><span>When a step points at a file that is gone, HQFlow flags the step.</span></li>
+          </ul>
+        </div>
 
-      <div class="cycle">
-        <span class="sp-node is-hub" data-sp="loop-hub" aria-hidden="true"></span>
-
-        <div class="cycle-row">
-          <article class="station reveal">
-            <span class="sp-node" data-sp="loop-1" aria-hidden="true"></span>
-            <div class="station-copy">
-              <h3>Scaffold</h3>
-              <p><code>hqflow init</code> drops a <code>.codehq/</code> into your repo: a strict JSON contract and a <code>SKILL.md</code> your agent already knows how to read.</p>
+        <div class="pr reveal" aria-label="Example pull request that changes code and its map together">
+          <div class="pr-head">
+            <span class="pr-state">Open</span>
+            <strong>Retry failed card payments once</strong>
+            <span class="pr-num">#142</span>
+          </div>
+          <div class="pr-files">
+            <div class="pr-file">
+              <span class="pr-name">src/checkout/payment.ts</span>
+              <span class="pr-stat"><span class="add">+18</span> <span class="del">−4</span></span>
             </div>
-            <pre class="mini" aria-label="Scaffolded files">.codehq/
-├── project.json
-├── SKILL.md          agent contract
-└── workflows/</pre>
-          </article>
-
-          <article class="station reveal">
-            <span class="sp-node" data-sp="loop-2" aria-hidden="true"></span>
-            <div class="station-head">
-              <h3>Author</h3>
-              <span class="cycle-repeat" aria-hidden="true">↑ repeat</span>
+            <div class="pr-file is-map">
+              <span class="pr-name">.codehq/workflows/checkout.json</span>
+              <span class="pr-stat"><span class="add">+9</span> <span class="del">−1</span></span>
             </div>
-            <div class="station-copy">
-              <p>Your agent traces real code paths and writes workflow JSON: steps, sources, edge cases, tests.</p>
-            </div>
-            <pre class="mini" aria-label="Workflow excerpt">{
-  "id": "create-order",
-  "category": "logic",
-  "sources": [{ "file": "app/api/checkout/route.ts",
-               "symbol": "POST" }]
-}</pre>
-          </article>
-
-          <article class="station reveal">
-            <span class="sp-node" data-sp="loop-3" aria-hidden="true"></span>
-            <div class="station-copy">
-              <h3>Observe</h3>
-              <p>HQFlow watches workflow files and re-renders the canvas live as your agent maps more of the system.</p>
-            </div>
-            <pre class="mini" aria-label="Live canvas update">workflow changed
-  checkout.json
-  6 steps · 7 connections
-  canvas updated</pre>
-            <span class="sp-anchor" data-sp="loop-out" aria-hidden="true"></span>
-          </article>
+          </div>
+<pre class="pr-diff"><span class="ctx">    { "from": "charge-card", "to": "send-receipt" },</span><span class="del">-   { "from": "charge-card", "to": "show-error", "type": "failure" }</span><span class="add">+   { "from": "charge-card", "to": "retry-charge", "type": "failure" },</span><span class="add">+   { "from": "retry-charge", "to": "send-receipt" },</span><span class="add">+   { "from": "retry-charge", "to": "show-error", "type": "failure" }</span></pre>
+          <p class="pr-note">The reviewer sees the new failure path, not only the new lines.</p>
         </div>
       </div>
     </section>
 
-    <!-- ============ principles: the spine runs as a bus with four taps ============ -->
-    <section class="section" id="principles">
-      <header class="section-head">
-        <h2 class="section-title reveal">An instrument, not a chatbot.</h2>
-      </header>
-
-      <div class="bus">
-        <article class="tap reveal">
-          <span class="sp-node" data-sp="prin-1" aria-hidden="true"></span>
-          <h3>Local-first</h3>
-          <p>Renders from files on disk. No accounts, no telemetry, no runtime network calls beyond localhost. Your code never leaves the machine.</p>
+    <!-- ============ trust: why it is safe to point at your repo ============ -->
+    <section class="section trust-band" aria-label="Why you can trust it">
+      <div class="trust">
+        <article class="trust-item reveal">
+          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+          <div>
+            <h3>Local-first, no LLM inside</h3>
+            <p>No model, no API keys, no accounts, no telemetry. HQFlow uses the agent you already have, and your code never leaves your machine.</p>
+          </div>
         </article>
-        <article class="tap reveal">
-          <span class="sp-node" data-sp="prin-2" aria-hidden="true"></span>
-          <h3>No LLM inside</h3>
-          <p>HQFlow contains no model and no prompts. Your agent is the brain. HQFlow is the instrument that keeps it honest.</p>
+        <article class="trust-item reveal">
+          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span>
+          <div>
+            <h3>Evidence attached</h3>
+            <p>Every step carries its real files, symbols, inputs, outputs, edge cases, and tests. Check any claim in one click.</p>
+          </div>
         </article>
-        <article class="tap reveal">
-          <span class="sp-node" data-sp="prin-3" aria-hidden="true"></span>
-          <h3>Evidence attached</h3>
-          <p>Steps carry their real source files, symbols, inputs, outputs, edge cases and tests. The map stays connected to the code it explains.</p>
-        </article>
-        <article class="tap reveal">
-          <span class="sp-node" data-sp="prin-4" aria-hidden="true"></span>
-          <h3>Built for review</h3>
-          <p>Open details, trace paths, rearrange the canvas and export the result. HQFlow turns an agent's map into something people can inspect together.</p>
+        <article class="trust-item reveal">
+          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/></svg></span>
+          <div>
+            <h3>Open source, MIT</h3>
+            <p>Read every line. Fork it, audit it, run it offline.</p>
+          </div>
         </article>
       </div>
     </section>
@@ -269,7 +234,8 @@
     <section class="section install" id="install">
       <header class="section-head">
         <span class="sp-node is-terminal" data-sp="install-node" aria-hidden="true"></span>
-        <h2 class="section-title reveal">Point it at a repository.</h2>
+        <h2 class="section-title reveal">Point it at your repo.</h2>
+        <p class="section-lede reveal">Two commands and one prompt. HQFlow draws each workflow while your agent writes it.</p>
       </header>
 
       <div class="install-grid">
@@ -281,6 +247,7 @@
             <span>copy</span>
           </button>
         </div>
+
         <div class="install-note reveal">
           <p class="install-cue">then ask your agent</p>
           <blockquote class="install-quote">
@@ -290,6 +257,11 @@
           <p class="install-compat">Works with Cursor, Claude Code and Codex. Anything that can read a repo.</p>
         </div>
       </div>
+
+      <a class="star-inline reveal" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+        <span>Find it useful? <strong>Star HQFlow on GitHub</strong></span>
+      </a>
     </section>
 
   </main>
@@ -298,18 +270,15 @@
   <footer class="site-foot">
     <div class="foot-inner">
       <div class="foot-brand">
-        <span class="brand-mark" aria-hidden="true">HQ</span>
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1"/><path d="M4.25 6.5V11.75H9.5"/></svg></span>
         <div>
-          <strong>Flow</strong> <span class="dim">/ workflow maps</span>
+          <strong>HQFlow</strong> <span class="dim">/ workflow maps</span>
           <p class="foot-tag">built local. stays local.</p>
         </div>
       </div>
       <nav class="foot-links" aria-label="Footer">
-        <a href="#why">Why</a>
-        <a href="#loop">The loop</a>
-        <a href="#canvas">Canvas</a>
-        <a href="#principles">Principles</a>
         <a href="#install">Install</a>
+        <a href="changelog">Changelog</a>
         <a
           href="https://github.com/WinterArc21/HQFlow"
           target="_blank"

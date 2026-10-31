@@ -15,8 +15,9 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  background-color: var(--bg-canvas);
-  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  /* A shader scene clears both, so its background shows through (tokens.css, Scenes). */
+  background-color: var(--stage-bg);
+  background-image: var(--stage-grid);
   background-position: 0 0;
   background-size: 28px 28px;
   /* `--canvas-node-header`, `--canvas-node-footer`, `--canvas-node-body-hover`, and
@@ -25,9 +26,8 @@
      hover state are mixed from the card's own `--node-accent` instead of from a neutral — nothing
      reads those four any more, so they are gone rather than left as tokens that look load-bearing
      and are not. */
-  --canvas-node-body: color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface));
+  --canvas-node-body: color-mix(in srgb, color-mix(in srgb, var(--text-primary) 4%, var(--bg-surface)) var(--card-alpha), transparent);
   --canvas-node-border: color-mix(in srgb, var(--text-primary) 18%, var(--border-subtle));
-  --canvas-node-divider: color-mix(in srgb, var(--text-primary) 10%, transparent);
   --canvas-port-center: var(--bg-inset);
   --canvas-port-ring: color-mix(in srgb, var(--text-primary) 55%, var(--border-strong));
   --canvas-node-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4.5%, transparent), 0 2px 5px color-mix(in srgb, var(--bg-canvas) 38%, transparent), 0 15px 34px color-mix(in srgb, var(--bg-canvas) 26%, transparent);
@@ -156,50 +156,17 @@
   max-width: none;
 }
 
-/* Quiet overflow affordances (contract mandate: a user must never believe they're seeing the
- * whole graph when they aren't). Shown when the fitted graph still extends below or to the right
- * of the stage. These are fades plus small labels, not scrollbars or buttons: panning already
- * works, and these only say that panning further is worth doing. */
-.overflowFade {
-  position: absolute;
-  display: flex;
-  pointer-events: none;
+/* A legend row under the pointer keeps its own edges and fades the rest. */
+.stage[data-legend-focus] :global([data-edge-kind]) {
+  opacity: 0.12;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
-.overflowFadeBottom {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 56px;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: var(--space-2);
-  background-image: linear-gradient(to bottom, transparent, var(--bg-canvas) 85%);
-}
-
-.overflowFadeRight {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 64px;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: var(--space-2);
-  background-image: linear-gradient(to right, transparent, var(--bg-canvas) 85%);
-}
-
-.overflowLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background-color: var(--bg-surface);
-  color: var(--text-tertiary);
-  font-family: var(--font-ui);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.stage[data-legend-focus="success"] :global([data-edge-kind="success"]),
+.stage[data-legend-focus="failure"] :global([data-edge-kind="failure"]),
+.stage[data-legend-focus="conditional"] :global([data-edge-kind="conditional"]),
+.stage[data-legend-focus="async"] :global([data-edge-kind="async"]),
+.stage[data-legend-focus="success-outcome"] :global([data-edge-kind="success-outcome"]),
+.stage[data-legend-focus="retry"] :global([data-edge-kind="retry"]) {
+  opacity: 1;
 }

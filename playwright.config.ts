@@ -37,8 +37,8 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // The shared, read-only server: boots.spec.ts, depth-and-selection.spec.ts, search.spec.ts,
-  // and a11y-basics.spec.ts all read from this one instance (never write). Every spec that
+  // The shared, read-only server: boots.spec.ts, a11y-basics.spec.ts, export.spec.ts, and
+  // edges-without-measurement.spec.ts all read from this one instance (never write). Every spec that
   // mutates `.codehq/*` spawns and tears down its own dedicated server/port/temp-dir
   // instead (see each spec's `test.beforeAll` and tests/e2e/helpers/paths.ts's `PORTS`) — that
   // is the parallelism-safety split this suite uses, rather than serializing all of `tests/e2e`.

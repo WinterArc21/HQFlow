@@ -9,6 +9,12 @@ interface CanvasLegendProps {
   dimmed?: boolean;
 }
 
+export interface LegendRow {
+  key: string;
+  label: string;
+  visual: ConnectionVisual;
+}
+
 const CONNECTION_TYPES = ["success", "failure", "conditional", "async"] as const;
 const LABELS: Record<(typeof CONNECTION_TYPES)[number], string> = {
   success: "Normal",
@@ -17,7 +23,7 @@ const LABELS: Record<(typeof CONNECTION_TYPES)[number], string> = {
   async: "Async",
 };
 
-function swatchStyle(visual: ConnectionVisual) {
+export function swatchStyle(visual: ConnectionVisual) {
   return {
     borderTopColor: `var(${visual.varName})`,
     borderTopStyle: visual.dash === "none" ? "solid" : visual.dash === "dotted" ? "dotted" : "dashed",
@@ -25,8 +31,8 @@ function swatchStyle(visual: ConnectionVisual) {
   } as const;
 }
 
-/** A read-only key for only the edge grammar currently visible in this workflow. */
-export function CanvasLegend({ workflow, dimmed = false }: CanvasLegendProps) {
+/** The rows of the key: only the edge grammar currently visible in this workflow. */
+export function legendRows(workflow: Workflow): LegendRow[] {
   // A self-loop renders with the retry grammar instead of its declared connection grammar, so
   // exclude it from the ordinary rows and add the dedicated Retry row below.
   const outcomeIds = computeOutcomeStepIds(workflow);
@@ -43,7 +49,7 @@ export function CanvasLegend({ workflow, dimmed = false }: CanvasLegendProps) {
       .filter((connection) => connection.from !== connection.to && !isTerminalOutcomeEdge(connection))
       .map((connection) => connection.type ?? "success"),
   );
-  const rows: Array<{ key: string; label: string; visual: ConnectionVisual }> = CONNECTION_TYPES.filter((type) => presentTypes.has(type)).map((type) => ({
+  const rows: LegendRow[] = CONNECTION_TYPES.filter((type) => presentTypes.has(type)).map((type) => ({
     key: type,
     label: LABELS[type],
     visual: connectionStyle(type),
@@ -59,17 +65,27 @@ export function CanvasLegend({ workflow, dimmed = false }: CanvasLegendProps) {
   if (workflow.connections.some((connection) => connection.from === connection.to)) {
     rows.push({ key: "retry", label: "Retry", visual: RETRY_EDGE_VISUAL });
   }
-  if (rows.length === 0) return null;
+  return rows;
+}
 
+/**
+ * The key in the stage corner, for the export viewer and the landing demo. The island shell has no
+ * key on the canvas; its rows sit in the dock's "More actions" menu instead.
+ */
+export function CanvasLegend({ workflow, dimmed = false }: CanvasLegendProps) {
+  const rows = legendRows(workflow);
+  if (rows.length === 0) return null;
   return (
     <div className={`${styles.legend} ${dimmed ? styles.dimmed : ""}`} role="group" aria-label="Connection legend">
-      <h2 className={styles.heading}>Connections</h2>
-      {rows.map((row) => (
-        <div className={styles.row} key={row.key}>
-          <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />
-          <span>{row.label}</span>
-        </div>
-      ))}
+      <div className={styles.rows}>
+        <h2 className={styles.heading}>Connections</h2>
+        {rows.map((row) => (
+          <div className={styles.row} key={row.key}>
+            <span className={styles.swatch} style={swatchStyle(row.visual)} aria-hidden="true" />
+            <span>{row.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

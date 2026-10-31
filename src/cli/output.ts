@@ -62,14 +62,14 @@ function groupByFile(issues: readonly Issue[]): Map<string, Issue[]> {
   return grouped;
 }
 
+const naturalOrder = new Intl.Collator("en", { numeric: true });
+
 function sortWithinFile(issues: Issue[]): Issue[] {
   return [...issues].sort((a, b) => {
     if (a.severity !== b.severity) {
       return a.severity === "error" ? -1 : 1;
     }
-    const aPath = a.path ?? "";
-    const bPath = b.path ?? "";
-    return aPath < bPath ? -1 : aPath > bPath ? 1 : 0;
+    return naturalOrder.compare(a.path ?? "", b.path ?? "");
   });
 }
 

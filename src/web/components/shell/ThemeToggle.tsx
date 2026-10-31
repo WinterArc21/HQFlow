@@ -1,16 +1,11 @@
 import { Moon, Sun } from "@phosphor-icons/react";
-import { useEffect } from "react";
 import { IconButton } from "../primitives";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 
-/** Keeps `document.documentElement[data-theme]` in sync with the store's `theme`. */
+/** Flips between the dark and light scene families; `Backdrop` applies the result to the document. */
 export function ThemeToggle() {
   const theme = useCodeHQStore((state) => state.theme);
   const setTheme = useCodeHQStore((state) => state.setTheme);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
 
   const nextTheme = theme === "dark" ? "light" : "dark";
 

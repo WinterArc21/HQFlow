@@ -1,2 +1,2 @@
 export { WorkflowNavigator, type WorkflowNavigatorProps } from "./WorkflowNavigator";
-export { NavigatorExpandControl } from "./NavigatorExpandControl";
+export { WorkflowRemovedNotice, type WorkflowRemovedNoticeProps } from "./WorkflowRemovedNotice";

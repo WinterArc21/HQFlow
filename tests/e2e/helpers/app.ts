@@ -1,6 +1,5 @@
 /**
- * Small, page-level helpers reused across specs. These stable selectors are exercised by the
- * committed Playwright interaction and screenshot coverage.
+ * Small, page-level helpers reused across specs.
  */
 import type { Locator, Page } from "@playwright/test";
 
@@ -13,10 +12,11 @@ export function workflowNavItem(page: Page, workflowName: string): Locator {
   return page.locator("button[data-workflow-item]").filter({ hasText: workflowName });
 }
 
+/** Opens the workflow tree from the title card and picks a workflow; picking closes it. */
 export async function selectWorkflowByName(page: Page, workflowName: string): Promise<void> {
-  await workflowNavItem(page, workflowName).click();
-}
-
-export function stepNode(page: Page, stepId: string): Locator {
-  return page.locator(`[data-step-node="${stepId}"]`);
+  const item = workflowNavItem(page, workflowName);
+  if (!(await item.isVisible())) {
+    await page.getByRole("button", { name: /^Workflows: / }).click();
+  }
+  await item.click();
 }

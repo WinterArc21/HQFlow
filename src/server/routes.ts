@@ -52,7 +52,11 @@ const exportQuerySchema = z
 
 function buildEditorUrl(absolutePath: string, line: number | undefined): string {
   const forwardSlashPath = absolutePath.split(path.sep).join("/");
-  const encodedPath = encodeURI(forwardSlashPath);
+  // Per segment, so '#', '?' and '%' in file names can't turn into a URL fragment or query.
+  const encodedPath = forwardSlashPath
+    .split("/")
+    .map((segment) => (/^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)))
+    .join("/");
   const suffix = line !== undefined ? `:${line}` : "";
   const wslDistro = process.env.WSL_DISTRO_NAME;
   if (wslDistro) {

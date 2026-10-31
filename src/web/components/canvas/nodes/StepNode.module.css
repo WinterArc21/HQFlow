@@ -3,19 +3,21 @@
    matching value here must change too. */
 
 /* Real edge anchors, visible for orientation but not interactive: users may move nodes, while
-   authoring connections remains outside this canvas. */
+   authoring connections remains outside this canvas. A small solid square in the colour of the
+   edge that leaves it, matching the square step badges. */
 .handle {
   box-sizing: border-box;
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  min-height: 0;
   opacity: 1;
-  background: var(--canvas-port-center);
-  border: 2px solid var(--canvas-port-ring);
+  border: 0;
+  border-radius: 1.5px;
+  background: var(--accent-ice);
   pointer-events: none;
   z-index: 3;
-  transition:
-    border-color var(--dur-fast) var(--ease-standard),
-    box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 /* Target-side anchors stay in the DOM for edge geometry but render invisible — the incoming
@@ -30,21 +32,21 @@
 }
 
 .failureHandle {
-  border-color: color-mix(in srgb, var(--accent-red) 75%, var(--canvas-port-ring));
+  background: var(--accent-red);
 }
 
 .successHandle {
-  border-color: color-mix(in srgb, var(--accent-output) 75%, var(--canvas-port-ring));
+  background: var(--accent-output);
 }
 
 .returnOutHandle {
   left: 70%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
+  background: var(--accent-amber);
 }
 
 .retryOutHandle {
   top: 72%;
-  border-color: color-mix(in srgb, var(--accent-amber) 70%, var(--canvas-port-ring));
+  background: var(--accent-amber);
 }
 
 /* The category marker is the card itself (contract §10 still holds — colour encodes category and
@@ -76,6 +78,7 @@
   border: 2px solid color-mix(in srgb, var(--node-accent) 62%, var(--canvas-node-border));
   border-radius: 10px;
   box-shadow: var(--canvas-node-shadow);
+  backdrop-filter: var(--card-filter);
   cursor: pointer;
   outline-offset: 2px;
   transition:
@@ -130,8 +133,8 @@
 }
 
 /* Transparent, not `--canvas-node-header`: the gradient is strongest across the top-left where the
-   title sits, and an opaque header band would mask exactly the part of it that does the work. The
-   divider takes a touch of accent so it doesn't read as a foreign grey line across a tinted card. */
+   title sits, and an opaque header band would mask exactly the part of it that does the work. Spacing
+   and type separate title, purpose, and footer; an inner line would only cut the card into boxes. */
 .header {
   height: 40px;
   flex-shrink: 0;
@@ -140,7 +143,6 @@
   gap: var(--space-2);
   padding: 0 12px;
   background: transparent;
-  border-bottom: 1px solid color-mix(in srgb, var(--node-accent) 18%, var(--canvas-node-divider));
   line-height: 1;
 }
 
@@ -177,57 +179,20 @@
   color: var(--accent-blue);
 }
 
-/* The per-step expand toggle: present in the layout at all times (so revealing it never reflows
-   the header) but only painted when the card is hovered, when focus is anywhere inside it, or
-   when the step is already expanded. `opacity` rather than `display`/`visibility` keeps it
-   hit-testable and exposed to assistive tech in every state — this hides a control from the
-   resting *picture*, not from the user. Fades at `--dur-fast`, which `prefers-reduced-motion`
-   collapses to 0ms in tokens.css. */
-.expandToggle {
-  flex-shrink: 0;
-  display: inline-flex;
-  opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-standard);
-}
-
-.card:hover .expandToggle,
-.card:focus-visible .expandToggle,
-.card:focus-within .expandToggle,
-.expandTogglePinned {
-  opacity: 1;
-}
-
-/* Height mirrors `PURPOSE_LINE_HEIGHT * purposeLineCount(...)` in `../nodeContent.ts` exactly —
-   one line by default, two when `.purposeTwoLine` is also applied, three for `.purposeThreeLine`.
-   Top margin is 15px so a three-line card is 148px (header 40 + pad 30 + purpose 48 + footer 30). */
+/* Up to three lines; the card's height is fixed
+   (`CARD_SIZE` in `../nodeContent.ts`), so the footer is pushed to the bottom and a short
+   purpose leaves the space below it, not above. */
 .purpose {
-  height: 16px;
   flex-shrink: 0;
   font-size: var(--fs-tiny);
   line-height: 16px;
+  max-height: 48px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 15px 12px 0;
-}
-
-.purposeTwoLine {
-  height: 32px;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.purposeThreeLine {
-  height: 48px;
-  white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 12px 12px 0;
 }
 
 .footer {
@@ -237,12 +202,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-top: 15px;
+  margin-top: auto;
   padding: 0 12px;
   /* A translucent inset wash rather than the opaque footer token, so the tail of the gradient still
      shows through and the footer reads as part of the same card rather than a plate stuck on it. */
   background: color-mix(in srgb, var(--bg-inset) 30%, transparent);
-  border-top: 1px solid color-mix(in srgb, var(--node-accent) 18%, var(--canvas-node-divider));
 }
 
 /* The accent nudged 15% toward the text colour. Tinting the card moves the background toward this
@@ -257,119 +221,81 @@
   color: color-mix(in srgb, var(--node-accent) 85%, var(--text-primary));
 }
 
-/* Now the row's only occupant (the source/edge-case/test counts that used to sit opposite it
-   moved to the drawer), so it aligns to the card's own left edge with the rows above it rather
-   than being pushed right by a `space-between` that has nothing left to space against, and it
-   may use the full width those counts previously reserved. */
-.factsIo {
-  flex-shrink: 0;
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-width: 0;
-  max-width: 100%;
+/* ---- micro-interactions ---- */
+
+/* A soft light in the card's own colour follows the pointer across it.
+   The light is a pseudo-element over the body, so it never touches the gradient that encodes the
+   category; it fades in and out with hover. The card itself never moves on hover: React Flow
+   anchors edges to the node's layout position, so a transform would pull the ports off their
+   edges. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--node-accent) 20%, transparent),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
-.ioTag {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  min-width: 0;
-  max-width: 180px;
+.card:hover::after {
+  opacity: 1;
 }
 
-/* `text-overflow: ellipsis` has no effect on a flex container (`.ioTag`, above) — it only
- * truncates a single block/inline-block box's own text. This is that box: a plain inline-block
- * with its own bounded width, so a long reference name clips to "ScrapedWeb…" instead of the
- * silently-broken mid-glyph cut a flexed ellipsis produces. */
-.ioValue {
-  display: inline-block;
-  max-width: 144px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: bottom;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  color: var(--text-secondary);
+/* The selected card wears a ring of light that slowly orbits it, in the selection blue fading into
+   the card's own colour. */
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
 
-/* `--text-secondary`, not `--text-tertiary`: at 9px this was already the weakest text on the card
-   (~3.7:1 on the old flat footer, under AA before any tint existed), and the wash behind it now
-   would have taken it to ~3.0. It still reads as subordinate to the value beside it — 9px against
-   11px, and the value is mono. */
-.ioLabel {
-  flex-shrink: 0;
-  font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
+.selected::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 14px;
+  padding: 2px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--ring-angle),
+    var(--accent-blue),
+    color-mix(in srgb, var(--node-accent) 80%, transparent) 30%,
+    transparent 50%,
+    color-mix(in srgb, var(--node-accent) 80%, transparent) 70%,
+    var(--accent-blue)
+  );
+  mask: linear-gradient(black, black) content-box exclude, linear-gradient(black, black);
+  animation: ringOrbit 4s linear infinite;
 }
 
-.detail {
-  flex-shrink: 0;
-  margin: 0 12px;
-  padding-top: 5px;
-  background-image: linear-gradient(var(--border-subtle), var(--border-subtle));
-  background-position: top;
-  background-repeat: no-repeat;
-  background-size: 100% 1px;
+@keyframes ringOrbit {
+  to {
+    --ring-angle: 360deg;
+  }
 }
 
-.sectionLabel {
-  display: block;
-  height: 14px;
-  font-family: var(--font-ui);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+/* Under its open step card the node drops the ring and the selection glow, so nothing shows
+   around the card's edge. */
+.underCard.selected {
+  box-shadow: none;
 }
 
-.fileRow {
-  height: 14px;
-  display: flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  white-space: nowrap;
-  overflow: hidden;
+.underCard.selected::before {
+  display: none;
 }
 
-.symbolRow {
-  height: 16px;
-  display: flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  white-space: nowrap;
-  overflow: hidden;
+:global(:root[data-motion="still"]) .selected::before {
+  animation: none;
 }
 
-.dir {
-  flex-shrink: 0;
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.base {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-}
-
-.symbol {
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.more {
-  height: 14px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  color: var(--text-tertiary);
+@media (prefers-reduced-motion: reduce) {
+  .selected::before {
+    animation: none;
+  }
 }

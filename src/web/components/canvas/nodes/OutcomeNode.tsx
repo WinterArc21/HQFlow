@@ -19,12 +19,12 @@ const TONE_LABELS = {
  * A terminal step's pill — "clearly not a unit of work" (contract §10): a compact rounded card
  * with a tone glyph instead of the category marker, name, and (when present) a single purpose
  * line. Sized to its own content by `layout.ts`/`nodeContent.ts`'s `computeOutcomeNodeWidth`
- * rather than the fixed `NODE_WIDTH` every `StepNode` uses — an outcome pill never grows with
+ * rather than the fixed card width every `StepNode` uses — an outcome pill never grows with
  * depth and never shows files/symbols, so there is nothing here for the depth ladder to expand
  * into.
  */
 export function OutcomeNode({ data }: NodeProps<OutcomeFlowNode>) {
-  const { step, tone, band, dimmed, tabIndex, onKeyDown, onHoverStart, onHoverEnd, onFocusStep, onBlurStep } = data;
+  const { step, tone, band, dimmed, tabIndex, onKeyDown, onHoverStart, onHoverEnd } = data;
   const cardClassName = [styles.card, TONE_CLASS_NAMES[tone], dimmed ? styles.dimmed : ""].filter(Boolean).join(" ");
   const accessibleName = `${TONE_LABELS[tone]}: ${step.name}.${step.purpose.length > 0 ? ` ${step.purpose}` : ""}`;
 
@@ -38,8 +38,6 @@ export function OutcomeNode({ data }: NodeProps<OutcomeFlowNode>) {
       onKeyDown={onKeyDown}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      onFocus={onFocusStep}
-      onBlur={onBlurStep}
     >
       {/* Outcome edges keep their success/failure semantics in the edge renderer, while their
           physical attachment follows the same live cardinal choice as work-card edges. */}

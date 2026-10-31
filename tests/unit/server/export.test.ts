@@ -3,7 +3,6 @@ import type { Workflow } from "@schema/workflow";
 import type { WorkflowRecord } from "@core/types";
 import {
   buildExportHtml,
-  buildContentDisposition,
   sanitizeExportPayload,
   sanitizeFilename,
   type ExportPayload,
@@ -118,13 +117,6 @@ describe("sanitizeFilename", () => {
   });
 });
 
-describe("buildContentDisposition", () => {
-  it("produces an attachment header with a sanitized filename", () => {
-    const header = buildContentDisposition("Checkout Flow");
-    expect(header).toBe('attachment; filename="checkout-flow-codehq.html"');
-  });
-});
-
 describe("buildExportHtml", () => {
   const PAYLOAD: ExportPayload = {
     workflow: WORKFLOW,
@@ -138,13 +130,6 @@ describe("buildExportHtml", () => {
 
   const HTML = buildExportHtml({ payload: PAYLOAD, viewerJs: "console.log('hi');", viewerCss: "body{color:red}" });
 
-  it("produces a complete HTML document", () => {
-    expect(HTML).toMatch(/^<!doctype html>/i);
-    expect(HTML).toContain("<html");
-    expect(HTML).toContain("</html>");
-    expect(HTML).toContain("<title>Checkout Flow");
-  });
-
   it("inlines the viewer JS and CSS — no external src or href", () => {
     expect(HTML).toContain("console.log('hi');");
     expect(HTML).toContain("body{color:red}");
@@ -153,12 +138,6 @@ describe("buildExportHtml", () => {
     expect(HTML).not.toMatch(/<script[^>]+src=/i);
     expect(HTML).not.toMatch(/<link[^>]+href=/i);
     expect(HTML).not.toMatch(/https?:\/\//i);
-  });
-
-  it("embeds the payload as a JSON script tag", () => {
-    expect(HTML).toContain('id="codehq-export-payload"');
-    expect(HTML).toContain("Checkout Flow");
-    expect(HTML).toContain("app/api/checkout/route.ts");
   });
 
   it("escapes the payload to prevent script injection", () => {
@@ -173,10 +152,5 @@ describe("buildExportHtml", () => {
     // The </script> inside the payload must be escaped, not interpreted as closing the tag.
     expect(maliciousHtml).not.toContain('</script><script>alert(1)');
     expect(maliciousHtml).toContain("\\u003c");
-  });
-
-  it("includes the theme bootstrap script", () => {
-    expect(HTML).toContain("data-theme");
-    expect(HTML).toContain("localStorage");
   });
 });

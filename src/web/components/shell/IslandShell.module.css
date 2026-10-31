@@ -1,0 +1,318 @@
+/* The canvas fills the window, so its dot field — the grid every island snaps to — starts at the
+ * window's top-left corner. */
+.shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- identity (top left) ---- */
+/* One island that is a pill when closed and grows into the full card when open. The box glides
+   between the two instead of jumping a dot step at a time. */
+.identityIsland {
+  /* Pin the header to the top-left corner: the slack from rounding up to whole dots goes below and
+     to the right, and while the box glides to a new size the text never spills out of its left edge. */
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+  transition:
+    width var(--dur-slow) var(--ease-out-expo),
+    height var(--dur-slow) var(--ease-out-expo);
+}
+
+/* The header row is mark, repository, "/", workflow name and caret. The portalled title's
+   wrappers dissolve (`display: contents`) so its name, purpose, size and freshness are all items
+   of this one wrapping row, ordered here; the open card breaks the details onto lines below. */
+.identity {
+  /* Two dots, less the island's border, so the pill fills its grid box exactly. */
+  --identity-row: 54px;
+  /* Not a positioning box: the trigger below anchors to the island itself. The island rounds its
+     width up to whole dots, so this row can be narrower than the island, and a trigger sized to
+     the row left that slack unhighlighted on hover. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-width: 0;
+  max-width: var(--identity-max-width);
+  padding: 0 var(--space-3);
+}
+
+.title,
+.title :global([data-title=""]),
+.title :global([data-title="row"]),
+.title :global([data-title="details"]) {
+  display: contents;
+}
+
+/* The whole header row is the button; its text sits above it and lets clicks through. */
+.trigger {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--identity-row);
+  border-radius: 11px;
+}
+
+.trigger:hover {
+  background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.identity[data-open] .trigger {
+  border-radius: 11px 11px 0 0;
+}
+
+.mark,
+.repositoryName,
+.slash,
+.caret,
+.title :global(h1),
+.title :global([data-title="trust"]) {
+  position: relative;
+  pointer-events: none;
+}
+
+.mark {
+  order: 1;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background-color: var(--text-primary);
+  color: var(--bg-canvas);
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.repositoryName {
+  order: 2;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slash {
+  order: 3;
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.title :global(h1) {
+  order: 4;
+  flex: 0 1 auto;
+  max-width: 260px;
+  font-size: var(--fs-base);
+}
+
+.identity[data-open] .title :global(h1) {
+  flex: 1 1 0;
+  max-width: none;
+}
+
+/* The caret's box sets the header row's height, so the row is the same in both states. */
+.caret {
+  order: 6;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  height: var(--identity-row);
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.identity[data-open] .caret {
+  transform: rotate(180deg);
+}
+
+/* In the pill only a stale workflow keeps its freshness, as an amber dot after the name. */
+.identity:not([data-open]) .title :global([data-title="steps"]),
+.identity:not([data-open]) .title :global([data-title="purpose"]),
+.identity:not([data-open]) .title :global([data-title="updated"]),
+.identity:not([data-open]) .title :global([data-title="trust"]:not([data-stale])),
+.identity:not([data-open]) .rule {
+  display: none;
+}
+
+.identity:not([data-open]) .title :global([data-title="trust"]) {
+  order: 5;
+}
+
+.identity:not([data-open]) .title :global([data-title="trust"] > :first-child) {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--accent-amber);
+  font-size: 0;
+}
+
+/* The open card: a hairline under the header, then the purpose, then size and freshness. */
+.rule {
+  order: 7;
+  flex: 0 0 calc(100% + 2 * var(--space-3));
+  height: 1px;
+  margin: 0 calc(-1 * var(--space-3));
+  background-color: var(--border-subtle);
+}
+
+.identity[data-open] .title :global([data-title="purpose"]) {
+  order: 8;
+  flex: 0 0 100%;
+  margin: var(--space-3) 0 var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+.identity[data-open] .title :global([data-title="steps"]) {
+  order: 9;
+  margin-bottom: var(--space-3);
+}
+
+.identity[data-open] .title :global([data-title="trust"]) {
+  order: 10;
+  margin-bottom: var(--space-3);
+}
+
+.identity[data-open] .title :global([data-title="trust"])::before {
+  content: "·";
+  color: var(--text-tertiary);
+}
+
+/* A notice wraps to the title's width instead of stretching the pill to fit its sentence. */
+.notice {
+  contain: inline-size;
+  white-space: normal;
+}
+
+/* The details and the list arrive just after the card starts to grow. */
+.identity[data-open] .title :global([data-title="purpose"]),
+.identity[data-open] .title :global([data-title="steps"]),
+.identity[data-open] .title :global([data-title="trust"]),
+.tree {
+  animation: identity-reveal var(--dur-base) var(--ease-standard) 60ms backwards;
+}
+
+@keyframes identity-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ---- status (top right) ---- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) 0 var(--space-4);
+}
+
+/* The copy control is a text button. Give it the icon buttons' height so the row shares one line,
+   and pull it against the paint icon so the three controls read as one group. */
+.status :global(button) {
+  height: var(--space-8);
+}
+
+.status > :global(span):has(button) {
+  margin-right: calc(-1 * var(--space-2));
+}
+
+/* Button wraps its label in a block span. That puts an icon on the text line, above the other glyphs. */
+.status :global(button) > :global(span) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-1);
+  background-color: var(--border-subtle);
+}
+
+/* ---- dock (bottom centre) ---- */
+.dock {
+  border-radius: 20px;
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-standard);
+}
+
+/* While the canvas moves, the dock steps back so the map shows through. */
+.dock[data-receded="true"] {
+  opacity: 0.35;
+  transform: translateY(6px) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock[data-receded="true"] {
+    transform: none;
+  }
+}
+
+.dockBody {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.dockBody > .divider {
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  flex: none;
+}
+
+/* On a phone the status island is wider than the screen; tighten it so the theme button fits. */
+@media (max-width: 685px) {
+  .status {
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+  }
+
+  .divider {
+    display: none;
+  }
+}
+
+/* ---- workflow tree: the title card grows downward to hold it ---- */
+.tree {
+  overflow-y: auto;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---- the step drawer, inset onto the grid like every other island ---- */
+.shell :global([data-step-drawer-backdrop]) {
+  padding: var(--island-drawer-top) var(--island-drawer-right) var(--island-drawer-bottom) 0;
+}
+
+.shell :global([data-step-drawer]) {
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+}

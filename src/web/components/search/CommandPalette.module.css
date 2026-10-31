@@ -6,7 +6,15 @@
   justify-content: center;
   align-items: flex-start;
   padding-top: 14vh;
-  background-color: var(--grid-line);
+  background-color: color-mix(in srgb, var(--bg-canvas) 35%, transparent);
+  backdrop-filter: blur(3px);
+  animation: fadeIn var(--dur-base) var(--ease-standard);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
 }
 
 .palette {
@@ -14,10 +22,23 @@
   max-height: 60vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-raised);
+  background-color: color-mix(in srgb, var(--bg-raised) var(--surface-alpha), transparent);
+  backdrop-filter: var(--surface-filter);
   border: 1px solid var(--border-strong);
-  box-shadow: 0 12px 32px var(--grid-line);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 64px color-mix(in srgb, var(--bg-canvas) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--focus-ring) 12%, transparent);
   overflow: hidden;
+  transform-origin: top center;
+  animation: paletteIn var(--dur-slow) var(--ease-spring);
+}
+
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
 }
 
 .inputRow {
@@ -66,12 +87,14 @@
   gap: 1px;
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
-  border-left: 2px solid transparent;
+  margin: 0 var(--space-2);
+  border-radius: 10px;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .option.active {
-  background-color: var(--bg-inset);
-  border-left-color: var(--accent-blue);
+  background-image: linear-gradient(100deg, color-mix(in srgb, var(--focus-ring) 20%, transparent), color-mix(in srgb, var(--focus-ring) 4%, transparent));
+  box-shadow: inset 2px 0 0 var(--focus-ring);
 }
 
 .optionLabel {
@@ -89,4 +112,11 @@
   text-align: center;
   color: var(--text-tertiary);
   font-size: var(--fs-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .palette {
+    animation: none;
+  }
 }

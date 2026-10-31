@@ -1,11 +1,10 @@
-import type { CSSProperties } from "react";
-import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { Check } from "@phosphor-icons/react";
 import { Handle, Position, useNodeConnections, type NodeProps } from "@xyflow/react";
 import { categoryToken } from "../../../design/semantics";
-import { Badge, IconButton } from "../../primitives";
-import { formatDataReferenceNames, purposeLineCount, showsIoOnCard, stepIoSummary } from "../nodeContent";
+import { Badge } from "../../primitives";
 import type { StepFlowNode } from "../types";
-import { StepNodeDetail } from "./StepNodeDetail";
+import { SPLIT_PORTS } from "../buildFlowElements";
 import styles from "./StepNode.module.css";
 
 /**
@@ -22,12 +21,17 @@ import styles from "./StepNode.module.css";
  * Category is carried by the card's own accent gradient rather than by a spine: see `.card` in the
  * stylesheet for why the leading edge tops out at 15%.
  */
+/** Feeds the hover spotlight its position without a re-render: two custom properties, in %. */
+function trackSpotlight(event: ReactPointerEvent<HTMLDivElement>): void {
+  const rect = event.currentTarget.getBoundingClientRect();
+  event.currentTarget.style.setProperty("--mx", `${((event.clientX - rect.left) / rect.width) * 100}%`);
+  event.currentTarget.style.setProperty("--my", `${((event.clientY - rect.top) / rect.height) * 100}%`);
+}
+
 export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
   const {
     step,
     index,
-    effectiveDepth,
-    expanded,
     selected,
     hasMissingSource,
     hasFailureOutcome,
@@ -37,33 +41,21 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
     hasReturnOut,
     dimmed,
     tabIndex,
-    onToggleExpand,
     onKeyDown,
     onHoverStart,
     onHoverEnd,
-    onFocusStep,
-    onBlurStep,
   } = data;
   const category = categoryToken(step.category);
-  const io = stepIoSummary(step);
-  const inSummary = formatDataReferenceNames(io.inputs);
-  const outSummary = formatDataReferenceNames(io.outputs);
-  const showIo = showsIoOnCard(effectiveDepth) && (inSummary.length > 0 || outSummary.length > 0);
   const sourceConnections = useNodeConnections({ id, handleType: "source" });
   const activeSourceHandles = new Set(sourceConnections.map((connection) => connection.sourceHandle));
   const sourceHandleClassName = (handleId: string) =>
     activeSourceHandles.has(handleId) ? styles.handle : styles.handleHidden;
 
-  const cardClassName = [styles.card, selected ? styles.selected : "", dimmed ? styles.dimmed : ""]
+  // The open step card sits on this node's corner; the selection ring would peek out around it.
+  const underCard = selected;
+  const cardClassName = [styles.card, selected ? styles.selected : "", underCard ? styles.underCard : "", dimmed ? styles.dimmed : ""]
     .filter(Boolean)
     .join(" ");
-  const purposeLines = purposeLineCount(step.purpose);
-  const purposeClassName =
-    purposeLines === 3
-      ? `${styles.purpose} ${styles.purposeThreeLine}`
-      : purposeLines === 2
-        ? `${styles.purpose} ${styles.purposeTwoLine}`
-        : styles.purpose;
   const accessibleName = `${index + 1}. ${step.name}. ${category.label} category.${
     hasMissingSource ? " Missing sources." : ""
   }`;
@@ -79,10 +71,9 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       aria-current={selected ? "true" : undefined}
       style={cardStyle}
       onKeyDown={onKeyDown}
+      onPointerMove={trackSpotlight}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
-      onFocus={onFocusStep}
-      onBlur={onBlurStep}
     >
       {/* Only source ports carrying an edge are visible. A target's arrival is already marked by
           the arrowhead, so target-side dots would double up on that same point. Dynamic source
@@ -95,6 +86,17 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
       <Handle id="out-left" type="source" position={Position.Left} className={sourceHandleClassName("out-left")} aria-hidden="true" />
       <Handle id="out-top" type="source" position={Position.Top} className={sourceHandleClassName("out-top")} aria-hidden="true" />
       <Handle id="out-bottom" type="source" position={Position.Bottom} className={sourceHandleClassName("out-bottom")} aria-hidden="true" />
+      {SPLIT_PORTS.map(({ id: handleId, type, position, fraction }) => (
+        <Handle
+          key={handleId}
+          id={handleId}
+          type={type}
+          position={position}
+          className={type === "source" ? sourceHandleClassName(handleId) : styles.handleHidden}
+          style={position === Position.Left || position === Position.Right ? { top: `${fraction * 100}%` } : { left: `${fraction * 100}%` }}
+          aria-hidden="true"
+        />
+      ))}
       {hasFailureOutcome ? <Handle id="failure" type="source" position={Position.Top} className={`${styles.handle} ${styles.failureHandle}`} aria-hidden="true" /> : null}
       {hasSuccessOutcome ? <Handle id="success" type="source" position={Position.Bottom} className={`${styles.handle} ${styles.successHandle}`} aria-hidden="true" /> : null}
       {hasReturnIn ? <Handle id="return-in" type="target" position={Position.Top} className={styles.handleHidden} aria-hidden="true" /> : null}
@@ -114,50 +116,15 @@ export function StepNode({ id, data }: NodeProps<StepFlowNode>) {
           <span className={styles.name}>{step.name}</span>
           {selected ? <Check size={14} weight="bold" className={styles.selectedIcon} aria-hidden="true" /> : null}
           {hasMissingSource ? <Badge tone="red">Missing sources</Badge> : null}
-          {/* Quiet until wanted: the toggle only paints once the card is hovered or holds focus
-              (or is already expanded, so the control that undoes that never vanishes out from
-              under the pointer). It keeps its box at all times — `opacity`, never `display` — so
-              revealing it can't reflow the header, and it stays reachable and hit-testable for
-              keyboard and assistive tech regardless of what the mouse is doing. */}
-          <span className={`${styles.expandToggle} ${expanded ? styles.expandTogglePinned : ""} nodrag`}>
-            <IconButton
-              label={expanded ? `Collapse ${step.name}` : `Expand ${step.name} to show code details`}
-              icon={expanded ? <CaretUp size={12} /> : <CaretDown size={12} />}
-              size="sm"
-              tabIndex={-1}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleExpand();
-              }}
-            />
-          </span>
         </div>
 
-        <p className={purposeClassName}>{step.purpose}</p>
-
-        <StepNodeDetail step={step} depth={effectiveDepth} />
+        <p className={styles.purpose}>{step.purpose}</p>
 
         <div className={styles.footer}>
           {/* No inline colour: the label derives its own from `--node-accent` in CSS, nudged toward
               the text colour for contrast against the tinted footer. An inline style here would
               win the cascade and put it back under AA. */}
           <span className={styles.categoryLabel}>{category.label}</span>
-          {showIo ? (
-            <span className={styles.factsIo}>
-              {inSummary.length > 0 ? (
-                <span className={styles.ioTag} title={`Input: ${inSummary}`}>
-                  <span className={styles.ioLabel}>in</span>
-                  <span className={styles.ioValue}>{inSummary}</span>
-                </span>
-              ) : null}
-              {outSummary.length > 0 ? (
-                <span className={styles.ioTag} title={`Output: ${outSummary}`}>
-                  <span className={styles.ioLabel}>out</span>
-                  <span className={styles.ioValue}>{outSummary}</span>
-                </span>
-              ) : null}
-            </span>
-          ) : null}
         </div>
       </div>
     </div>

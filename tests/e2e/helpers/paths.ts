@@ -27,7 +27,7 @@ export const WEB_DIST_INDEX = path.join(REPO_ROOT, "dist", "web", "index.html");
  * The shared, read-only server: a fresh copy of the test project, recreated at
  * `playwright.config.ts` module-load time (before Playwright's `webServer` plugin starts the
  * process — see `helpers/bootstrap.ts`), reused across every spec that only ever reads
- * `.codehq` (boots, depth-and-selection, search, a11y-basics).
+ * `.codehq` (boots, a11y-basics, edges-without-measurement, export).
  */
 export const SHARED_FIXTURE_DIR = path.join(os.tmpdir(), "codehq-e2e-shared-fixture");
 export const SHARED_PORT = 4399;
@@ -41,8 +41,6 @@ export const SHARED_BASE_URL = `http://127.0.0.1:${SHARED_PORT}`;
  */
 export const PORTS = {
   liveUpdate: 4501,
-  invalidPreservesBoard: 4502,
-  uninitialized: 4503,
   empty: 4504,
   cliOpen: 4505,
   canvasGrammar: 4506,

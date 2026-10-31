@@ -1,14 +1,85 @@
-.status {
-  margin-left: var(--space-2);
-  font-family: var(--font-ui);
-  font-size: var(--fs-tiny);
-  color: var(--text-tertiary);
+/* On copy, the icon turns into a tick and the label turns into a short status word, in the
+   same place. Both states share one grid cell, so the button keeps the wider of the two and
+   nothing around it moves. */
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.copied {
+.swap {
+  display: inline-grid;
+  align-items: center;
+}
+
+.idle,
+.done {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-standard);
+}
+
+.done {
+  opacity: 0;
+  transform: translateY(3px);
+}
+
+[data-status="copied"] .done {
   color: var(--accent-green);
 }
 
-.failed {
+[data-status="manual-selection"] .done {
+  color: var(--accent-amber);
+}
+
+[data-status="unavailable"] .done {
   color: var(--accent-red);
+}
+
+[data-status]:not([data-status="idle"]) .idle {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+[data-status]:not([data-status="idle"]) .done {
+  opacity: 1;
+  transform: none;
+}
+
+.tick,
+.alert {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tick {
+  stroke-width: 2.2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.alert {
+  stroke-width: 1.6;
+}
+
+[data-status="copied"] .tick {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 420ms var(--ease-out-expo) 80ms;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

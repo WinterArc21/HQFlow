@@ -203,7 +203,7 @@
           "file": "tests/e2e/canvas-grammar-demo.spec.ts"
         },
         {
-          "file": "tests/e2e/depth-and-selection.spec.ts"
+          "file": "tests/unit/web/canvas-keyboard.test.tsx"
         }
       ]
     },

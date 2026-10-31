@@ -11,9 +11,9 @@ const NS = "http://www.w3.org/2000/svg";
 
 /* ==========================================================================
    2. THE SPINE
-   One line down the page in the canvas notation. It forks where the argument
-   forks, fans into the three-move loop, enters the canvas, runs as a bus past
-   the principles, and terminates at the install step.
+   One line down the page in the canvas notation. It enters the canvas, forks
+   where the argument forks, passes the map section, and terminates at the
+   install step.
    ========================================================================== */
 
 function initSpine() {
@@ -25,13 +25,17 @@ function initSpine() {
   const box = (name) => {
     const el = main.querySelector(`[data-sp="${name}"]`);
     if (!el) return null;
-    const r = el.getBoundingClientRect();
-    if (!r.width && !r.height) return null;
-    return {
-      x: r.left - M.left, y: r.top - M.top, w: r.width, h: r.height,
-      cx: r.left - M.left + r.width / 2, cy: r.top - M.top + r.height / 2,
-      right: r.right - M.left, bottom: r.bottom - M.top,
-    };
+    /* Offsets ignore transforms, so a row still mid scroll-in (shifted down by
+       its reveal) is measured where it comes to rest. */
+    let x = 0, y = 0, n = el;
+    while (n && n !== main) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (n !== main) {
+      const r = el.getBoundingClientRect();
+      x = r.left - M.left; y = r.top - M.top;
+    }
+    if (!w && !h) return null;
+    return { x, y, w, h, cx: x + w / 2, cy: y + h / 2, right: x + w, bottom: y + h };
   };
 
   /* rounded orthogonal elbows. the corner radius shrinks rather than
@@ -59,28 +63,14 @@ function initSpine() {
     if (!origin) return;
     const railX = Math.round(origin.cx) + 0.5;
 
-    const contentEl = main.querySelector("#principles .tap h3");
-    const contentX = contentEl ? contentEl.getBoundingClientRect().left - M.left : railX + 78;
-
     const segs = [];
     const push = (sec, d, cls = "", draw = true, arrow = false) => segs.push({ sec, d, cls, draw, arrow });
     const dots = [];
 
     const why1 = box("why-1"), why2 = box("why-2"), why3 = box("why-3");
-    const hub = box("loop-hub");
-    const l1 = box("loop-1"), l2 = box("loop-2"), l3 = box("loop-3");
-    const lOut = box("loop-out");
     const frame = box("canvas-frame");
-    const p1 = box("prin-1"), p4 = box("prin-4");
+    const lives = box("map-node");
     const term = box("install-node");
-
-    /* gentle cubic from a hub down into a station top */
-    const fan = (from, to) => {
-      const dy = Math.max(56, to.y - from.bottom);
-      const c1y = from.bottom + dy * 0.55;
-      const c2y = to.y - Math.min(28, dy * 0.35);
-      return `M ${from.cx} ${from.bottom} C ${from.cx} ${c1y}, ${to.cx} ${c2y}, ${to.cx} ${to.y}`;
-    };
 
     /* The playable canvas follows the hero before the argument continues. */
     if (frame && why3) {
@@ -94,62 +84,13 @@ function initSpine() {
        node carries the meaning on its own. */
     for (const b of [why1, why2]) {
       if (!b || b.x - 4 <= railX + 12) continue;
-      push("why", elbowRight(railX, b.cy - 26, b.cy, b.x - 4, 12), "is-fail", false);
+      push("why", elbowRight(railX, b.cy - 26, b.cy, b.x + 1, 12), "is-fail", false);
       dots.push({ sec: "why", x: railX, y: b.cy - 26 });
     }
-    if (why3) push("why", `M ${why3.right + 3} ${why3.cy} H ${contentX - 10}`);
 
-    /* the loop: rail runs to the hub, then fans into three stations.
-       on the stacked layout the hub sits on the rail and the fan collapses
-       into short left-side taps. */
-    const hubbed = hub && Math.abs(hub.cx - railX) > 36;
-    if (why3 && hub) {
-      if (hubbed) {
-        /* leave the rail, rise into the hub from the left so the fan sits
-           above the row instead of reading as a left-to-right bus */
-        const approachY = hub.cy;
-        push("loop", `M ${railX} ${why3.cy} V ${approachY}`);
-        push("loop", `M ${railX} ${approachY} H ${hub.x - 4}`);
-      } else {
-        push("loop", `M ${railX} ${why3.cy} V ${hub.cy}`);
-      }
-    }
-
-    if (hub && l1 && l2 && l3) {
-      if (hubbed) {
-        push("loop", fan(hub, l1));
-        push("loop", fan(hub, l2));
-        push("loop", fan(hub, l3));
-      } else {
-        push("loop", `M ${railX} ${hub.cy} V ${l3.cy}`);
-        for (const s of [l1, l2, l3]) {
-          if (s && s.x - 4 > railX + 8) push("loop", `M ${railX} ${s.cy} H ${s.x - 4}`);
-        }
-      }
-    }
-
-    /* leave through Observe and rejoin the rail */
-    let joinY = null;
-    if (hubbed && lOut) {
-      joinY = lOut.cy + 36;
-      push("loop", `M ${lOut.cx} ${lOut.cy} V ${joinY}`);
-      push("loop", `M ${lOut.cx} ${joinY} H ${railX}`);
-    } else if (l3) {
-      joinY = l3.cy;
-    }
-
-    /* the bus, with a tap per principle */
-    if (frame && p1 && p4 && joinY != null) {
-      const principlesStart = joinY;
-      push("principles", `M ${railX} ${principlesStart} V ${p4.cy}`);
-      for (const n of ["prin-1", "prin-2", "prin-3", "prin-4"]) {
-        const t = box(n);
-        if (t) push("principles", `M ${t.right + 3} ${t.cy} H ${contentX - 10}`);
-      }
-    }
-
-    /* everything converges on one terminal node */
-    if (p4 && term) push("install", `M ${railX} ${p4.cy} V ${term.y - 4}`);
+    /* the trunk passes the map-in-your-repo node and ends at one terminal node */
+    if (why3 && lives) push("map", `M ${railX} ${why3.cy} V ${lives.cy}`);
+    if (lives && term) push("install", `M ${railX} ${lives.cy} V ${term.y - 4}`);
 
     /* render */
     svg.replaceChildren();
@@ -196,7 +137,7 @@ function initSpine() {
   let groups = build();
 
   /* draw each section's segments as that section arrives */
-  const drawn = new Set(REDUCED ? ["why", "loop", "canvas", "principles", "install"] : []);
+  const drawn = new Set(REDUCED ? ["why", "canvas", "map", "install"] : []);
   const applyDrawn = () => {
     if (!groups) return;
     for (const [sec, g] of groups) g.classList.toggle("in", drawn.has(sec));
@@ -215,7 +156,7 @@ function initSpine() {
       if (changed) applyDrawn();
     }, { rootMargin: "0px 0px -12% 0px", threshold: 0.02 });
 
-    for (const id of ["why", "loop", "canvas", "principles", "install"]) {
+    for (const id of ["why", "canvas", "map", "install"]) {
       const el = document.getElementById(id);
       if (el) io.observe(el);
     }
@@ -239,9 +180,10 @@ function initSpine() {
    ========================================================================== */
 
 const TOUR_INSTRUCTIONS = {
+  draw: "Your agent saves the workflow file. HQFlow draws each step as it lands.",
   details: "Click “Agent Maps Code” to inspect its real sources, inputs, outputs, and agent boundary.",
   trace: "Hover “Agent Maps Code.” HQFlow strengthens its visible path and quiets everything else.",
-  arrange: "Drag a card to reshape the flow. Then drag the dot on a solid edge to bend or snap it.",
+  arrange: "Drag a card to reshape the flow. The edges follow.",
   export: "Export the complete diagram as a PNG, or take an interactive HTML snapshot offline.",
 };
 
@@ -306,17 +248,24 @@ async function downloadInteractiveDemo() {
 
 function initWalkthrough() {
   const tabs = Array.from(document.querySelectorAll("[data-tour-step]"));
+  const instructionLabel = document.querySelector("#tourInstruction span");
   const instruction = document.querySelector("#tourInstruction strong");
   const exportPreview = document.getElementById("tourExport");
   const frame = document.querySelector(".tour-frame");
   const formatInputs = Array.from(document.querySelectorAll('input[name="tour-export-format"]'));
   const downloadButton = document.getElementById("tourExportDownload");
   const error = document.getElementById("tourExportError");
-  if (!tabs.length || !instruction || !exportPreview || !frame || !formatInputs.length || !downloadButton || !error) return;
+  if (!tabs.length || !instructionLabel || !instruction || !exportPreview || !frame || !formatInputs.length || !downloadButton || !error) return;
+
+  /* The one canvas draws itself first (tab "draw"), then hosts the feature tour. */
+  const tell = (command) => frame.contentWindow?.postMessage({ type: "hqflow-demo", command }, window.location.origin);
+  const tabFor = (step) => tabs.find((tab) => tab.dataset.tourStep === step);
 
   const activate = (tab) => {
     const step = tab.dataset.tourStep;
     if (!step || !(step in TOUR_INSTRUCTIONS)) return;
+    tell(step === "draw" ? "replay" : "finish");
+    instructionLabel.textContent = step === "draw" ? "Live" : "Try it";
     for (const candidate of tabs) {
       const active = candidate === tab;
       candidate.classList.toggle("is-active", active);
@@ -329,6 +278,12 @@ function initWalkthrough() {
     exportPreview.setAttribute("aria-hidden", String(!showExport));
     if (showExport) exportPreview.querySelector("input:checked")?.focus();
   };
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== frame.contentWindow || event.data?.type !== "hqflow-demo") return;
+    if (event.data.event === "export") activate(tabFor("export"));
+    else if (event.data.event === "drawn" && tabFor("draw")?.classList.contains("is-active")) activate(tabFor("details"));
+  });
 
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activate(tab));
@@ -351,7 +306,7 @@ function initWalkthrough() {
   formatInputs.forEach((input) => input.addEventListener("change", updateFormat));
 
   document.querySelectorAll("[data-export-close]").forEach((button) => {
-    button.addEventListener("click", () => activate(tabs[0]));
+    button.addEventListener("click", () => activate(tabFor("details")));
   });
 
   downloadButton.addEventListener("click", async () => {
@@ -436,8 +391,37 @@ function initUI() {
     document.querySelectorAll(".section .reveal").forEach((el) => io.observe(el));
   }
 
+  initStarCount();
+
   const progress = document.querySelector(".progress");
   if (progress && REDUCED) progress.remove();
+}
+
+/* The star count beside the GitHub link. It is a nicety: on any failure (offline, rate
+   limited) the button simply reads "Star" without a number. Cached for the session so
+   moving between pages does not spend the 60-per-hour anonymous API budget. */
+async function initStarCount() {
+  const slots = document.querySelectorAll("[data-stars]");
+  if (!slots.length) return;
+  const KEY = "hqflow.stars";
+  let stars = Number(sessionStorage.getItem(KEY));
+  if (!stars) {
+    try {
+      const response = await fetch("https://api.github.com/repos/WinterArc21/HQFlow", { headers: { Accept: "application/vnd.github+json" } });
+      if (!response.ok) return;
+      stars = Number((await response.json()).stargazers_count);
+      if (!Number.isFinite(stars) || stars <= 0) return;
+      sessionStorage.setItem(KEY, String(stars));
+    } catch {
+      return;
+    }
+  }
+  const label = stars >= 1000 ? `${(stars / 1000).toFixed(stars >= 10000 ? 0 : 1)}k` : String(stars);
+  for (const slot of slots) {
+    slot.textContent = label;
+    slot.hidden = false;
+    slot.closest("a")?.setAttribute("aria-label", `Star HQFlow on GitHub (${stars} stars)`);
+  }
 }
 
 /* ---- boot ---- */

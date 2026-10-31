@@ -5,10 +5,11 @@
  * title), deliberately kept in `tests/e2e/**` rather than pulling in a new devDependency.
  */
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 });
 
 test("every interactive control has an accessible name", async ({ page }) => {
@@ -74,15 +75,6 @@ test("every interactive control has an accessible name", async ({ page }) => {
   });
 
   expect(unnamed, `Interactive elements with no accessible name:\n${unnamed.join("\n---\n")}`).toEqual([]);
-});
-
-test("the canvas is reachable by pressing Tab", async ({ page }) => {
-  let reachedCanvas = false;
-  for (let attempt = 0; attempt < 40 && !reachedCanvas; attempt += 1) {
-    await page.keyboard.press("Tab");
-    reachedCanvas = await page.evaluate(() => document.activeElement?.hasAttribute("data-step-node") ?? false);
-  }
-  expect(reachedCanvas).toBe(true);
 });
 
 test("a focused control has a visible focus indicator", async ({ page }) => {

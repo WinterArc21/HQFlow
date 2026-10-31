@@ -1,14 +1,14 @@
+/* The app shell fills the frame on its own; this wrapper only marks the drawing phase. */
 .app {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-canvas);
+  display: contents;
 }
 
-.canvas {
-  flex: 1;
-  min-height: 0;
+/* While the map draws, the change toast would cover the cards it draws in. */
+.app[data-live] :global([class^="_toast_"]) {
+  display: none;
+}
+
+/* There is no HQFlow server behind the demo, so a step card's source rows keep only "Copy path". */
+.app :global([class^="_card_"] [class^="_actions_"] > button:first-child:not(:only-child)) {
+  display: none;
 }

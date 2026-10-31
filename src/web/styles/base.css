@@ -13,9 +13,6 @@ body {
   line-height: var(--lh-base);
   color: var(--text-primary);
   background-color: var(--bg-canvas);
-  background-image:
-    repeating-linear-gradient(to right, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 32px),
-    repeating-linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 32px);
 }
 
 code,

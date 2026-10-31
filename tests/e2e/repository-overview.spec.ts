@@ -1,0 +1,102 @@
+/**
+ * An initialized repository with no workflow files, served from its own server/port/temp-dir
+ * (PORTS.empty) so it is safe to run concurrently with the rest of the suite under
+ * `fullyParallel`.
+ */
+import { promises as fsp } from "node:fs";
+import path from "node:path";
+import { expect, test } from "@playwright/test";
+import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
+import { PORTS } from "./helpers/paths";
+import { startCodeHQServer, type ManagedServer } from "./helpers/server";
+
+test.describe("initialized but no workflow files", () => {
+  test.describe.configure({ mode: "serial" });
+  let root: string;
+  let server: ManagedServer;
+
+  test.beforeAll(async () => {
+    root = await createTempFixtureCopy("empty");
+    await fsp.rm(path.join(root, ".codehq", "workflows", "generate-video.json"), { force: true });
+    await fsp.rm(path.join(root, ".codehq", "workflows", "upload-assets.json"), { force: true });
+    server = await startCodeHQServer(root, PORTS.empty);
+  });
+
+  test.afterAll(async () => {
+    await server.stop();
+    await removeTempDir(root);
+  });
+
+  test("shows overview cards live, then opens a workflow when its detail file arrives", async ({ page }) => {
+    await page.goto(server.url);
+    await fsp.writeFile(
+      path.join(root, ".codehq", "repository-map.json"),
+      JSON.stringify({
+        schemaVersion: "0.1",
+        workflows: [
+          { id: "checkout", name: "Checkout", purpose: "Turns a cart into a confirmed order." },
+          { id: "fulfilment", name: "Fulfilment", purpose: "Ships paid orders." },
+        ],
+        connections: [{
+          from: "checkout",
+          to: "fulfilment",
+          label: "paid order",
+          sources: [{ file: "package.json" }],
+        }],
+      }, null, 2),
+    );
+
+    await expect(page.getByRole("heading", { name: "Repository Overview" })).toBeVisible();
+    // The title is a pill; clicking it opens the card with the overview's details.
+    await page.getByRole("button", { name: "Workflows: Overview" }).click();
+    await expect(page.getByText("0 of 2 workflows mapped")).toBeVisible();
+    await page.keyboard.press("Escape");
+    const checkoutCard = page.locator('[data-step-node="checkout"]');
+    await expect(checkoutCard).toBeVisible();
+    await expect(page.locator('[data-step-node="fulfilment"]')).toBeVisible();
+    // A straight hand-off edge has a zero-height box, which Playwright calls hidden, so check that
+    // the edge is drawn and that its label shows.
+    await expect(page.locator('.react-flow__edge[data-id="repository-handoff-0"] path.react-flow__edge-path')).toHaveAttribute("d", /\S/);
+    await expect(page.getByText("paid order", { exact: true })).toBeVisible();
+
+    const cardBox = await checkoutCard.boundingBox();
+    expect(cardBox).not.toBeNull();
+    await page.mouse.move(cardBox!.x + cardBox!.width / 2, cardBox!.y + cardBox!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(cardBox!.x + cardBox!.width / 2 + 80, cardBox!.y + cardBox!.height / 2 + 50, { steps: 4 });
+    await page.mouse.up();
+
+    await expect(page.getByRole("button", { name: /^Bend edge / })).toHaveCount(0);
+
+    await expect.poll(async () => {
+      const raw = await fsp.readFile(path.join(root, ".codehq", ".runtime", "layout.json"), "utf-8").catch(() => "{}");
+      return JSON.parse(raw) as unknown;
+    }).toMatchObject({
+      workflows: {
+        "__repository-map__": {
+          nodePositions: { checkout: { x: expect.any(Number), y: expect.any(Number) } },
+        },
+      },
+    });
+
+    await fsp.writeFile(
+      path.join(root, ".codehq", "workflows", "checkout.json"),
+      JSON.stringify({
+        schemaVersion: "0.1",
+        id: "checkout",
+        name: "Checkout",
+        purpose: "Turns a cart into a confirmed order.",
+        steps: [{ id: "receive-cart", name: "Receive cart", purpose: "Accepts the cart.", category: "entry" }],
+        connections: [],
+      }, null, 2),
+    );
+
+    // The title is a pill; clicking it opens the card with the overview's details.
+    await page.getByRole("button", { name: "Workflows: Overview" }).click();
+    await expect(page.getByText("1 of 2 workflows mapped")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await checkoutCard.click();
+    await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
+    await expect(page.locator('[data-step-node="receive-cart"]')).toBeVisible();
+  });
+});

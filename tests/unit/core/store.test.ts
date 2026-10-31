@@ -158,6 +158,39 @@ describe("CodeHQStore — last-valid-state preservation", () => {
 
     expect(snapshot.workflows.map((w) => w.id)).toEqual(["zeta", "alpha"]);
   });
+
+  it("sorts numbered workflow names numerically", async () => {
+    for (const n of [10, 2, 1]) {
+      writeFileSync(
+        path.join(workflowsDir, `step-${n}.json`),
+        JSON.stringify({
+          schemaVersion: "0.1",
+          id: `step-${n}`,
+          name: `Step ${n}`,
+          purpose: "p",
+          steps: [{ id: "s", name: "S", purpose: "p", category: "entry" }],
+          connections: [],
+        }),
+      );
+    }
+
+    const snapshot = await createCodeHQStore(root).reload();
+
+    expect(snapshot.workflows.map((w) => w.workflow.name)).toEqual(["Step 1", "Step 2", "Step 10"]);
+  });
+
+  it("accepts workflow and project files saved with a UTF-8 byte order mark", async () => {
+    writeFileSync(
+      path.join(root, ".codehq", "project.json"),
+      `﻿${JSON.stringify({ schemaVersion: "0.1", project: { id: "test", name: "Test Project" } })}`,
+    );
+    writeFileSync(path.join(workflowsDir, "wf.json"), `﻿${validWorkflowJson("With BOM")}`);
+
+    const snapshot = await createCodeHQStore(root).reload();
+
+    expect(snapshot.diagnostics.issues.filter((issue) => issue.severity === "error")).toEqual([]);
+    expect(snapshot.workflows.map((w) => w.workflow.name)).toEqual(["With BOM"]);
+  });
 });
 
 describe("CodeHQStore — status", () => {

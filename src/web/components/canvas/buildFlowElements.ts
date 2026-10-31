@@ -1,15 +1,14 @@
 /** Converts a `LayoutResult` plus current UI state into the plain node/edge arrays React Flow
  * renders. Kept out of `WorkflowCanvas.tsx` so that component stays focused on wiring. */
-import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Position, type NodeHandle } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
 import { outcomeTone } from "../../design/semantics";
 import { computeIncomingTypes } from "./graph";
-import type { LayoutResult } from "./layout";
-import { effectiveDepthForStep, stepHasMissingSource } from "./nodeContent";
+import { WRAP_ROW_GAP, type CanvasView, type LayoutResult, type OutcomeBand } from "./layout";
+import { stepHasMissingSource } from "./nodeContent";
 import type { OutcomeFlowNode, StepFlowNode, WorkflowFlowEdge } from "./types";
-import type { CanvasBend } from "../../store/useCodeHQStore";
 
 export function restoreGeneratedNodePositions<
   NodeType extends { id: string; position: { x: number; y: number } },
@@ -18,14 +17,99 @@ export function restoreGeneratedNodePositions<
   return nodes.map((node) => ({ ...node, position: generatedPositions.get(node.id) ?? node.position }));
 }
 
-function isStepExpanded(expandedStepIds: Record<string, true>, stepId: string): boolean {
-  return expandedStepIds[stepId] === true;
+/** Rendered size of the invisible target-side anchors in both node stylesheets (`.handleHidden`
+ * in StepNode, `.handle` in OutcomeNode). */
+const HANDLE_SIZE = 10;
+/** Rendered size of the visible source-side port squares (`.handle` in StepNode). */
+const SOURCE_HANDLE_SIZE = 7;
+export const RETRY_IN_FRACTION = 0.28;
+export const RETRY_OUT_FRACTION = 0.72;
+
+/**
+ * Each side of a work card has one arrival port and one departure port, both at the side's middle.
+ * When a moved card makes one edge arrive and another leave on the same side, the arrowhead would
+ * land on the departure square; when two edges leave on the same side, they would start on one
+ * square. In both cases the ports move to these split slots instead (see
+ * `splitSharedSides`). The id of a split port is its middle port's id plus `@1` or `@2`.
+ */
+const SPLIT_FRACTIONS = [0.35, 0.65] as const;
+const MIDDLE_PORTS = [
+  { id: "in", type: "target", position: Position.Left },
+  { id: "in-right", type: "target", position: Position.Right },
+  { id: "in-top", type: "target", position: Position.Top },
+  { id: "in-bottom", type: "target", position: Position.Bottom },
+  { id: "out", type: "source", position: Position.Right },
+  { id: "out-left", type: "source", position: Position.Left },
+  { id: "out-top", type: "source", position: Position.Top },
+  { id: "out-bottom", type: "source", position: Position.Bottom },
+] as const;
+export const SPLIT_PORTS = MIDDLE_PORTS.flatMap((port) =>
+  SPLIT_FRACTIONS.map((fraction, slot) => ({ ...port, id: `${port.id}@${slot + 1}`, fraction })),
+);
+
+function splitPortHandles(width: number, height: number): NodeHandle[] {
+  return SPLIT_PORTS.map(({ id, type, position, fraction }) => {
+    const size = type === "source" ? SOURCE_HANDLE_SIZE : HANDLE_SIZE;
+    const vertical = position === Position.Left || position === Position.Right;
+    const x = vertical ? (position === Position.Left ? 0 : width) : width * fraction;
+    const y = vertical ? height * fraction : position === Position.Top ? 0 : height;
+    return { id, type, position, x: x - size / 2, y: y - size / 2, width: size, height: size };
+  });
 }
 
-/** Rendered size of the visible geometric ports in both node stylesheets. */
-const HANDLE_SIZE = 10;
-const RETRY_IN_FRACTION = 0.28;
-const RETRY_OUT_FRACTION = 0.72;
+/**
+ * Moves the arrival and the departure on a shared card side apart, and also two departures that
+ * share a side. The role (or departure) whose other cards sit nearer the start of the side (the
+ * top, or the left) takes the first slot, so the lines do not cross at the card. Edges that need
+ * no change keep their identity.
+ */
+export function splitSharedSides(edges: WorkflowFlowEdge[], bounds: ReadonlyMap<string, Box>): WorkflowFlowEdge[] {
+  const sideOf = new Map<string, Position>(MIDDLE_PORTS.map((port) => [port.id, port.position]));
+  const peerCenter = (nodeId: string, side: Position): number => {
+    const box = bounds.get(nodeId);
+    if (box === undefined) return 0;
+    return side === Position.Left || side === Position.Right ? box.y + box.height / 2 : box.x + box.width / 2;
+  };
+  type SideUse = { edgeIndex: number; peer: number };
+  const arrivals = new Map<string, SideUse[]>();
+  const departures = new Map<string, SideUse[]>();
+  const add = (map: Map<string, SideUse[]>, key: string, use: SideUse) => map.set(key, [...(map.get(key) ?? []), use]);
+  edges.forEach((edge, edgeIndex) => {
+    const sourceSide = sideOf.get(edge.sourceHandle ?? "");
+    const targetSide = sideOf.get(edge.targetHandle ?? "");
+    if (sourceSide !== undefined) add(departures, `${edge.source}:${sourceSide}`, { edgeIndex, peer: peerCenter(edge.target, sourceSide) });
+    if (targetSide !== undefined) add(arrivals, `${edge.target}:${targetSide}`, { edgeIndex, peer: peerCenter(edge.source, targetSide) });
+  });
+  const average = (uses: SideUse[]) => uses.reduce((sum, use) => sum + use.peer, 0) / uses.length;
+  const sourceSlots = new Map<number, 1 | 2>();
+  const targetSlots = new Map<number, 1 | 2>();
+  for (const [key, departureUses] of departures) {
+    const arrivalUses = arrivals.get(key);
+    if (arrivalUses !== undefined) {
+      const arrivalsFirst = average(arrivalUses) <= average(departureUses);
+      arrivalUses.forEach(({ edgeIndex }) => targetSlots.set(edgeIndex, arrivalsFirst ? 1 : 2));
+      departureUses.forEach(({ edgeIndex }) => sourceSlots.set(edgeIndex, arrivalsFirst ? 2 : 1));
+    } else if (departureUses.length > 1) {
+      // Two or more departures and no arrival: they leave from the two slots like an arrival and a
+      // departure do. The departures to cards nearer the start of the side take the first slot.
+      // Arrivals with no departure stay merged on the middle port, so a fan-in reads as one join.
+      const ordered = [...departureUses].sort((a, b) => a.peer - b.peer);
+      const firstSlotCount = Math.ceil(ordered.length / 2);
+      ordered.forEach(({ edgeIndex }, order) => sourceSlots.set(edgeIndex, order < firstSlotCount ? 1 : 2));
+    }
+  }
+  if (sourceSlots.size === 0 && targetSlots.size === 0) return edges;
+  return edges.map((edge, edgeIndex) => {
+    const sourceSlot = sourceSlots.get(edgeIndex);
+    const targetSlot = targetSlots.get(edgeIndex);
+    if (sourceSlot === undefined && targetSlot === undefined) return edge;
+    return {
+      ...edge,
+      ...(sourceSlot !== undefined ? { sourceHandle: `${edge.sourceHandle}@${sourceSlot}` } : {}),
+      ...(targetSlot !== undefined ? { targetHandle: `${edge.targetHandle}@${targetSlot}` } : {}),
+    };
+  });
+}
 
 /** The four target-side ports shared by work cards and terminal outcome pills. The default
  * "in" id is the left-facing port; the other ids name their physical side explicitly. */
@@ -70,17 +154,18 @@ function stepHandles(
 ): NodeHandle[] {
   return [
     ...cardinalTargetHandles(width, height),
-    { id: "out", type: "source", position: Position.Right, x: width - HANDLE_SIZE / 2, y: height / 2 - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-left", type: "source", position: Position.Left, x: -HANDLE_SIZE / 2, y: height / 2 - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-top", type: "source", position: Position.Top, x: width / 2 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    { id: "out-bottom", type: "source", position: Position.Bottom, x: width / 2 - HANDLE_SIZE / 2, y: height - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-    ...(failure ? [{ id: "failure", type: "source" as const, position: Position.Top, x: width / 2 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
-    ...(success ? [{ id: "success", type: "source" as const, position: Position.Bottom, x: width / 2 - HANDLE_SIZE / 2, y: height - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
+    { id: "out", type: "source", position: Position.Right, x: width - SOURCE_HANDLE_SIZE / 2, y: height / 2 - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-left", type: "source", position: Position.Left, x: -SOURCE_HANDLE_SIZE / 2, y: height / 2 - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-top", type: "source", position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    { id: "out-bottom", type: "source", position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
+    ...splitPortHandles(width, height),
+    ...(failure ? [{ id: "failure", type: "source" as const, position: Position.Top, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
+    ...(success ? [{ id: "success", type: "source" as const, position: Position.Bottom, x: width / 2 - SOURCE_HANDLE_SIZE / 2, y: height - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(returnIn ? [{ id: "return-in", type: "target" as const, position: Position.Top, x: width * 0.3 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
-    ...(returnOut ? [{ id: "return-out", type: "source" as const, position: Position.Top, x: width * 0.7 - HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE }] : []),
+    ...(returnOut ? [{ id: "return-out", type: "source" as const, position: Position.Top, x: width * 0.7 - SOURCE_HANDLE_SIZE / 2, y: -SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE }] : []),
     ...(retry ? [
       { id: "retry-in", type: "target" as const, position: Position.Right, x: width - HANDLE_SIZE / 2, y: height * RETRY_IN_FRACTION - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
-      { id: "retry-out", type: "source" as const, position: Position.Right, x: width - HANDLE_SIZE / 2, y: height * RETRY_OUT_FRACTION - HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE },
+      { id: "retry-out", type: "source" as const, position: Position.Right, x: width - SOURCE_HANDLE_SIZE / 2, y: height * RETRY_OUT_FRACTION - SOURCE_HANDLE_SIZE / 2, width: SOURCE_HANDLE_SIZE, height: SOURCE_HANDLE_SIZE },
     ] : []),
   ];
 }
@@ -105,20 +190,54 @@ export function chooseCardinalHandles(
     : { sourceHandle: "out-top", targetHandle: "in-bottom" };
 }
 
-/** Shared hover/focus wiring every node (step or outcome) needs for path tracing (contract §11:
- * "Must work for keyboard focus too, not just mouse"). */
+type Box = { x: number; y: number; width: number; height: number };
+
+/** Line view: whether an outcome sits in its band past its step (above for failure, below for
+ * success) and so uses the step's band port. An outcome hung under its step does not. */
+function inBandBeyond(source: Box, target: Box, band: OutcomeBand | undefined): boolean {
+  return band === "failure" ? target.y + target.height <= source.y : band === "success" && target.y >= source.y + source.height;
+}
+
+/**
+ * The handle pair for a connection in a given view. Flow prefers a straight drop from the bottom
+ * of one card into the top of the next; the other views use the facing sides.
+ */
+export function chooseViewHandles(
+  view: CanvasView,
+  source: Box,
+  target: Box,
+  targetIsOutcome = false,
+): { sourceHandle: string; targetHandle: string } {
+  if (view === "flow") {
+    // An outcome stack hangs beside its step: leave from the facing side, even for a lower pill.
+    if (targetIsOutcome && target.x >= source.x + source.width) {
+      return { sourceHandle: "out", targetHandle: "in" };
+    }
+    if (targetIsOutcome && target.x + target.width <= source.x) {
+      return { sourceHandle: "out-left", targetHandle: "in-right" };
+    }
+    if (target.y >= source.y + source.height) {
+      return { sourceHandle: "out-bottom", targetHandle: "in-top" };
+    }
+  }
+  // Line reads left to right: a card in another column connects side to side, however far down
+  // it sits, so the line never drops through the cards stacked between them.
+  if (view === "line" && !targetIsOutcome && target.x !== source.x) {
+    return target.x > source.x ? { sourceHandle: "out", targetHandle: "in" } : { sourceHandle: "out-left", targetHandle: "in-right" };
+  }
+  return chooseCardinalHandles(source, target);
+}
+
+/** Shared hover wiring every node (step or outcome) needs for path tracing. */
 export interface TraceHandlers {
   onHoverStart: (stepId: string) => void;
   onHoverEnd: () => void;
-  onFocusStep: (stepId: string) => void;
-  onBlurStep: () => void;
 }
 
 export interface BuildFlowNodesParams extends TraceHandlers {
   workflow: Workflow;
   layout: LayoutResult;
   backEdgeIds: ReadonlySet<string>;
-  expandedStepIds: Record<string, true>;
   sourceChecks: Record<string, SourceStatus>;
   selectedStepId: string | null;
   /** The active trace's one-hop step set (anchor + immediate upstream/downstream), or `null` when
@@ -126,7 +245,6 @@ export interface BuildFlowNodesParams extends TraceHandlers {
    * contain it. */
   traceStepIds: ReadonlySet<string> | null;
   getTabIndex: (stepId: string) => 0 | -1;
-  onToggleExpand: (stepId: string) => void;
   onNodeKeyDown: (event: ReactKeyboardEvent<HTMLElement>, stepId: string) => void;
 }
 
@@ -154,7 +272,13 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
   params.workflow.connections.forEach((edge, index) => {
     const sourceFlags = flagsByStepId.get(edge.from);
     const targetFlags = flagsByStepId.get(edge.to);
-    const outcomeBand = outcomeNodeById.get(edge.to)?.outcomeBand;
+    // Outside the line view, outcome and return edges use the ordinary side ports.
+    const lineView = params.layout.view === "line";
+    const outcomeNode = lineView ? outcomeNodeById.get(edge.to) : undefined;
+    const sourceNode = params.layout.nodes.find((node) => node.id === edge.from);
+    const outcomeBand = outcomeNode !== undefined && sourceNode !== undefined && inBandBeyond(sourceNode, outcomeNode, outcomeNode.outcomeBand)
+      ? outcomeNode.outcomeBand
+      : undefined;
     if (sourceFlags !== undefined && outcomeBand === "failure") {
       sourceFlags.hasFailureOutcome = true;
     }
@@ -165,7 +289,7 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
       sourceFlags.hasRetry = true;
     }
     const id = edge.id ?? `${edge.from}->${edge.to}#${index}`;
-    if (edge.from !== edge.to && params.backEdgeIds.has(id)) {
+    if (lineView && edge.from !== edge.to && params.backEdgeIds.has(id)) {
       if (sourceFlags !== undefined) {
         sourceFlags.hasReturnOut = true;
       }
@@ -188,8 +312,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
     const traceHandlers = {
       onHoverStart: () => params.onHoverStart(step.id),
       onHoverEnd: params.onHoverEnd,
-      onFocusStep: (_event: ReactFocusEvent<HTMLElement>) => params.onFocusStep(step.id),
-      onBlurStep: (_event: ReactFocusEvent<HTMLElement>) => params.onBlurStep(),
     };
 
     if (layoutNode.isOutcome) {
@@ -249,8 +371,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
       data: {
         step,
         index: layoutNode.index,
-        effectiveDepth: effectiveDepthForStep(step, params.expandedStepIds),
-        expanded: isStepExpanded(params.expandedStepIds, step.id),
         selected: step.id === params.selectedStepId,
         hasMissingSource: stepHasMissingSource(step, params.sourceChecks),
         hasFailureOutcome,
@@ -260,7 +380,6 @@ export function buildFlowNodes(params: BuildFlowNodesParams): Array<StepFlowNode
         hasReturnOut,
         dimmed,
         tabIndex: params.getTabIndex(step.id),
-        onToggleExpand: () => params.onToggleExpand(step.id),
         onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => params.onNodeKeyDown(event, step.id),
         ...traceHandlers,
       },
@@ -271,21 +390,45 @@ export function buildFlowEdges(
   layout: LayoutResult,
   backEdgeIds: ReadonlySet<string>,
   traceEdgeIds: ReadonlySet<string> | null,
-  bendResetKey?: string,
-  savedBends: Record<string, CanvasBend> = {},
-  onBendChange?: (edgeId: string, bend: CanvasBend) => void,
 ): WorkflowFlowEdge[] {
   const nodeById = new Map(layout.nodes.map((node) => [node.id, node] as const));
+  const siblingsByPair = new Map<string, string[]>();
+  for (const edge of layout.edges) {
+    if (edge.source === edge.target) {
+      continue;
+    }
+    const key = `${edge.source}\u0000${edge.target}`;
+    siblingsByPair.set(key, [...(siblingsByPair.get(key) ?? []), edge.id]);
+  }
+  const parallelOffsetOf = (edge: LayoutResult["edges"][number]): number => {
+    const siblings = siblingsByPair.get(`${edge.source}\u0000${edge.target}`);
+    if (siblings === undefined || siblings.length < 2) {
+      return 0;
+    }
+    return siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
+  };
 
   return layout.edges.map((edge) => {
     // Only a literal self-loop means retry. Other DFS back edges retain their declared semantics.
     const isRetryLoop = backEdgeIds.has(edge.id) && edge.source === edge.target;
     const isReturnEdge = backEdgeIds.has(edge.id) && edge.source !== edge.target;
+    const parallelOffset = parallelOffsetOf(edge);
     const targetNode = nodeById.get(edge.target);
     const sourceNode = nodeById.get(edge.source);
-    const cardinalHandles = !isRetryLoop && !isReturnEdge && targetNode?.isOutcome !== true && sourceNode !== undefined && targetNode !== undefined
-      ? chooseCardinalHandles(sourceNode, targetNode)
+    const lineView = layout.view === "line";
+    // A wrap edge into a later row returns under its row to the start of the next one.
+    const turnY = layout.view === "wrap" && !isReturnEdge && !isRetryLoop && targetNode?.isOutcome !== true
+      && sourceNode?.row !== undefined && targetNode?.row !== undefined && targetNode.row > sourceNode.row
+      ? (layout.wrapRowBottoms?.[sourceNode.row] ?? 0) + WRAP_ROW_GAP / 2
       : undefined;
+    // Outside the line view a return edge runs up the right side of the whole map.
+    const sideReturnX = !lineView && isReturnEdge ? layout.bounds.maxX + 56 : undefined;
+    const cardinalHandles = turnY !== undefined || sideReturnX !== undefined
+      ? { sourceHandle: "out", targetHandle: turnY !== undefined ? "in" : "in-right" }
+      : !isRetryLoop && !isReturnEdge && sourceNode !== undefined && targetNode !== undefined
+        && (targetNode.isOutcome !== true || !lineView || !inBandBeyond(sourceNode, targetNode, targetNode.outcomeBand))
+        ? chooseViewHandles(layout.view, sourceNode, targetNode, targetNode.isOutcome)
+        : undefined;
     // `computeTracePath` supplies only the anchor's outgoing edge ids. All other edges remain in
     // the canvas as context but dim while a trace is active.
     const dimmed = traceEdgeIds !== null && !traceEdgeIds.has(edge.id);
@@ -296,16 +439,16 @@ export function buildFlowEdges(
 
     const sourceHandle = isRetryLoop
       ? "retry-out"
-      : isReturnEdge
+      : cardinalHandles?.sourceHandle ?? (isReturnEdge
         ? "return-out"
-        : cardinalHandles?.sourceHandle ?? (targetNode?.isOutcome
+        : targetNode?.isOutcome
           ? targetNode.outcomeBand === "failure" ? "failure" : "success"
           : "out");
     const targetHandle = isRetryLoop
       ? "retry-in"
-      : isReturnEdge
+      : cardinalHandles?.targetHandle ?? (isReturnEdge
         ? "return-in"
-        : cardinalHandles?.targetHandle ?? (targetNode?.isOutcome === true ? "outcome-in" : "in");
+        : targetNode?.isOutcome === true ? "outcome-in" : "in");
 
     return {
       id: edge.id,
@@ -320,12 +463,13 @@ export function buildFlowEdges(
         retry: isRetryLoop,
         returnEdge: isReturnEdge,
         branch: targetNode?.isOutcome === true,
+        ...(parallelOffset !== 0 ? { parallelOffset } : {}),
         ...(outcomeBand !== undefined ? { outcomeBand } : {}),
+        ...(!isRetryLoop ? { routing: "step" as const } : {}),
+        ...(turnY !== undefined ? { turnY } : {}),
+        ...(sideReturnX !== undefined ? { returnX: sideReturnX } : {}),
         dimmed,
         traced,
-        ...(bendResetKey !== undefined ? { bendResetKey } : {}),
-        ...(savedBends[edge.id] !== undefined ? { savedBend: savedBends[edge.id] } : {}),
-        ...(onBendChange !== undefined ? { onBendChange: (bend: CanvasBend) => onBendChange(edge.id, bend) } : {}),
       },
     };
   });

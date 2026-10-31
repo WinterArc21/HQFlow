@@ -42,6 +42,17 @@ describe("buildDiagnostics", () => {
     expect(report.issues.map((i) => i.message)).toEqual(["4", "3", "2", "5", "1"]);
   });
 
+  it("orders array indices in paths numerically", () => {
+    const issues: Issue[] = ["tests[29]", "tests[2]", "tests[10]"].map((p) => ({
+      severity: "warning",
+      file: "a.json",
+      path: `steps[0].${p}`,
+      message: p,
+    }));
+
+    expect(buildDiagnostics(issues).issues.map((i) => i.message)).toEqual(["tests[2]", "tests[10]", "tests[29]"]);
+  });
+
 });
 
 describe("writeDiagnostics", () => {

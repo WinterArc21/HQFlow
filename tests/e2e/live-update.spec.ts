@@ -9,6 +9,7 @@
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForBoot } from "./helpers/app";
 import { createTempFixtureCopy, removeTempDir } from "./helpers/fixture";
 import { PORTS } from "./helpers/paths";
 import { startCodeHQServer, type ManagedServer } from "./helpers/server";
@@ -39,7 +40,7 @@ test.afterEach(async () => {
 
 test("renaming a step, then adding a step and connection, both appear live without a page reload", async ({ page }) => {
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
   await expect(page.locator("[data-step-node]")).toHaveCount(11);
 
   const workflowFile = path.join(root, ".codehq", "workflows", "generate-video.json");
@@ -73,20 +74,15 @@ test("renaming a step, then adding a step and connection, both appear live witho
   await expect(page.locator("[data-step-node]")).toHaveCount(12, { timeout: 10_000 });
   await expect(page.locator('[data-step-node="post-process-video"]')).toContainText("Post-process Video");
   await expect(page.locator(".react-flow__edge")).toHaveCount(11, { timeout: 10_000 });
+  // Live drawing remains, but the file/count status pill must not return during the build.
+  await expect(page.locator("[data-agent-cursor]").first()).toBeAttached();
+  await expect(page.getByRole("status").filter({ hasText: "generate-video.json" })).toHaveCount(0);
 });
 
-test("new graph elements animate in without detaching existing connectors", async ({ page }) => {
+test("a card that moves in a live edit keeps its connector attached", async ({ page }) => {
   await page.goto(server.url);
-  await page.locator("[data-step-node]").first().waitFor({ state: "visible", timeout: 15_000 });
+  await waitForBoot(page);
 
-  // New edges should have an enter animation (animation-name is not "none").
-  const existingEdgeAnimation = await page.locator(".react-flow__edge").first().evaluate((el) => {
-    return getComputedStyle(el).animationName;
-  });
-  expect(existingEdgeAnimation).not.toBe("none");
-
-  // Add a new step to trigger a live update, then verify the new node's wrapper has an enter
-  // animation (animation-name is not "none") while existing nodes retain their transform transition.
   const workflowFile = path.join(root, ".codehq", "workflows", "generate-video.json");
   const current = JSON.parse(await fsp.readFile(workflowFile, "utf-8")) as MinimalWorkflowFile;
   const withExtraStep = structuredClone(current);
@@ -104,29 +100,60 @@ test("new graph elements animate in without detaching existing connectors", asyn
 
   await expect(page.locator('[data-step-node="quality-check"]')).toBeVisible({ timeout: 10_000 });
 
-  // The enter animation (nodeEnter keyframe) is on the .react-flow__node wrapper, not the card
-  // inside — see WorkflowCanvas.module.css for why the opacity animation must be on the wrapper.
-  const newNodeAnimation = await page
-    .locator('.react-flow__node[data-id="quality-check"]')
-    .evaluate((el) => getComputedStyle(el).animationName);
-  expect(newNodeAnimation).not.toBe("none");
-
   const incomingEdgeId = "save-result->outcome-generation-created#9";
-  const connectorDistance = await page.evaluate((edgeId) => {
-    const targetHandle = document.querySelector<HTMLElement>('[data-nodeid="outcome-generation-created"][data-handleid="in-top"]');
+  const connectorDistance = () => page.evaluate((edgeId) => {
+    // The step moves onto the main line with the new layout, so whichever side faces its source
+    // takes the edge; attached means the line ends on one of the step's target handles.
+    const targetHandles = [...document.querySelectorAll<HTMLElement>('[data-nodeid="outcome-generation-created"].react-flow__handle.target')];
     const path = document.querySelector<SVGPathElement>(
       `.react-flow__edge[data-id="${edgeId}"] path.react-flow__edge-path`,
     );
-    if (targetHandle === null || path === null) {
+    if (targetHandles.length === 0 || path === null) {
       return Number.POSITIVE_INFINITY;
     }
-    const rect = targetHandle.getBoundingClientRect();
     const endpoint = path.getPointAtLength(path.getTotalLength());
     const screenEndpoint = new DOMPoint(endpoint.x, endpoint.y).matrixTransform(path.getScreenCTM() ?? new DOMMatrix());
-    return Math.hypot(screenEndpoint.x - (rect.left + rect.width / 2), screenEndpoint.y - (rect.top + rect.height / 2));
+    return Math.min(...targetHandles.map((handle) => {
+      const rect = handle.getBoundingClientRect();
+      return Math.hypot(screenEndpoint.x - (rect.left + rect.width / 2), screenEndpoint.y - (rect.top + rect.height / 2));
+    }));
   }, incomingEdgeId);
   // The horizontal canvas attaches incoming connections to the target's live facing handle,
   // rather than the card centre. A larger gap means node and edge geometry diverged during the
-  // live update.
-  expect(connectorDistance).toBeLessThan(5);
+  // live update. The card can take a frame or two to settle as it appears, so allow a short wait.
+  await expect.poll(connectorDistance, { timeout: 1_000 }).toBeLessThan(5);
+});
+
+test("cards that survive a live edit re-flow with the new layout instead of stacking under new cards", async ({ page }) => {
+  const workflowFile = path.join(root, ".codehq", "workflows", "upload-assets.json");
+  const full = JSON.parse(await fsp.readFile(workflowFile, "utf-8")) as MinimalWorkflowFile;
+  const keep = new Set(["receive-upload", "validate-file"]);
+  const small = structuredClone(full);
+  small.steps = small.steps.filter((step) => keep.has(step.id));
+  small.connections = small.connections.filter((connection) => keep.has(connection.from) && keep.has(connection.to));
+  await fsp.writeFile(workflowFile, `${JSON.stringify(small, null, 2)}\n`, "utf-8");
+
+  await page.goto(server.url);
+  await page.getByRole("button", { name: /^Workflows:/ }).click();
+  await page.getByRole("button", { name: /Upload Reference Asset/ }).first().click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2, { timeout: 10_000 });
+
+  await fsp.writeFile(workflowFile, `${JSON.stringify(full, null, 2)}\n`, "utf-8");
+  await expect(page.locator(".react-flow__node")).toHaveCount(full.steps.length, { timeout: 10_000 });
+
+  const overlaps = await page.locator(".react-flow__node").evaluateAll((elements) => {
+    const boxes = elements.map((element) => ({ id: element.getAttribute("data-id"), rect: element.getBoundingClientRect() }));
+    const found: string[] = [];
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i]!.rect;
+        const b = boxes[j]!.rect;
+        if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) {
+          found.push(`${boxes[i]!.id} / ${boxes[j]!.id}`);
+        }
+      }
+    }
+    return found;
+  });
+  expect(overlaps).toEqual([]);
 });

@@ -12,7 +12,7 @@ export function DataReferenceRow({ item }: DataReferenceRowProps) {
     <li className={styles.row}>
       <div className={styles.headerLine}>
         <span className={styles.name}>{item.name}</span>
-        {item.type !== undefined ? <Badge>{item.type}</Badge> : null}
+        {item.type !== undefined ? <Badge className={styles.type}>{item.type}</Badge> : null}
       </div>
       {item.description !== undefined ? <p className={styles.description}>{item.description}</p> : null}
     </li>

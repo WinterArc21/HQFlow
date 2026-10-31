@@ -1,17 +1,8 @@
 .indicator {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
   font-family: var(--font-ui);
   font-size: var(--fs-tiny);
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: currentColor;
-  flex-shrink: 0;
 }
 
 .label {
@@ -19,14 +10,32 @@
   white-space: nowrap;
 }
 
-.green {
+/* The word carries the tone. A new snapshot adds `.wash`, which plays once and is removed. */
+.green .label {
   color: var(--accent-green);
 }
 
-.amber {
+.wash {
+  border-radius: var(--radius-sm);
+  animation: wash 700ms var(--ease-out-expo);
+}
+
+.amber .label {
   color: var(--accent-amber);
 }
 
-.red {
+.red .label {
   color: var(--accent-red);
+}
+
+@keyframes wash {
+  from {
+    background-color: color-mix(in srgb, currentColor 16%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wash {
+    animation: none;
+  }
 }

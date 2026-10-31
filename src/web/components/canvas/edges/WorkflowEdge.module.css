@@ -1,103 +1,37 @@
-.orbTrack {
-  fill: none;
-  stroke: none;
-  pointer-events: none;
-}
-
-.orb {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-fast) var(--ease-standard);
-}
-
-.orbHalo {
-  fill: currentColor;
-  fill-opacity: 0.22;
-}
-
-.orbBead {
-  fill: currentColor;
-}
-
-.orbHost:hover .orb,
-:global(.react-flow__edge:hover) .orb,
-.orbHost[data-orb-active="true"] .orb {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .orb {
-    opacity: 0;
-  }
-
-  .orb animateMotion {
-    display: none;
-  }
-}
-
+/* Text-only label: no pill at rest. The edge line stops at the word (a mask cut in
+   WorkflowEdge.tsx) and continues after it. The pill appears on hover.
+   The box size stays the same in every state, so the
+   gap in the line does not change. */
 .label {
   position: absolute;
+  margin: 0;
   padding: 2px var(--space-2);
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, currentColor 38%, var(--border-subtle));
-  background-color: var(--canvas-node-body, var(--bg-surface));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: inherit;
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   line-height: 1.35;
   white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
 
-.bendHandleRegion {
-  overflow: visible;
-  pointer-events: none;
+/* Expose the full, possibly clamped text on the label itself. */
+.labelHoverable {
+  pointer-events: auto;
+  cursor: default;
 }
 
-.bendHandle {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  margin: 6px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  cursor: grab;
-  opacity: 0.78;
-  transition: opacity var(--dur-fast) var(--ease-standard);
-  pointer-events: all;
-  touch-action: none;
-}
-
-.bendHandle::before {
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--bg-raised);
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 1px 5px color-mix(in srgb, currentColor 35%, transparent);
-  content: "";
-  transition: scale var(--dur-fast) var(--ease-standard), border-radius var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
-}
-
-.bendHandle:hover,
-.bendHandle:focus-visible,
-.bendHandle[data-active="true"] {
-  opacity: 1;
-}
-
-.bendHandle:hover::before,
-.bendHandle:focus-visible::before,
-.bendHandle[data-active="true"]::before {
-  scale: 1.25;
-}
-
-.bendHandle[data-active="true"] {
-  cursor: grabbing;
-}
-
-.bendHandle[data-snapped="true"]::before {
-  border-radius: 2px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 22%, transparent);
+.labelHoverable:hover {
+  border-color: color-mix(in srgb, currentColor 38%, var(--border-subtle));
+  background-color: var(--bg-raised);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-canvas) 65%, transparent);
 }

@@ -1,38 +1,50 @@
 import {
   ArrowCounterClockwise,
-  ArrowsInLineVertical,
   DownloadSimple,
   MagnifyingGlassMinus,
   MagnifyingGlassPlus,
   Trash,
 } from "@phosphor-icons/react";
 import { IconButton } from "../primitives";
+import type { LegendRow } from "./CanvasLegend";
+import { CanvasViewSwitch, type CanvasViewSwitchProps } from "./CanvasViewSwitch";
 import styles from "./CanvasToolbar.module.css";
 
 export interface CanvasToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
+  /** Fits the whole map back into view; the dock's zoom level calls it when clicked. */
+  onFit?: () => void;
   onResetLayout: () => void;
-  onCollapseAll: () => void;
-  collapseDisabled: boolean;
   /** When provided, an export button is shown. Omitted in the export viewer. */
   onExport?: () => void;
+  /** Redraws the map as if the agent were writing it; the live app's dock only. */
+  onReplay?: () => void;
   /** Only available for a completed workflow in the live app. */
   onDelete?: () => void;
+  /** The Flow / Wrap / Line switch. */
+  viewSwitch?: CanvasViewSwitchProps;
+  /** The connection key, shown in the dock's "More actions" menu; pointing at a row picks out those edges. */
+  legend?: { rows: LegendRow[]; onHighlight: (key: string | null) => void };
 }
 
-/** The canvas's own chrome: zoom, collapse-all, and (when available) export/delete. */
+/** The canvas's own chrome: zoom, reset, and (when available) export/delete. */
 export function CanvasToolbar({
   onZoomIn,
   onZoomOut,
   onResetLayout,
-  onCollapseAll,
-  collapseDisabled,
   onExport,
   onDelete,
+  viewSwitch,
 }: CanvasToolbarProps) {
   return (
     <div className={styles.toolbar}>
+      {viewSwitch !== undefined ? (
+        <>
+          <CanvasViewSwitch {...viewSwitch} />
+          <div className={styles.divider} aria-hidden="true" />
+        </>
+      ) : null}
       <div className={styles.zoomGroup}>
         <IconButton label="Zoom in" icon={<MagnifyingGlassPlus size={16} />} size="sm" onClick={onZoomIn} />
         <IconButton label="Zoom out" icon={<MagnifyingGlassMinus size={16} />} size="sm" onClick={onZoomOut} />
@@ -43,14 +55,6 @@ export function CanvasToolbar({
           onClick={onResetLayout}
         />
       </div>
-      <div className={styles.divider} aria-hidden="true" />
-      <IconButton
-        label="Collapse all expanded steps"
-        icon={<ArrowsInLineVertical size={16} />}
-        size="sm"
-        onClick={onCollapseAll}
-        disabled={collapseDisabled}
-      />
       {onExport !== undefined ? (
         <>
           <div className={styles.divider} aria-hidden="true" />

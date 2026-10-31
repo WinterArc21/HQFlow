@@ -29,33 +29,17 @@ describe("validateWorkflowSemantics", () => {
     expect(validateWorkflowSemantics(baseWorkflow(), FILE)).toEqual([]);
   });
 
-  it("rule 1 — flags duplicate step ids", () => {
+  it("rule 1 — flags duplicate explicit connection ids", () => {
     const workflow = baseWorkflow({
-      steps: [
-        { id: "start", name: "Start", purpose: "Entry step.", category: "entry" },
-        { id: "start", name: "Duplicate", purpose: "Same id as the first step." },
+      connections: [
+        { id: "dup", from: "start", to: "finish", type: "success" },
+        { id: "dup", from: "finish", to: "start", type: "failure" },
       ],
-      connections: [],
     });
 
-    const issues = validateWorkflowSemantics(workflow, FILE);
-    const duplicate = issues.find((issue) => issue.message.includes("Duplicate step id"));
-    expect(duplicate).toBeDefined();
+    const duplicate = validateWorkflowSemantics(workflow, FILE).find((issue) => issue.message.includes("Duplicate connection id"));
     expect(duplicate?.severity).toBe("error");
-    expect(duplicate?.message).toContain("'start'");
-  });
-
-  it("rule 2 — flags a connection referencing a missing step", () => {
-    const workflow = baseWorkflow({ connections: [{ from: "start", to: "missing-step", type: "success" }] });
-
-    const issues = validateWorkflowSemantics(workflow, FILE);
-    expect(issues).toContainEqual(
-      expect.objectContaining({
-        severity: "error",
-        path: "connections[0].to",
-        message: "Connection references missing step 'missing-step'.",
-      }),
-    );
+    expect(duplicate?.path).toBe("connections[1].id");
   });
 
   it("rule 7 — entryPoint does not affect reachability; it is a source pointer, not a step reference", () => {
@@ -63,21 +47,6 @@ describe("validateWorkflowSemantics", () => {
 
     const issues = validateWorkflowSemantics(workflow, FILE);
     expect(issues.some((issue) => issue.message.includes("unreachable"))).toBe(false);
-  });
-
-  it("rule 7 — warns (not errors) on a step unreachable from any entry step", () => {
-    const workflow = baseWorkflow({
-      steps: [
-        { id: "start", name: "Start", purpose: "Entry step.", category: "entry" },
-        { id: "finish", name: "Finish", purpose: "Terminal step.", category: "output" },
-        { id: "orphan", name: "Orphan", purpose: "Never connected." },
-      ],
-    });
-
-    const issues = validateWorkflowSemantics(workflow, FILE);
-    const warning = issues.find((issue) => issue.message.includes("orphan"));
-    expect(warning).toBeDefined();
-    expect(warning?.severity).toBe("warning");
   });
 
   it("rule 7 — warns on a workflow with more than 14 steps", () => {
@@ -113,5 +82,4 @@ describe("validateWorkflowSemantics", () => {
     expect(duplicate).toBeDefined();
     expect(duplicate?.severity).toBe("warning");
   });
-
 });

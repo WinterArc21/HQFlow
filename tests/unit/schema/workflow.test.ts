@@ -188,24 +188,37 @@ describe("parseWorkflow — shape and semantic rules", () => {
 
     expect(result.ok).toBe(false);
   });
-});
 
-describe("parseWorkflow — corrected field shapes (entryPoint, notes)", () => {
-  it("rejects an unrecognized status field because the schema no longer includes it", () => {
+  it("rejects ids that collide with built-in object properties", () => {
+    const cases: Array<(data: RawWorkflow) => void> = [
+      (data) => { data.id = "constructor"; },
+      (data) => { data.steps[0]!.id = "__proto__"; },
+      (data) => { data.steps[0]!.id = "toString"; },
+      (data) => { data.connections[0]!.id = "hasOwnProperty"; },
+    ];
+    for (const mutate of cases) {
+      const data = loadFixture();
+      mutate(data);
+
+      const result = parseWorkflow(data, FILE);
+
+      expect(result.ok).toBe(false);
+      expect(result.ok ? "" : result.issues[0]?.message).toMatch(/reserved JavaScript property name/);
+    }
+  });
+
+  it("rejects names and purposes that are only whitespace", () => {
     const data = loadFixture();
-    data.status = "active";
+    data.steps[0]!.name = "   ";
 
     const result = parseWorkflow(data, FILE);
 
     expect(result.ok).toBe(false);
-    if (result.ok) {
-      throw new Error("expected failure");
-    }
-    const issue = result.issues.find((i) => i.path === "status");
-    expect(issue).toBeDefined();
-    expect(issue?.message).toContain("Unrecognized property 'status'");
+    expect(result.ok ? undefined : result.issues[0]?.path).toBe("steps[0].name");
   });
+});
 
+describe("parseWorkflow — corrected field shapes (entryPoint, notes)", () => {
   it("rejects legacy and unsafe entry-point shapes with useful paths", () => {
     const legacy = loadFixture();
     legacy.entryPoint = "POST /api/x" as unknown as NonNullable<RawWorkflow["entryPoint"]>;

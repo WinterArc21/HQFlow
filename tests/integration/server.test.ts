@@ -128,12 +128,6 @@ describe("createCodeHQServer — endpoint shapes", () => {
     const body = (await response.json()) as { generatedAt: string };
     expect(typeof body.generatedAt).toBe("string");
   });
-
-  it("does not expose the removed folder/reveal endpoint", async () => {
-    const running = await startServer();
-    const response = await fetch(`${running.url}/api/reveal`, { method: "POST" });
-    expect(response.status).toBe(404);
-  });
 });
 
 describe("createCodeHQServer — /api/source", () => {
@@ -147,6 +141,18 @@ describe("createCodeHQServer — /api/source", () => {
     expect(body.editorUrl).toMatch(/^vscode:\/\/file\//);
     expect(body.editorUrl).toContain(":1");
     expect(JSON.stringify(body)).not.toContain("realFunction() {}");
+  });
+
+  it("escapes '#', '?' and '%' in editor links so the whole file name reaches the editor", async () => {
+    delete process.env.WSL_DISTRO_NAME;
+    writeFileSync(path.join(root, "we#ird %20 name.ts"), "export {};\n");
+    const running = await startServer();
+    const response = await fetch(`${running.url}/api/source?${new URLSearchParams({ file: "we#ird %20 name.ts", line: "3" })}`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { editorUrl: string; exists: boolean };
+    expect(body.exists).toBe(true);
+    expect(body.editorUrl).toMatch(/\/we%23ird%20%2520%20name\.ts:3$/);
+    expect(new URL(body.editorUrl).hash).toBe("");
   });
 
   it("routes editor links through the current WSL distribution", async () => {
@@ -183,7 +189,6 @@ describe("createCodeHQServer — /api/source", () => {
 describe("createCodeHQServer — /api/workflows/:id/layout", () => {
   const layout = {
     nodePositions: { "step-1": { x: 12, y: 34 } },
-    edgeBends: { "step-1->done#0": { point: { x: 56, y: 78 }, snap: null } },
   };
 
   it("writes, reads, and deletes the complete layout", async () => {

@@ -23,9 +23,14 @@ export function toRepoRelativePosix(root: string, absolute: string): string {
 export type JsonParseResult = { ok: true; data: unknown } | { ok: false; message: string };
 
 /** Parses `text` as JSON without throwing; failures carry the parser's own message. */
+/** Editors and Windows PowerShell 5.1 often prefix UTF-8 files with a BOM, which `JSON.parse` rejects. */
+export function stripByteOrderMark(text: string): string {
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
 export function parseJsonText(text: string): JsonParseResult {
   try {
-    return { ok: true, data: JSON.parse(text) as unknown };
+    return { ok: true, data: JSON.parse(stripByteOrderMark(text)) as unknown };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }

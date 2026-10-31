@@ -131,7 +131,9 @@ invented a field (especially visual ones).
 
 ### Semantic rules (beyond shape) — implement in `src/schema/semantics.ts`, pure functions
 
-1. Step `id`s unique within a workflow.
+1. Step `id`s unique within a workflow; explicit connection `id`s likewise unique. Step,
+   connection, and workflow ids must not be built-in JavaScript property names (`__proto__`,
+   `constructor`, `toString`, …), because ids key plain objects in layout state.
 2. Every `connection.from` / `connection.to` references an existing step id.
 3. `steps.length >= 1`.
 4. Every `SourceReference.file` / `TestReference.file` is repository-relative:
@@ -141,6 +143,7 @@ invented a field (especially visual ones).
 7. Warning (not error): a step unreachable from any entry step, or a workflow with >14 steps
    ("prefer 5–9 top-level steps").
 8. Warning: duplicate connection (same from/to/type).
+9. `name` and `purpose` must contain non-whitespace text.
 
 Semantic validation returns `Issue[]`, never throws.
 
@@ -217,7 +220,7 @@ partial JSON, schema error), the previously valid `workflow` stays in the snapsh
 | GET | `/api/project` | `CodeHQProject \| null` |
 | GET | `/api/workflows` | `WorkflowRecord[]` |
 | GET | `/api/workflows/:id` | `WorkflowRecord`, 404 if unknown |
-| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions and edge bends. |
+| GET | `/api/workflows/:id/layout` | `{ layout: WorkflowCanvasLayout \| null }`. Repository-local node positions. |
 | PUT | `/api/workflows/:id/layout` | Replace the workflow's complete canvas layout. Returns 204. |
 | DELETE | `/api/workflows/:id/layout` | Delete the workflow's saved layout. Returns 204. |
 | DELETE | `/api/workflows/:id` | Delete a valid workflow; returns the refreshed snapshot. |

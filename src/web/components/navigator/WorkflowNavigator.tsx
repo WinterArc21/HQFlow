@@ -1,5 +1,5 @@
-import { CaretLeft, CaretRight, CirclesFour, Folder, GitBranch } from "@phosphor-icons/react";
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { Folder, GitBranch } from "@phosphor-icons/react";
+import { useRef, type KeyboardEvent } from "react";
 import type { RepositoryMapRecord, WorkflowRecord } from "../../api/types";
 import { ANOTHER_WORKFLOW_PROMPT } from "../../lib/agentPrompt";
 import { CopyButton, SectionLabel } from "../primitives";
@@ -12,9 +12,6 @@ export interface WorkflowNavigatorProps {
   repositoryMap?: RepositoryMapRecord | null;
   selectedWorkflowId: string | null;
   onSelect: (workflowId: string | null) => void;
-  /** Controlled by App for the shell grid; omitted for a self-contained navigator. */
-  collapsed?: boolean;
-  onToggleCollapsed?: () => void;
 }
 
 /**
@@ -23,7 +20,7 @@ export interface WorkflowNavigatorProps {
  * ARIA `listbox`, since a partial listbox implementation is worse than a correct plain list
  * (contract §11).
  *
- * When a repository map exists, the rail is a file tree: the repository folder is Overview,
+ * When a repository map exists, the list is a file tree: the repository folder is Overview,
  * and each workflow hangs off the same spine.
  */
 export function WorkflowNavigator({
@@ -32,13 +29,8 @@ export function WorkflowNavigator({
   repositoryMap,
   selectedWorkflowId,
   onSelect,
-  collapsed,
-  onToggleCollapsed,
 }: WorkflowNavigatorProps) {
   const listRef = useRef<HTMLUListElement>(null);
-  const listId = useId();
-  const [uncontrolledCollapsed, setUncontrolledCollapsed] = useState(false);
-  const isCollapsed = collapsed ?? uncontrolledCollapsed;
   const hasRepositoryMap = repositoryMap !== undefined && repositoryMap !== null;
   const overviewSelected = hasRepositoryMap && selectedWorkflowId === null;
   const definitions = hasRepositoryMap
@@ -48,14 +40,6 @@ export function WorkflowNavigator({
         name: record.workflow.name,
         purpose: record.workflow.purpose,
       }));
-
-  const handleToggleCollapsed = (): void => {
-    if (onToggleCollapsed !== undefined) {
-      onToggleCollapsed();
-      return;
-    }
-    setUncontrolledCollapsed((current) => !current);
-  };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLUListElement>): void => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
@@ -72,26 +56,12 @@ export function WorkflowNavigator({
   };
 
   return (
-    <nav
-      className={`${styles.navigator} ${isCollapsed ? styles.collapsed : ""}`}
-      aria-label="Repository navigation"
-      hidden={isCollapsed}
-    >
+    <nav className={styles.navigator} aria-label="Repository navigation">
       <div className={styles.header}>
-        {isCollapsed ? null : <SectionLabel as="h2">Navigator</SectionLabel>}
-        <button
-          type="button"
-          className={styles.toggle}
-          aria-controls={listId}
-          aria-expanded={!isCollapsed}
-          aria-label={isCollapsed ? "Expand workflows rail" : "Collapse workflows rail"}
-          title={isCollapsed ? "Expand workflows rail" : "Collapse workflows rail"}
-          onClick={handleToggleCollapsed}
-        >
-          {isCollapsed ? <CaretRight size={16} weight="bold" aria-hidden="true" /> : <CaretLeft size={16} weight="bold" aria-hidden="true" />}
-        </button>
+        <SectionLabel as="h2">Workflows</SectionLabel>
+        <span className={styles.count}>{definitions.length}</span>
       </div>
-      <div id={listId} className={styles.content} hidden={isCollapsed}>
+      <div className={styles.content}>
         {!hasRepositoryMap && repositoryName !== undefined ? <p className={styles.repositoryName}>{repositoryName}</p> : null}
         {workflows.length === 0 && !hasRepositoryMap ? (
           <p className={styles.empty}>No workflows yet.</p>
@@ -108,24 +78,16 @@ export function WorkflowNavigator({
                   onClick={() => onSelect(null)}
                 >
                   <Folder size={16} weight="fill" aria-hidden="true" />
-                  <span className={styles.rootCopy}>
-                    <strong>{repositoryName ?? "Repository"}</strong>
-                    <small className={styles.overviewHint}>
-                      <CirclesFour size={12} aria-hidden="true" />
-                      Overview · repo-wide map
-                    </small>
-                  </span>
+                  <strong className={styles.rootName}>{repositoryName ?? "Repository"}</strong>
+                  <small className={styles.overviewHint}>Overview</small>
                 </button>
                 <ul className={styles.branch} aria-label={`${repositoryName ?? "Repository"} workflows`}>
                   {definitions.map((definition) => {
                     const record = workflows.find((workflow) => workflow.id === definition.id);
                     return record === undefined ? (
                       <li key={definition.id} className={styles.plannedItem}>
-                        <span className={styles.dot} aria-hidden="true" />
-                        <span>
-                          <strong>{definition.name}</strong>
-                          <small>Not mapped</small>
-                        </span>
+                        <span className={styles.plannedName}>{definition.name}</span>
+                        <small>Not mapped</small>
                       </li>
                     ) : (
                       <WorkflowListItem

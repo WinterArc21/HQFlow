@@ -50,7 +50,6 @@ export function ExportApp({ payload }: ExportAppProps) {
           stepId={selectedStepId}
           sourceChecks={payload.sourceChecks}
           onClose={() => selectStep(null)}
-          onSelectStep={selectStep}
         />
       ) : null}
     </ExportModeProvider>
