@@ -238,4 +238,19 @@ describe("CodeHQStore — repository map", () => {
     expect(snapshot.repositoryMap?.repositoryMap.workflows[0]?.name).toBe("Workflow");
     expect(snapshot.diagnostics.valid).toBe(false);
   });
+
+  it("serves a workflow the map does not declare, and warns that the map is missing it", async () => {
+    writeFileSync(path.join(root, ".codehq", "repository-map.json"), validRepositoryMap);
+    writeFileSync(path.join(workflowsDir, "wf.json"), validWorkflowJson("Workflow"));
+    writeFileSync(
+      path.join(workflowsDir, "image-upload.json"),
+      validWorkflowJson("Image upload").replace('"id":"wf"', '"id":"image-upload"'),
+    );
+    const snapshot = await createCodeHQStore(root).reload();
+    expect(snapshot.workflows.map((record) => record.id).sort()).toEqual(["image-upload", "wf"]);
+    const warnings = snapshot.diagnostics.issues.filter((issue) => issue.message.includes("not declared"));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain("'image-upload'");
+    expect(snapshot.diagnostics.valid).toBe(true);
+  });
 });

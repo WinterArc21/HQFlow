@@ -245,6 +245,21 @@ export async function loadHQ(root: string): Promise<LoadResult> {
     outcomes.push(outcome);
   }
 
+  if (repositoryMap?.status === "valid") {
+    const declaredIds = new Set(repositoryMap.repositoryMap.workflows.map((workflow) => workflow.id));
+    for (const [id, file] of idToFile) {
+      if (!declaredIds.has(id)) {
+        issues.push({
+          severity: "warning",
+          file: repositoryMap.file,
+          path: "workflows",
+          message: `Workflow '${id}' (${file}) is not declared in the repository map.`,
+          hint: `Add '${id}' to repository-map.json workflows, with any evidence-backed handoffs, so it appears in the overview.`,
+        });
+      }
+    }
+  }
+
   const defaultWorkflowId = project?.settings?.defaultWorkflowId;
   if (defaultWorkflowId !== undefined && !idToFile.has(defaultWorkflowId)) {
     issues.push({

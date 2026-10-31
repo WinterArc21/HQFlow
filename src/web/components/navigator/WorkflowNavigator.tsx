@@ -33,13 +33,18 @@ export function WorkflowNavigator({
   const listRef = useRef<HTMLUListElement>(null);
   const hasRepositoryMap = repositoryMap !== undefined && repositoryMap !== null;
   const overviewSelected = hasRepositoryMap && selectedWorkflowId === null;
-  const definitions = hasRepositoryMap
-    ? repositoryMap.repositoryMap.workflows
-    : workflows.map((record) => ({
+  const mapDefinitions = hasRepositoryMap ? repositoryMap.repositoryMap.workflows : [];
+  const mappedIds = new Set(mapDefinitions.map((definition) => definition.id));
+  // Workflow files the map does not declare yet (e.g. one the user just asked the agent to
+  // split out) still get a navigator entry, after the declared ones.
+  const definitions = [
+    ...mapDefinitions,
+    ...workflows.filter((record) => !mappedIds.has(record.id)).map((record) => ({
         id: record.id,
         name: record.workflow.name,
         purpose: record.workflow.purpose,
-      }));
+      })),
+  ];
 
   const handleKeyDown = (event: KeyboardEvent<HTMLUListElement>): void => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {

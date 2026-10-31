@@ -45,19 +45,16 @@ When the user asks you to map the repository:
    workflows. Do not treat modules, utility layers, or individual functions as workflows.
 2. Write a complete, valid `.codehq/repository-map.json` immediately. Include each identified
    workflow and only the cross-workflow handoffs that have direct source evidence.
-3. If your environment supports subagents, assign every independent workflow to a separate
-   subagent and run them concurrently. Each subagent must own exactly one
-   `.codehq/workflows/<id>.json` file. Subagents must not edit `repository-map.json`, another
-   workflow's file, or source code. If subagents are unavailable, map the same files sequentially.
-4. Tell each subagent to save complete, valid checkpoints as it traces the workflow. HQFlow will
-   show each workflow as soon as its first valid file is saved.
-5. After all workflow tasks finish, check their results against `repository-map.json`, run
+3. Map each workflow in turn, one `.codehq/workflows/<id>.json` file per workflow. Save
+   complete, valid checkpoints as you trace each one. HQFlow shows each workflow as soon as its
+   first valid file is saved.
+4. After all workflows are mapped, check them against `repository-map.json`, run
    `hqflow validate`, read `.codehq/diagnostics.json`, and fix all errors before handoff.
 
 Example user prompt:
 
 > "Read `.codehq/SKILL.md` and map this repository. Write the repository overview first,
-> then use separate subagents to map the primary workflows concurrently."
+> then map each primary workflow."
 
 ## Workflow authoring loop
 
