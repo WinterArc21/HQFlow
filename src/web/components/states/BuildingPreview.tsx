@@ -64,7 +64,8 @@ export function BuildingPreview() {
         </g>
       ))}
       <g className={styles.cursor}>
-        <path d="M0 0 L0 15 L4 11.5 L7 18 L9.5 16.8 L6.8 10.6 L12.5 10.6 Z" />
+        {/* The canvas's agent cursor (AgentCursor.tsx), shifted so its tip sits on the origin. */}
+        <path transform="translate(-3.6 -3)" d="M4.3 3.2C3.8 2.7 3 3.1 3 3.8L3.4 19.4C3.4 20.2 4.4 20.5 4.9 19.9L8.7 15.6C9 15.3 9.4 15.1 9.8 15.1L15.5 15.1C16.3 15.1 16.7 14.2 16.1 13.6Z" />
       </g>
     </svg>
   );

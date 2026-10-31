@@ -125,10 +125,13 @@
 }
 
 /* The pen: arrives at each card's leading edge as that card starts drawing, then traces it. */
+/* Same look as the canvas's agent cursor (AgentCursor.module.css). */
 .cursor {
-  fill: var(--focus-ring);
-  stroke: var(--bg-surface);
-  stroke-width: 1.2;
+  fill: var(--agent-cursor-fill);
+  stroke: var(--agent-cursor-line);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px var(--agent-cursor-shadow)) drop-shadow(0 4px 8px var(--agent-cursor-shadow));
   animation: pen var(--loop) var(--ease-standard) infinite;
 }
 
