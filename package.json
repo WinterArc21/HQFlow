@@ -1,6 +1,6 @@
 {
   "name": "hqflow",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "type": "module",
   "description": "Local-first workflow mapping for coding agents, rendered as an interactive canvas.",
   "license": "MIT",
