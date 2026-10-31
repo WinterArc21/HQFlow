@@ -64,7 +64,9 @@ Example user prompt:
    that you can actually find in the code (rules 6–9).
 4. Write (or update) `.codehq/workflows/<id>.json`. If a human previously edited this
    file, keep their names, notes, and corrections — do not overwrite them with your own
-   guesses (rule 10).
+   guesses (rule 10). Declare every workflow in `.codehq/repository-map.json`: when you add
+   one (for example, "map account creation"), add it to the map with evidence-backed handoffs.
+   If you split it out of another workflow, replace the moved steps there with a handoff.
 5. Do not touch anything outside `.codehq` unless the user explicitly asked you to change
    source code (rule 11). Follow the schema below exactly (rule 12) — do not invent fields,
    and never add layout, color, or styling (rule 13).
