@@ -19,6 +19,7 @@ export interface CopyButtonProps {
 
 const RESET_DELAY_MS = 1800;
 
+/** What the live region announces. */
 function statusText(status: CopyStatus): string | null {
   switch (status) {
     case "copied":
@@ -30,6 +31,34 @@ function statusText(status: CopyStatus): string | null {
     case "idle":
       return null;
   }
+}
+
+/** The shorter word that takes the label's place inside the button. */
+function swapText(status: CopyStatus): string {
+  switch (status) {
+    case "manual-selection":
+      return "Press Ctrl+C";
+    case "unavailable":
+      return "Copy failed";
+    default:
+      return "Copied";
+  }
+}
+
+function StatusIcon({ status }: { status: CopyStatus }) {
+  if (status === "copied" || status === "idle") {
+    return (
+      <svg className={styles.tick} viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M3 8.5 L6.5 12 L13 4.5" pathLength={1} />
+      </svg>
+    );
+  }
+  return (
+    <svg className={styles.alert} viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v3.5M8 11h0" />
+    </svg>
+  );
 }
 
 export function CopyButton({ value, label = "Copy", variant = "secondary", size = "sm", icon, leadingIcon }: CopyButtonProps) {
@@ -47,13 +76,15 @@ export function CopyButton({ value, label = "Copy", variant = "secondary", size 
 
   const handleClick = (): void => {
     void copyToClipboard(value).then((outcome) => {
+      if (timeoutRef.current !== undefined) {
+        window.clearTimeout(timeoutRef.current);
+      }
       setStatus(outcome);
       timeoutRef.current = window.setTimeout(() => setStatus("idle"), RESET_DELAY_MS);
     });
   };
 
-  const text = statusText(status);
-  const toneClass = status === "copied" ? styles.copied : status === "unavailable" ? styles.failed : "";
+  const swapIcon = icon ?? leadingIcon;
 
   return (
     <span>
@@ -61,21 +92,30 @@ export function CopyButton({ value, label = "Copy", variant = "secondary", size 
         variant={variant}
         size={size}
         onClick={handleClick}
-        data-copied={status === "copied" ? "true" : undefined}
+        data-status={status}
         {...(icon !== undefined ? { "aria-label": label, title: label } : {})}
       >
-        <span className={styles.labelSwap}>
-          <span className={styles.label} aria-hidden={icon !== undefined ? "true" : undefined}>
-            {leadingIcon !== undefined ? <span className={styles.leading} aria-hidden="true">{leadingIcon}</span> : null}
-            {icon ?? label}
-          </span>
-          <svg className={styles.tick} viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M3 8.5 L6.5 12 L13 4.5" pathLength={1} />
-          </svg>
+        <span className={styles.content}>
+          {swapIcon !== undefined ? (
+            <span className={styles.swap} aria-hidden="true">
+              <span className={styles.idle}>{swapIcon}</span>
+              <span className={styles.done}>
+                <StatusIcon status={status} />
+              </span>
+            </span>
+          ) : null}
+          {icon === undefined ? (
+            <span className={styles.swap}>
+              <span className={styles.idle}>{label}</span>
+              <span className={styles.done} aria-hidden="true">
+                {swapText(status)}
+              </span>
+            </span>
+          ) : null}
         </span>
       </Button>
-      <span className={`${styles.status} ${toneClass}`} role="status" aria-live="polite">
-        {text}
+      <span className={styles.srOnly} role="status" aria-live="polite">
+        {statusText(status)}
       </span>
     </span>
   );
