@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { X } from "@phosphor-icons/react";
 import type { Workflow, WorkflowStep } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
@@ -32,6 +32,9 @@ export interface StepCardProps {
   /** Grows from the node's right edge toward the left, when the node is at the board's edge. */
   growsLeft: boolean;
   onClose: () => void;
+  /** Extra content at the top of the overview, such as a behavior moment's verdict and links. */
+  details?: ReactNode;
+  moment?: boolean;
 }
 
 /**
@@ -40,7 +43,7 @@ export interface StepCardProps {
  * neighbouring cards and every arrow stay exactly where they were — and its sections are tabs
  * that scroll inside the card.
  */
-export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose }: StepCardProps) {
+export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, growsLeft, onClose, details, moment = false }: StepCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
@@ -57,7 +60,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
   const tabs: Array<{ id: Tab; label: string; count?: number }> = [
     { id: "overview", label: "Overview" },
     { id: "source", label: "Source", count: sources.length },
-    { id: "edges", label: "Edge cases", count: edgeCases.length },
+    ...(moment ? [] : [{ id: "edges" as const, label: "Edge cases", count: edgeCases.length }]),
     ...(tests.length > 0 ? [{ id: "tests" as const, label: "Tests", count: tests.length }] : []),
   ];
   const activeTab = tabs.some((candidate) => candidate.id === tab) ? tab : "overview";
@@ -141,6 +144,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
         {activeTab === "overview" ? (
           <>
             <p className={styles.purpose}>{step.purpose}</p>
+            {details}
             {inputs.length > 0 ? (
               <DrawerSection title="Inputs" count={inputs.length}>
                 <ul className={styles.list}>{inputs.map((item, index) => <DataReferenceRow key={`${item.name}-${index}`} item={item} />)}</ul>
@@ -184,7 +188,7 @@ export function StepCard({ workflow, step, stepNumber, sourceChecks, origin, gro
       </div>
 
       <footer className={styles.footer}>
-        <span className={styles.kicker}>{category.label}</span>
+        <span className={styles.kicker}>{moment ? "Moment" : category.label}</span>
         <span className={styles.hint} aria-hidden="true"><kbd>Esc</kbd> close</span>
       </footer>
     </div>

@@ -22,6 +22,7 @@ function makeSnapshot(workflows: Workflow[]): CodeHQSnapshot {
     project: null,
     repositoryMap: null,
     workflows: workflows.map(makeRecord),
+    behaviors: [],
     diagnostics: { generatedAt: new Date().toISOString(), valid: true, issues: [] },
   };
 }

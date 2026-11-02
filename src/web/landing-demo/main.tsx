@@ -23,6 +23,7 @@ const snapshot: CodeHQSnapshot = {
   repository: { name: "hqflow", root: "", codeHQDir: ".codehq" },
   project: null,
   repositoryMap: null,
+  behaviors: [],
   workflows: [{
     id: workflow.id,
     file: `.codehq/workflows/${workflow.id}.json`,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { deleteWorkflow, recheck } from "./api/client";
 import { useCodeHQSnapshot } from "./api/events";
 import { IslandShell, type CodeHQStatus } from "./components/shell";
+import { BehaviorCanvas, StepMoments } from "./components/behavior";
 import { WorkflowNavigator, WorkflowRemovedNotice } from "./components/navigator";
 import { EmptyState, ErrorState, LoadingState, UninitializedState } from "./components/states";
 import { DiagnosticsBanner, DiagnosticsPanel } from "./components/diagnostics";
@@ -29,6 +30,8 @@ export function App() {
 
   const selectedWorkflowId = useCodeHQStore((state) => state.selectedWorkflowId);
   const selectWorkflow = useCodeHQStore((state) => state.selectWorkflow);
+  const selectedBehaviorId = useCodeHQStore((state) => state.selectedBehaviorId);
+  const selectBehavior = useCodeHQStore((state) => state.selectBehavior);
   const diagnosticsOpen = useCodeHQStore((state) => state.diagnosticsOpen);
   const toggleDiagnostics = useCodeHQStore((state) => state.toggleDiagnostics);
   const closeDiagnostics = useCodeHQStore((state) => state.closeDiagnostics);
@@ -38,6 +41,9 @@ export function App() {
 
   useEffect(() => {
     if (snapshot === null) {
+      return;
+    }
+    if (selectedBehaviorId !== null && snapshot.behaviors.some((record) => record.id === selectedBehaviorId)) {
       return;
     }
     const knownIds = new Set(snapshot.workflows.map((record) => record.id));
@@ -58,8 +64,12 @@ export function App() {
     const nextId = snapshot.repositoryMap !== null
       ? null
       : defaultId !== undefined && knownIds.has(defaultId) ? defaultId : snapshot.workflows[0]?.id;
+    if (nextId === undefined && snapshot.behaviors[0] !== undefined) {
+      selectBehavior(snapshot.behaviors[0].id);
+      return;
+    }
     selectWorkflow(nextId ?? null);
-  }, [snapshot, selectedWorkflowId, selectWorkflow]);
+  }, [snapshot, selectedWorkflowId, selectedBehaviorId, selectWorkflow, selectBehavior]);
 
   if (snapshot === null) {
     if (status === "error") {
@@ -77,6 +87,7 @@ export function App() {
   const errorCount = snapshot.diagnostics.issues.filter((issue) => issue.severity === "error").length;
 
   const selectedRecord = snapshot.workflows.find((record) => record.id === selectedWorkflowId) ?? null;
+  const selectedBehavior = snapshot.behaviors.find((record) => record.id === selectedBehaviorId) ?? null;
   const invalidWorkflowIds = new Set(
     snapshot.repositoryMap?.repositoryMap.workflows
       .filter((workflow) => snapshot.diagnostics.issues.some((issue) =>
@@ -90,14 +101,14 @@ export function App() {
     refetch();
   };
 
-  if (selectedRecord === null && snapshot.repositoryMap === null) {
+  if (selectedRecord === null && selectedBehavior === null && snapshot.repositoryMap === null) {
     return <EmptyState />;
   }
 
   return (
     <IslandShell
       repositoryName={snapshot.repository.name}
-      locationLabel={selectedRecord?.workflow.name ?? "Overview"}
+      locationLabel={selectedRecord?.workflow.name ?? selectedBehavior?.behavior.name ?? "Overview"}
       status={connectionStatus}
       pulseKey={snapshot.generatedAt}
       {...(connectionStatus === "invalid" ? { errorCount } : {})}
@@ -109,6 +120,12 @@ export function App() {
           selectedWorkflowId={selectedWorkflowId}
           onSelect={(workflowId) => {
             selectWorkflow(workflowId);
+            close();
+          }}
+          behaviors={snapshot.behaviors}
+          selectedBehaviorId={selectedBehaviorId}
+          onSelectBehavior={(behaviorId) => {
+            selectBehavior(behaviorId);
             close();
           }}
         />
@@ -137,12 +154,15 @@ export function App() {
           modifiedAt={selectedRecord.modifiedAt}
           state={selectedRecord.state}
           chrome={chrome}
+          stepDetails={(stepId) => <StepMoments workflowId={selectedRecord.id} stepId={stepId} behaviors={snapshot.behaviors} />}
           onDeleteWorkflow={async () => {
             deletingWorkflowId.current = selectedRecord.workflow.id;
             await deleteWorkflow(selectedRecord.workflow.id);
             refetch();
           }}
         />
+      ) : selectedBehavior !== null ? (
+        <BehaviorCanvas record={selectedBehavior} workflows={snapshot.workflows} chrome={chrome} />
       ) : snapshot.repositoryMap !== null ? (
         <RepositoryOverview
           repositoryName={snapshot.repository.name}

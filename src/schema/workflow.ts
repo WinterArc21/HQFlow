@@ -16,7 +16,7 @@ const repoRelativePathSchema = z.string().min(1, { message: "Path must not be em
 // already exist on every object would read back as built-in functions.
 const RESERVED_IDS = new Set(Object.getOwnPropertyNames(Object.prototype));
 
-function idSchema(label: string) {
+export function idSchema(label: string) {
   return z
     .string()
     .min(1, { message: `${label} must not be empty.` })

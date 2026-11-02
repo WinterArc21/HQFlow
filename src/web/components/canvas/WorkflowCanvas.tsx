@@ -82,6 +82,8 @@ export interface WorkflowCanvasProps {
   modifiedAt?: WorkflowRecord["modifiedAt"];
   state?: WorkflowRecord["state"];
   onDeleteWorkflow?: () => Promise<void>;
+  /** Extra content for an opened step card, rendered by the view that owns the data. */
+  stepDetails?: (stepId: string) => ReactNode;
 }
 
 /** Public entry point: owns the `ReactFlowProvider` so `useReactFlow` is available below it. */
@@ -111,6 +113,7 @@ function WorkflowCanvasInner({
   modifiedAt,
   state,
   onDeleteWorkflow,
+  stepDetails,
 }: WorkflowCanvasProps) {
   const canvasId = requestedCanvasId ?? workflow.id;
   const reactFlowInstance = useReactFlow<CanvasFlowNode, WorkflowFlowEdge>();
@@ -606,6 +609,7 @@ function WorkflowCanvasInner({
               insets={chrome.fitInsets}
               containerRef={containerRef}
               reducedMotion={reducedMotion}
+              stepDetails={stepDetails}
             />
           ) : null}
         </ReactFlow>

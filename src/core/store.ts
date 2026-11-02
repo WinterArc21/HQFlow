@@ -8,10 +8,10 @@ import type { Issue } from "@schema/diagnostics";
 import type { Workflow } from "@schema/workflow";
 import type { RepositoryMap } from "@schema/repository-map";
 import { buildDiagnostics, writeDiagnostics } from "./diagnostics";
-import { loadHQ, type WorkflowFileOutcome } from "./load";
+import { loadHQ, type BehaviorFileOutcome, type LoadedBehavior, type WorkflowFileOutcome } from "./load";
 import { codeHQPaths, repositoryName, type CodeHQPaths } from "./repository";
 import { toRepoRelativePosix } from "./fs-utils";
-import type { CodeHQSnapshot, RepositoryMapRecord, WorkflowRecord } from "./types";
+import type { BehaviorRecord, CodeHQSnapshot, RepositoryMapRecord, WorkflowRecord } from "./types";
 import type { SourceStatus } from "./source-check";
 import { watchHQ, type CodeHQWatcher } from "./watcher";
 
@@ -47,6 +47,7 @@ function buildEmptySnapshot(root: string, paths: CodeHQPaths): CodeHQSnapshot {
     project: null,
     repositoryMap: null,
     workflows: [],
+    behaviors: [],
     diagnostics: { generatedAt: new Date().toISOString(), valid: true, issues: [] },
   };
 }
@@ -86,10 +87,40 @@ function toValidRecord(loaded: Extract<WorkflowFileOutcome, { status: "valid" }>
   };
 }
 
+/**
+ * Rule 7.1 for behaviors: a valid file refreshes its cache entry, an invalid file falls back to
+ * its last valid version marked stale, and a file that was never valid is left out. Entries for
+ * files no longer on disk are dropped.
+ */
+function mergeBehaviors(
+  cache: Map<string, LoadedBehavior & { staleSince?: string }>,
+  outcomes: ReadonlyArray<BehaviorFileOutcome>,
+): BehaviorRecord[] {
+  const present = new Set(outcomes.map((outcome) => outcome.file));
+  for (const file of [...cache.keys()]) {
+    if (!present.has(file)) cache.delete(file);
+  }
+  const records: BehaviorRecord[] = [];
+  for (const outcome of outcomes) {
+    if (outcome.status === "valid") {
+      cache.set(outcome.file, outcome.loaded);
+      records.push({ ...outcome.loaded, state: "valid" });
+      continue;
+    }
+    const cached = cache.get(outcome.file);
+    if (cached === undefined) continue;
+    const staleSince = cached.staleSince ?? new Date().toISOString();
+    cache.set(outcome.file, { ...cached, staleSince });
+    records.push({ ...cached, state: "stale", staleSince });
+  }
+  return records.sort((a, b) => a.behavior.name.localeCompare(b.behavior.name, undefined, { numeric: true }));
+}
+
 /** Creates a store for the repository at `root`. Call `start()` to begin watching. */
 export function createCodeHQStore(root: string): CodeHQStore {
   const paths = codeHQPaths(root);
   const cacheByFile = new Map<string, CachedWorkflow>();
+  const behaviorCache = new Map<string, LoadedBehavior & { staleSince?: string }>();
   const listeners = new Set<(snapshot: CodeHQSnapshot) => void>();
   let cachedRepositoryMap: CachedRepositoryMap | null = null;
 
@@ -174,6 +205,7 @@ export function createCodeHQStore(root: string): CodeHQStore {
       project: result.project,
       repositoryMap,
       workflows: records,
+      behaviors: mergeBehaviors(behaviorCache, result.behaviors),
       diagnostics,
     };
 

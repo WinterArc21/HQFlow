@@ -6,8 +6,9 @@ only renders the structured JSON files you write here, in `.codehq/`, as an inte
 workflow canvas that a human can explore in their browser. Your job is to read the real
 source code and describe real workflows accurately, honestly, and at the right altitude.
 
-The repository overview goes into `.codehq/repository-map.json`, and each detailed workflow
-goes into `.codehq/workflows/<id>.json`. HQFlow validates every file you write, watches
+The repository overview goes into `.codehq/repository-map.json`, each detailed workflow
+goes into `.codehq/workflows/<id>.json`, and each user journey (a behavior map) goes into
+`.codehq/behaviors/<id>.json`. HQFlow validates every file you write, watches
 `.codehq/`, and updates the canvas live. If validation
 fails, HQFlow writes the errors to `.codehq/diagnostics.json`. Read that file and fix the
 errors before handoff.
@@ -94,6 +95,31 @@ explore.
    version must describe real behavior you read in the code — a made-up step that appears then
    vanishes was never real, and a reader who saw it has been misled.
 
+## Map a behavior
+
+A workflow shows what the **code** does in one run. A behavior map shows what the **user** sees
+and does across a whole journey, often across several workflows and several requests. Write one
+only when the user asks for it.
+
+Test every moment with one question: *can the user see it or do it?* If yes, it is a moment. If
+no ("Charge payment", "Write diagnostics"), it is a workflow step: link to it with `causedBy`
+instead of drawing it again.
+
+1. Pick one journey that a real user takes, such as "pay for an order". Keep it to 5–12 moments.
+2. Start at the moment the journey begins (`kind: "start"`) and follow what the user can see next.
+   Mark where the journey ends with `kind: "end"`.
+3. Name moments and transitions in the user's words: "Sees a spinner", "taps Pay again". Every
+   transition needs a `label`: the event that moves the user on.
+4. Include the paths a user can take that the happy path forgets: waiting, closing the tab,
+   pressing twice, restarting. These are where bugs between workflows live.
+5. Attach `sources` (the UI or server code that shows the moment) and `causedBy` (the workflow
+   steps that cause it). Map the workflow first if it does not exist yet.
+6. Add a `verdict` only when you have proof. `works` needs a test or a run you observed; `bug`
+   needs a reproduction or a failing check; `fixed` needs the test that now passes. Write the
+   proof in `evidence`, and list the test files in `tests`. Without proof, leave `verdict` out:
+   the canvas shows the path as "Not checked", which is honest.
+7. Save to `.codehq/behaviors/<id>.json`, then run `hqflow validate`.
+
 ## JSON schema reference
 
 Every object below is validated strictly: **unknown keys are a hard error.** This is
@@ -178,6 +204,29 @@ only when it has no outgoing connections; use `failure` only for genuine failure
 real retry (for example `"retry ≤3"`), while a loop back to a different step remains a normal
 return connection. Several success branches do not imply that they run concurrently. Never add
 fictional branches merely to demonstrate these canvas forms.
+
+### `Behavior` (one file per behavior, `.codehq/behaviors/<id>.json`)
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `schemaVersion` | `"0.1"` | yes | Must be exactly `"0.1"`. |
+| `id` | string | yes | Same format as a workflow id. Should match the filename. |
+| `name` | string | yes | The journey, e.g. `"Paying for an order"`. |
+| `purpose` | string | yes | One sentence: who takes this journey and why. |
+| `moments` | `BehaviorMoment[]` | yes | At least one. Prefer 5–12; more than 14 triggers a warning. |
+| `transitions` | `BehaviorTransition[]` | yes | May be empty. Every `from`/`to` must reference an existing moment `id`. |
+| `notes` | `string[]` | no | Free-form notes. Preserve these. |
+
+`BehaviorMoment`: `id`, `name`, and `purpose` are required. Optional: `kind` (`"start"` or
+`"end"`), `sources` (`SourceReference[]`), `causedBy` (`{ "workflow": "<workflow id>", "step":
+"<step id>" }[]`), and `verdict`. A `causedBy` link to a workflow or step that does not exist is a
+warning.
+
+`BehaviorTransition`: `from`, `to`, and `label` are required. Optional: `id` (unique), `sources`,
+and `verdict`.
+
+`Verdict`: `status` (`"works"`, `"bug"`, or `"fixed"`) and `evidence` (string) are required;
+`tests` (`TestReference[]`) is optional.
 
 ### `SourceReference`
 

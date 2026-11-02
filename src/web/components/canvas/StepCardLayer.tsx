@@ -1,12 +1,11 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
-import { useReactFlow, ViewportPortal } from "@xyflow/react";
+import { useLayoutEffect, useState, type ReactNode, type RefObject } from "react";
+import { useReactFlow, ViewportPortal, type Node } from "@xyflow/react";
 import type { Workflow } from "@schema/workflow";
 import type { SourceStatus } from "../../api/types";
 import { useCodeHQStore } from "../../store/useCodeHQStore";
 import type { FitInsets } from "./fitViewport";
 import type { LayoutBounds } from "./layout";
 import { StepCard, STEP_CARD_HEIGHT, STEP_CARD_WIDTH } from "./StepCard";
-import type { CanvasFlowNode } from "./types";
 
 /** The card never opens smaller than this, so it is always readable, nor larger than this. */
 const CARD_MIN_ZOOM = 0.9;
@@ -21,12 +20,15 @@ const CAMERA_MS = 300;
 export interface StepCardLayerProps {
   workflow: Workflow;
   sourceChecks: Record<string, SourceStatus>;
-  nodes: CanvasFlowNode[];
+  nodes: ReadonlyArray<Pick<Node, "id" | "position" | "measured" | "width">>;
   bounds: LayoutBounds;
   /** Screen edges covered by the island shell; the opened card is panned clear of them. */
   insets: FitInsets;
   containerRef: RefObject<HTMLDivElement | null>;
   reducedMotion: boolean;
+  stepDetails?: ((stepId: string) => ReactNode) | undefined;
+  /** Behavior maps: cards are user moments, labelled as such and without an edge-cases tab. */
+  moments?: boolean;
 }
 
 /**
@@ -34,7 +36,7 @@ export interface StepCardLayerProps {
  * (leftward when the node is at the board's right edge), and the viewport pans so the whole card
  * sits between the title island and the dock.
  */
-export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, containerRef, reducedMotion }: StepCardLayerProps) {
+export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, containerRef, reducedMotion, stepDetails, moments = false }: StepCardLayerProps) {
   const reactFlow = useReactFlow();
   const selectedStepId = useCodeHQStore((state) => state.selectedStepId);
   const selectStep = useCodeHQStore((state) => state.selectStep);
@@ -49,6 +51,7 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
   // zoom redraws the whole board on every frame, so an iris played during it stuttered and was
   // hard to see. Selecting another step keeps the open card, so it moves with the camera.
   const [revealed, setRevealed] = useState(false);
+  const [retry, setRetry] = useState(0);
   if (revealed && selectedStepId === null) {
     setRevealed(false);
   }
@@ -56,8 +59,14 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
   // Pan once per opened step (not on every node drag) so the card lands clear of the chrome.
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (origin === null || container === null) {
+    if (origin === null) {
       return;
+    }
+    // A canvas that opens with a step already selected (a link from a behavior moment) runs this
+    // before its container is attached; try again on the next frame.
+    if (container === null) {
+      const frame = requestAnimationFrame(() => setRetry((count) => count + 1));
+      return () => cancelAnimationFrame(frame);
     }
     const rect = container.getBoundingClientRect();
     const freeWidth = rect.width - insets.left - insets.right;
@@ -86,7 +95,7 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStepId]);
+  }, [selectedStepId, retry]);
 
   if (step === undefined || origin === null || !(revealed || reducedMotion)) {
     return null;
@@ -109,6 +118,8 @@ export function StepCardLayer({ workflow, sourceChecks, nodes, bounds, insets, c
         origin={origin}
         growsLeft={growsLeft}
         onClose={close}
+        details={stepDetails?.(step.id)}
+        moment={moments}
       />
     </ViewportPortal>
   );

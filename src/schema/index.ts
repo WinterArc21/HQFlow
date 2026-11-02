@@ -1,3 +1,4 @@
+export * from "./behavior";
 export * from "./project";
 export * from "./repository-map";
 export * from "./workflow";

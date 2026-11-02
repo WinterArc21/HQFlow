@@ -18,7 +18,7 @@ export interface ValidateOptions {
 
 export type ValidateResult =
   | { exitCode: 0 | 1; root: string; kind: "missing-codehq"; message: string }
-  | { exitCode: 0 | 1; root: string; kind: "report"; report: DiagnosticsReport; workflowCount: number };
+  | { exitCode: 0 | 1; root: string; kind: "report"; report: DiagnosticsReport; workflowCount: number; behaviorCount: number };
 
 /** Loads, validates, and synchronizes the error-only `diagnostics.json` file. */
 export async function runValidate(options: ValidateOptions): Promise<ValidateResult> {
@@ -44,6 +44,7 @@ export async function runValidate(options: ValidateOptions): Promise<ValidateRes
     kind: "report",
     report,
     workflowCount: loaded.files.length,
+    behaviorCount: loaded.behaviors.length,
   };
 }
 
@@ -60,13 +61,16 @@ export function printValidateResult(result: ValidateResult, json: boolean): void
   }
 
   if (result.report.issues.length === 0) {
-    if (result.workflowCount === 0) {
+    if (result.workflowCount === 0 && result.behaviorCount === 0) {
       console.log("No workflow files found in .codehq/workflows/.");
       return;
     }
-    const noun = result.workflowCount === 1 ? "workflow" : "workflows";
-    const verb = result.workflowCount === 1 ? "is" : "are";
-    console.log(`All ${result.workflowCount} ${noun} ${verb} valid.`);
+    const parts = [
+      ...(result.workflowCount > 0 ? [pluralize(result.workflowCount, "workflow")] : []),
+      ...(result.behaviorCount > 0 ? [pluralize(result.behaviorCount, "behavior")] : []),
+    ];
+    const verb = result.workflowCount + result.behaviorCount === 1 ? "is" : "are";
+    console.log(`All ${parts.join(" and ")} ${verb} valid.`);
     return;
   }
 

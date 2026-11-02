@@ -1,4 +1,5 @@
 /** Browser-safe server/client wire contracts. This module must stay free of Node imports. */
+import type { Behavior } from "./behavior";
 import type { DiagnosticsReport } from "./diagnostics";
 import type { CodeHQProject } from "./project";
 import type { RepositoryMap } from "./repository-map";
@@ -12,6 +13,18 @@ export interface WorkflowRecord {
   id: string;
   file: string;
   workflow: Workflow;
+  modifiedAt: string;
+  state: "valid" | "stale";
+  staleSince?: string;
+  /** Keyed by `${file}` or `${file}#${symbol}`. */
+  sourceChecks: Record<string, SourceStatus>;
+}
+
+export interface BehaviorRecord {
+  id: string;
+  file: string;
+  /** The last valid version, kept like a workflow's when a newer save is invalid. */
+  behavior: Behavior;
   modifiedAt: string;
   state: "valid" | "stale";
   staleSince?: string;
@@ -40,6 +53,7 @@ export interface CodeHQSnapshot {
   project: CodeHQProject | null;
   repositoryMap: RepositoryMapRecord | null;
   workflows: WorkflowRecord[];
+  behaviors: BehaviorRecord[];
   diagnostics: DiagnosticsReport;
 }
 

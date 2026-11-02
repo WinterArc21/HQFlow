@@ -1,0 +1,178 @@
+/* A behavior map reads like a hand-drawn statechart: plain dark arrows, the event written on each
+   arrow, and colour only on the boxes, where it means a verdict. */
+.flow {
+  --story-ink: color-mix(in srgb, var(--text-primary) 78%, var(--bg-canvas));
+  --story-paper: var(--bg-surface);
+}
+
+.lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.lines svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.line {
+  fill: none;
+  stroke: var(--story-ink);
+  stroke-width: 1.25;
+}
+
+.arrowHead {
+  fill: none;
+  stroke: var(--story-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: 150px;
+  padding: 1px 6px;
+  border-radius: var(--radius-md);
+  /* The stage may be a gradient scene, so the label carries its own paper over the line. */
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  color: var(--text-primary);
+  font-size: var(--fs-tiny);
+  line-height: 15px;
+  text-align: center;
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.label[data-verdict="bug"] {
+  color: var(--accent-red);
+}
+
+.label[data-verdict="fixed"] {
+  color: var(--accent-green);
+}
+
+.start {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--story-ink);
+  transform: translate(-50%, -50%);
+}
+
+.diamond {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: color-mix(in srgb, var(--text-primary) 8%, var(--bg-surface));
+  border: 1.25px solid color-mix(in srgb, var(--text-primary) 45%, var(--bg-surface));
+}
+
+.key {
+  position: absolute;
+  left: 24px;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  color: var(--text-secondary);
+}
+
+/* Moment boxes and key chips share the verdict colours. */
+.moment,
+.keyChip {
+  box-sizing: border-box;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-ui);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 5%, var(--bg-surface));
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 30%, var(--bg-surface));
+}
+
+.keyChip {
+  padding: 2px 8px;
+}
+
+.moment {
+  width: 100%;
+  height: 100%;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--fs-sm);
+  line-height: 16px;
+  text-wrap: balance;
+  overflow: hidden;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.moment[data-verdict="bug"],
+.keyChip[data-verdict="bug"] {
+  background: color-mix(in srgb, var(--accent-red) 12%, var(--bg-surface));
+  border: 2px solid var(--accent-red);
+  color: color-mix(in srgb, var(--accent-red) 70%, var(--text-primary));
+}
+
+.moment[data-verdict="fixed"],
+.keyChip[data-verdict="fixed"] {
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--bg-surface));
+  border: 2px solid var(--accent-green);
+  color: color-mix(in srgb, var(--accent-green) 70%, var(--text-primary));
+}
+
+.moment[data-verdict="none"],
+.keyChip[data-verdict="none"] {
+  background: var(--bg-surface);
+  border: 1.5px dashed color-mix(in srgb, var(--text-primary) 35%, var(--bg-surface));
+  color: var(--text-secondary);
+}
+
+.moment:focus-visible,
+.jump:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.selected {
+  box-shadow: 0 0 0 2px var(--story-paper), 0 0 0 4px var(--focus-ring);
+}
+
+.jump {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 2px 14px;
+  border-radius: 20px;
+  border: 1px dotted color-mix(in srgb, var(--text-primary) 40%, var(--bg-surface));
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-tiny);
+  line-height: 15px;
+  text-wrap: balance;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .moment:hover {
+    filter: brightness(0.97);
+  }
+
+  .jump:hover {
+    color: var(--text-primary);
+  }
+}

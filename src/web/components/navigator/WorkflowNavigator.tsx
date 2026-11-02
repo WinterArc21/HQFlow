@@ -1,6 +1,6 @@
 import { Folder, GitBranch } from "@phosphor-icons/react";
 import { useRef, type KeyboardEvent } from "react";
-import type { RepositoryMapRecord, WorkflowRecord } from "../../api/types";
+import type { BehaviorRecord, RepositoryMapRecord, WorkflowRecord } from "../../api/types";
 import { ANOTHER_WORKFLOW_PROMPT } from "../../lib/agentPrompt";
 import { CopyButton, SectionLabel } from "../primitives";
 import { WorkflowListItem } from "./WorkflowListItem";
@@ -12,6 +12,9 @@ export interface WorkflowNavigatorProps {
   repositoryMap?: RepositoryMapRecord | null;
   selectedWorkflowId: string | null;
   onSelect: (workflowId: string | null) => void;
+  behaviors?: readonly BehaviorRecord[];
+  selectedBehaviorId?: string | null;
+  onSelectBehavior?: (behaviorId: string) => void;
 }
 
 /**
@@ -29,10 +32,14 @@ export function WorkflowNavigator({
   repositoryMap,
   selectedWorkflowId,
   onSelect,
+  behaviors = [],
+  selectedBehaviorId = null,
+  onSelectBehavior,
 }: WorkflowNavigatorProps) {
   const listRef = useRef<HTMLUListElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const hasRepositoryMap = repositoryMap !== undefined && repositoryMap !== null;
-  const overviewSelected = hasRepositoryMap && selectedWorkflowId === null;
+  const overviewSelected = hasRepositoryMap && selectedWorkflowId === null && selectedBehaviorId === null;
   const definitions = hasRepositoryMap
     ? repositoryMap.repositoryMap.workflows
     : workflows.map((record) => ({
@@ -41,11 +48,11 @@ export function WorkflowNavigator({
         purpose: record.workflow.purpose,
       }));
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLUListElement>): void => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
       return;
     }
-    const buttons = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>("button[data-navigation-item]") ?? []);
+    const buttons = Array.from(navRef.current?.querySelectorAll<HTMLButtonElement>("button[data-navigation-item]") ?? []);
     const currentIndex = buttons.findIndex((button) => button === document.activeElement);
     if (currentIndex === -1) {
       return;
@@ -56,7 +63,7 @@ export function WorkflowNavigator({
   };
 
   return (
-    <nav className={styles.navigator} aria-label="Repository navigation">
+    <nav ref={navRef} className={styles.navigator} aria-label="Repository navigation">
       <div className={styles.header}>
         <SectionLabel as="h2">Workflows</SectionLabel>
         <span className={styles.count}>{definitions.length}</span>
@@ -92,7 +99,9 @@ export function WorkflowNavigator({
                     ) : (
                       <WorkflowListItem
                         key={record.id}
-                        record={record}
+                        name={record.workflow.name}
+                        stale={record.state === "stale"}
+                        count={record.workflow.steps.length}
                         selected={record.id === selectedWorkflowId}
                         onSelect={() => onSelect(record.id)}
                       />
@@ -106,7 +115,9 @@ export function WorkflowNavigator({
                 return record === undefined ? null : (
                   <WorkflowListItem
                     key={record.id}
-                    record={record}
+                    name={record.workflow.name}
+                    stale={record.state === "stale"}
+                    count={record.workflow.steps.length}
                     selected={record.id === selectedWorkflowId}
                     onSelect={() => onSelect(record.id)}
                   />
@@ -115,6 +126,28 @@ export function WorkflowNavigator({
             )}
           </ul>
         )}
+        {behaviors.length > 0 ? (
+          <>
+            <div className={styles.header}>
+              <SectionLabel as="h2">Behaviors</SectionLabel>
+              <span className={styles.count}>{behaviors.length}</span>
+            </div>
+            <ul className={styles.list} aria-label="Behaviors" onKeyDown={handleKeyDown}>
+              {behaviors.map((record) => (
+                <WorkflowListItem
+                  key={record.id}
+                  kind="behavior"
+                  name={record.behavior.name}
+                  stale={record.state === "stale"}
+                  count={record.behavior.moments.length}
+                  countNoun="moment"
+                  selected={record.id === selectedBehaviorId}
+                  onSelect={() => onSelectBehavior?.(record.id)}
+                />
+              ))}
+            </ul>
+          </>
+        ) : null}
         {hasRepositoryMap ? (
           <div className={styles.mapAnother}>
             <GitBranch size={14} aria-hidden="true" />

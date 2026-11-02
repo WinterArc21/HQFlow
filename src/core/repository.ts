@@ -101,6 +101,7 @@ export interface CodeHQPaths {
   projectFile: string;
   repositoryMapFile: string;
   workflowsDir: string;
+  behaviorsDir: string;
   diagnosticsFile: string;
   skillFile: string;
   runtimeDir: string;
@@ -114,6 +115,7 @@ export function codeHQPaths(root: string): CodeHQPaths {
     projectFile: path.join(dir, "project.json"),
     repositoryMapFile: path.join(dir, "repository-map.json"),
     workflowsDir: path.join(dir, "workflows"),
+    behaviorsDir: path.join(dir, "behaviors"),
     diagnosticsFile: path.join(dir, "diagnostics.json"),
     skillFile: path.join(dir, "SKILL.md"),
     runtimeDir: path.join(dir, ".runtime"),

@@ -41,6 +41,8 @@ const PERSIST_VERSION = 8;
 
 interface CodeHQUiState {
   selectedWorkflowId: string | null;
+  /** A behavior map open instead of a workflow; the two selections never coexist. */
+  selectedBehaviorId: string | null;
   selectedStepId: string | null;
   /** Ephemeral request used by indirect selection paths that must reveal the selected card. */
   stepPanRequest: StepPanRequest | null;
@@ -62,6 +64,11 @@ interface CodeHQUiState {
 
 interface CodeHQUiActions {
   selectWorkflow: (workflowId: string | null) => void;
+  selectBehavior: (behaviorId: string) => void;
+  /** Opens a workflow with one step's card open: the link between a behavior moment and its code. */
+  openWorkflowStep: (workflowId: string, stepId: string) => void;
+  /** Opens a behavior with one moment's card open: the link back from a workflow step. */
+  openBehaviorMoment: (behaviorId: string, momentId: string) => void;
   selectStep: (stepId: string | null) => void;
   selectStepAndPan: (workflowId: string, stepId: string) => void;
   saveNodePosition: (workflowId: string, nodeId: string, position: CanvasPoint) => void;
@@ -129,6 +136,7 @@ const safeStorage: StateStorage = {
 
 const INITIAL_STATE: CodeHQUiState = {
   selectedWorkflowId: null,
+  selectedBehaviorId: null,
   selectedStepId: null,
   stepPanRequest: null,
   canvasLayouts: {},
@@ -151,9 +159,31 @@ export const useCodeHQStore = create<CodeHQStore>()(
       selectWorkflow: (workflowId) =>
         set({
           selectedWorkflowId: workflowId,
+          selectedBehaviorId: null,
           selectedStepId: null,
           stepPanRequest: null,
-                }),
+        }),
+
+      selectBehavior: (behaviorId) =>
+        set({ selectedWorkflowId: null, selectedBehaviorId: behaviorId, selectedStepId: null, stepPanRequest: null }),
+
+      openWorkflowStep: (workflowId, stepId) =>
+        set({
+          selectedWorkflowId: workflowId,
+          selectedBehaviorId: null,
+          selectedStepId: stepId,
+          stepPanRequest: { workflowId, stepId },
+          diagnosticsOpen: false,
+        }),
+
+      openBehaviorMoment: (behaviorId, momentId) =>
+        set({
+          selectedWorkflowId: null,
+          selectedBehaviorId: behaviorId,
+          selectedStepId: momentId,
+          stepPanRequest: null,
+          diagnosticsOpen: false,
+        }),
 
       // The diagnostics panel and the step drawer are both single-focus overlays (contract §11
       // accessibility: focus traps must never nest) — selecting a step always closes

@@ -238,4 +238,34 @@ describe("CodeHQStore — repository map", () => {
     expect(snapshot.repositoryMap?.repositoryMap.workflows[0]?.name).toBe("Workflow");
     expect(snapshot.diagnostics.valid).toBe(false);
   });
+
+  it("loads a behavior on its own, keeps it when broken, and warns about links to missing steps", async () => {
+    writeFileSync(path.join(workflowsDir, "wf.json"), validWorkflowJson("Workflow"));
+    const behaviorsDir = path.join(root, ".codehq", "behaviors");
+    mkdirSync(behaviorsDir);
+    const behaviorFile = path.join(behaviorsDir, "journey.json");
+    writeFileSync(behaviorFile, JSON.stringify({
+      schemaVersion: "0.1",
+      id: "journey",
+      name: "Journey",
+      purpose: "A user journey.",
+      moments: [
+        { id: "start", name: "Opens the app", purpose: "The user arrives.", kind: "start", causedBy: [{ workflow: "wf", step: "step-1" }] },
+        { id: "end", name: "Sees a result", purpose: "The user is done.", kind: "end", causedBy: [{ workflow: "wf", step: "missing-step" }] },
+      ],
+      transitions: [{ from: "start", to: "end", label: "waits", verdict: { status: "bug", evidence: "Reproduced by hand." } }],
+    }));
+    const store = createCodeHQStore(root);
+
+    const first = await store.reload();
+    expect(first.behaviors.map((record) => [record.id, record.state])).toEqual([["journey", "valid"]]);
+    const linkIssues = first.diagnostics.issues.filter((issue) => issue.file.endsWith("journey.json"));
+    expect(linkIssues.map((issue) => [issue.severity, issue.path])).toEqual([["warning", "moments[1].causedBy[0]"]]);
+
+    writeFileSync(behaviorFile, JSON.stringify({ schemaVersion: "0.1", id: "journey" }));
+    const second = await store.reload();
+    expect(second.behaviors[0]?.state).toBe("stale");
+    expect(second.behaviors[0]?.behavior.name).toBe("Journey");
+    expect(second.diagnostics.valid).toBe(false);
+  });
 });

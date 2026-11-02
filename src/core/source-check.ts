@@ -6,6 +6,7 @@
 import { statSync } from "node:fs";
 import type { Issue } from "@schema/diagnostics";
 import type { SourceStatus } from "@schema/wire";
+import type { Behavior } from "@schema/behavior";
 import type { Workflow } from "@schema/workflow";
 import { resolveInsideRepository } from "./safe-path";
 
@@ -80,7 +81,7 @@ export interface SourceCheckOutcome {
  * `warning` Issue — never an `error`, the file may be gitignored or generated — for each
  * occurrence of a `missing` reference, naming the step it came from.
  */
-export function computeWorkflowSourceChecks(root: string, workflow: Workflow, file: string): SourceCheckOutcome {
+function createRecorder(root: string, file: string) {
   const sourceChecks: Record<string, SourceStatus> = {};
   const issues: Issue[] = [];
 
@@ -99,6 +100,11 @@ export function computeWorkflowSourceChecks(root: string, workflow: Workflow, fi
       });
     }
   };
+  return { record, outcome: { sourceChecks, issues } as SourceCheckOutcome };
+}
+
+export function computeWorkflowSourceChecks(root: string, workflow: Workflow, file: string): SourceCheckOutcome {
+  const { record, outcome } = createRecorder(root, file);
 
   if (workflow.entryPoint !== undefined) {
     record(workflow.entryPoint, "Workflow entryPoint", "entryPoint");
@@ -122,5 +128,21 @@ export function computeWorkflowSourceChecks(root: string, workflow: Workflow, fi
     });
   });
 
-  return { sourceChecks, issues };
+  return outcome;
+}
+
+/** The same check for a valid `Behavior`: moment and transition sources, and verdict tests. */
+export function computeBehaviorSourceChecks(root: string, behavior: Behavior, file: string): SourceCheckOutcome {
+  const { record, outcome } = createRecorder(root, file);
+  const recordAll = (
+    item: { sources?: SourceCheckRef[] | undefined; verdict?: { tests?: SourceCheckRef[] | undefined } | undefined },
+    context: string,
+    itemPath: string,
+  ): void => {
+    (item.sources ?? []).forEach((ref, index) => record(ref, `${context} source`, `${itemPath}.sources[${index}]`));
+    (item.verdict?.tests ?? []).forEach((ref, index) => record(ref, `${context} verdict test`, `${itemPath}.verdict.tests[${index}]`));
+  };
+  behavior.moments.forEach((moment, index) => recordAll(moment, `Moment '${moment.id}'`, `moments[${index}]`));
+  behavior.transitions.forEach((transition, index) => recordAll(transition, `Transition '${transition.from}' to '${transition.to}'`, `transitions[${index}]`));
+  return outcome;
 }
