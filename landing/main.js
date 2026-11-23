@@ -469,8 +469,9 @@ function initDims() {
     const tick = ([, y]) => `<path d="M${rail - 5} ${y} H${rail + 5}"/>`;
     const span = (a, b) => `<path d="M${rail} ${a[1] + 3} V${b[1] - 3}" marker-start="url(#dim-arr)" marker-end="url(#dim-arr)"/>`;
     const label = (a, b, text) => {
+      // inside the rail, between it and the corner posts, so nothing reaches toward the headline
       const y = (a[1] + b[1]) / 2;
-      return `<text x="${rail - 9}" y="${y}" transform="rotate(-90 ${rail - 9} ${y})">${text}</text>`;
+      return `<text x="${rail + 14}" y="${y}" transform="rotate(-90 ${rail + 14} ${y})">${text}</text>`;
     };
     dims.innerHTML = `<svg width="${A.width}" height="${A.height}">
       <defs><marker id="dim-arr" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 1 L4 7 L8 1" fill="none" stroke="currentColor"/></marker></defs>

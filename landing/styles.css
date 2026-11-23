@@ -215,7 +215,7 @@ main { position: relative; }
 .hero-dims text { fill: var(--accent); font: 9.5px var(--mono); letter-spacing: .12em; text-anchor: middle; dominant-baseline: middle; }
 
 .iso { position: relative; height: 520px; }
-.iso-stack { position: absolute; top: 64%; left: 34%; width: 300px; height: 300px; margin: -150px 0 0 -150px; transform: rotateX(57deg) rotateZ(-40deg); transform-style: preserve-3d; }
+.iso-stack { position: absolute; top: 64%; left: 38%; width: 300px; height: 300px; margin: -150px 0 0 -150px; transform: scale(.88) rotateX(57deg) rotateZ(-40deg); transform-style: preserve-3d; }
 .iso-layer { position: absolute; inset: 0; border: 1px solid rgb(var(--ink-rgb) / .28); box-shadow: 0 40px 50px -30px rgb(var(--shadow-rgb) / .35); transform: translateZ(var(--z)); transition: transform 420ms var(--snap), box-shadow 420ms var(--snap); }
 .iso:has(.n1:hover) .cvs, .iso:has(.n2:hover) .json, .iso:has(.n3:hover) .src { box-shadow: 0 0 0 2px var(--accent), 0 60px 60px -30px rgb(var(--shadow-rgb) / .4); transform: translateZ(calc(var(--z) + 28px)); }
 /* registration crosses at each layer's corners, in the layer's own plane */
@@ -576,8 +576,8 @@ main { position: relative; }
   :root { --rail-gap: 84px; }
 }
 
-/* the rail needs the gap beside the headline; between the one-column and full layouts there is none */
-@media (min-width: 961px) and (max-width: 1180px) {
+/* the rail needs the gap beside the headline, and at one column the scaled-down stack leaves no room for its labels */
+@media (max-width: 1180px) {
   .hero-dims { display: none; }
 }
 
