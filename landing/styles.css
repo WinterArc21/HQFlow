@@ -111,13 +111,6 @@ h1, h2, h3 { font-family: var(--display); }
   margin-inline: auto;
 }
 
-/* small mono labels */
-.install-cue, .install-compat {
-  color: var(--ink-3);
-  font: 11px/1.4 var(--mono);
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
 
 .brand-mark { display: inline-grid; flex: none; width: 30px; height: 30px; place-items: center; border-radius: 8px; color: white; background: var(--ink); }
 .brand { display: inline-flex; align-items: center; gap: 10px; }
@@ -252,15 +245,16 @@ main { position: relative; }
 .cmd-line code { user-select: text; }
 .cmd-line + .cmd-line { border-top: 1px solid var(--line); }
 .cmd-prompt { color: var(--ink-3); user-select: none; }
-.cmd-comment { margin-left: 16px; color: var(--ink-3); font-size: 11.5px; }
 .cmd-copy { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--ink); border-radius: var(--r-1); color: var(--ink); font: 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; transition: color 150ms ease-out, background-color 150ms ease-out; }
 .cmd-copy:hover { color: white; background: var(--ink); }
 .cmd-copy.is-copied { border-color: var(--green); color: var(--green); background: none; }
-.cmd-lg { width: 100%; padding: 20px 120px 20px 20px; border: 0; color: white; background: var(--dark); text-align: left; }
-.cmd-lg .cmd-line { font-size: 14.5px; }
+.cmd-lg { width: min(100%, 300px); padding: 8px 88px 8px 16px; border: 0; color: white; background: var(--dark); text-align: left; }
+.cmd-lg .cmd-line { font-size: 14px; }
 .cmd-lg .cmd-prompt { color: #8c8c8c; }
 .cmd-lg .cmd-line + .cmd-line { border-top-color: var(--dark-2); }
-.cmd-lg .cmd-copy { border-color: var(--dark-mute); color: var(--dark-text); }
+.cmd-lg .cmd-copy { top: 50%; border-color: var(--dark-mute); color: var(--dark-text); translate: 0 -50%; }
+.cmd-lg .cmd-copy:hover { border-color: var(--dark-text); color: white; background: none; }
+.cmd-lg .cmd-copy.is-copied { border-color: var(--print-night); color: var(--print-night); }
 
 /* ==========================================================================
    PLAYABLE PRODUCT WALKTHROUGH
@@ -380,15 +374,22 @@ main { position: relative; }
 .trust-item p { max-width: 50ch; margin: 4px auto 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
 
 /* ==========================================================================
-   INSTALL: one centred column inside orbit lines
+   INSTALL: three numbered steps on one wire, in the canvas notation
    ========================================================================== */
 
-.install-orbit { position: absolute; z-index: -1; top: 40px; left: 50%; width: min(1200px, 100vw); height: 420px; color: rgb(var(--accent-rgb) / .14); pointer-events: none; translate: -50% 0; }
-.install-orbit svg { width: 100%; height: 100%; }
-.install-grid { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: clamp(32px, 4vw, 52px); max-width: 720px; margin-inline: auto; text-align: center; }
-.install-cue { margin-bottom: 12px; color: var(--accent); }
-.install-quote { margin-bottom: 16px; font-size: 19px; line-height: 1.6; }
-.install-compat { text-transform: none; letter-spacing: .02em; }
+.install-steps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; max-width: 1040px; margin: 0 auto; padding: 0; list-style: none; }
+.install-steps::before { content: ""; position: absolute; top: 6px; right: calc(100% / 6); left: calc(100% / 6); height: 1.5px; background: var(--wire); }
+.install-step { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 34px; text-align: center; }
+.step-node { position: absolute; top: 0; left: 50%; width: 13px; height: 13px; border: 1px solid var(--wire); border-radius: 2px; background: var(--paper); box-shadow: 0 1px 3px rgb(0 0 0 / .14); translate: -50% 0; }
+.step-node::after { content: ""; position: absolute; inset: 3px; border-radius: 1px; background: var(--line-strong); }
+.step-node:is(.is-entry, .is-out) { border-color: var(--accent); }
+.step-node:is(.is-entry, .is-out)::after { background: var(--accent); }
+.step-n { color: var(--accent); font: 11px var(--mono); letter-spacing: .14em; }
+.install-step h3 { margin-top: 6px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.install-step .cmd { margin-top: 14px; }
+.install-step blockquote { max-width: 32ch; margin-top: 14px; font-size: 16px; line-height: 1.5; }
+.install-step p { max-width: 30ch; margin-top: 12px; color: var(--ink-3); font-size: 13.5px; line-height: 1.5; }
+.install-step p code { font-size: .92em; }
 .install .star-inline { display: flex; width: max-content; margin: 36px auto 0; }
 
 /* ==========================================================================
@@ -513,6 +514,13 @@ main { position: relative; }
   .lives, .trust { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 860px) {
+  .install-steps { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-left: 34px; }
+  .install-steps::before { top: 6px; right: auto; bottom: 0; left: 6px; width: 1.5px; height: auto; }
+  .install-step { align-items: flex-start; padding-top: 0; text-align: left; }
+  .step-node { left: -34px; translate: 0 0; }
+}
+
 @media (max-width: 900px) {
   .head-nav { display: none; }
   .foot-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -534,8 +542,6 @@ main { position: relative; }
   .release-card { padding: 16px 16px 18px; }
   .release-card li { grid-template-columns: 1fr; gap: 4px; }
   .cmd { max-width: 100%; }
-  .cmd-lg { padding-right: 20px; }
-  .cmd-lg .cmd-comment { display: none; }
   .tour-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tour-tab:first-child { grid-column: 1 / -1; }
   .tour-tab + .tour-tab { border-left: 0; border-top: 1px solid var(--line); }

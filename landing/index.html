@@ -283,34 +283,47 @@
 
     <!-- ============ install ============ -->
     <section class="section install" id="install">
-      <div class="install-orbit" aria-hidden="true">
-        <svg viewBox="0 0 1200 420" preserveAspectRatio="none"><g fill="none" stroke="currentColor"><ellipse cx="600" cy="150" rx="420" ry="70"/><ellipse cx="600" cy="150" rx="540" ry="98"/><ellipse cx="600" cy="150" rx="660" ry="126"/></g></svg>
-      </div>
       <div class="section-rule" aria-hidden="true"><i></i><span>05 / INSTALL</span><i></i></div>
       <header class="section-head is-centered">
         <h2 class="section-title reveal">Point it at your repo.</h2>
         <p class="section-lede reveal">Two commands and one prompt. HQFlow draws each workflow while your agent writes it.</p>
       </header>
 
-      <div class="install-grid">
-        <div class="cmd cmd-lg reveal" role="group" aria-label="Getting started commands">
-          <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow init</code><span class="cmd-comment">scaffold .codehq/</span></div>
-          <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow open</code><span class="cmd-comment">start the local canvas</span></div>
-          <button class="cmd-copy" type="button" data-copy aria-label="Copy commands">
-            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 2.5h7A1.5 1.5 0 0 1 13.5 4v7M3.5 5H11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-            <span>copy</span>
-          </button>
-        </div>
-
-        <div class="install-note reveal">
-          <p class="install-cue">then ask your agent</p>
-          <blockquote class="install-quote">
-            “Map how checkout actually works in this repo: steps, sources, failure paths.
-            I’ll review the architecture on the canvas.”
-          </blockquote>
-          <p class="install-compat">Works with Cursor, Claude Code and Codex. Anything that can read a repo.</p>
-        </div>
-      </div>
+      <ol class="install-steps">
+        <li class="install-step reveal">
+          <span class="step-node is-entry" aria-hidden="true"></span>
+          <span class="step-n">01</span>
+          <h3>Scaffold the contract</h3>
+          <div class="cmd cmd-lg" role="group" aria-label="Scaffold command">
+            <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow init</code></div>
+            <button class="cmd-copy" type="button" data-copy aria-label="Copy npx hqflow init">
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 2.5h7A1.5 1.5 0 0 1 13.5 4v7M3.5 5H11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+              <span>copy</span>
+            </button>
+          </div>
+          <p>Adds <code>.codehq/</code> and the skill your agent reads.</p>
+        </li>
+        <li class="install-step reveal">
+          <span class="step-node" aria-hidden="true"></span>
+          <span class="step-n">02</span>
+          <h3>Open the canvas</h3>
+          <div class="cmd cmd-lg" role="group" aria-label="Open command">
+            <div class="cmd-line"><span class="cmd-prompt">$</span><code>npx hqflow open</code></div>
+            <button class="cmd-copy" type="button" data-copy aria-label="Copy npx hqflow open">
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 2.5h7A1.5 1.5 0 0 1 13.5 4v7M3.5 5H11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+              <span>copy</span>
+            </button>
+          </div>
+          <p>Starts the canvas on localhost. Nothing is uploaded.</p>
+        </li>
+        <li class="install-step reveal">
+          <span class="step-node is-out" aria-hidden="true"></span>
+          <span class="step-n">03</span>
+          <h3>Ask your agent</h3>
+          <blockquote>“Map how checkout actually works in this repo: steps, sources, failure paths.”</blockquote>
+          <p>Works with Cursor, Claude Code and Codex. Anything that can read a repo.</p>
+        </li>
+      </ol>
 
       <a class="star-inline reveal" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
