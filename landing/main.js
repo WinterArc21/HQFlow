@@ -16,8 +16,6 @@ const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
    needs nothing special; they redraw when the layout width changes.
    ========================================================================== */
 
-const FAIL_INK = "#cf5a4c"; // failure stays red: red means failure in the product
-
 function readInks() {
   const css = getComputedStyle(document.documentElement);
   const get = (name) => css.getPropertyValue(name).trim();
@@ -122,26 +120,6 @@ const PRINTS = {
       });
       o.globalAlpha = 1; o.fillStyle = inks.grey;
       [.8, .6, .75, .5, .7, .4].forEach((f, i) => rr(o, x + 14, 26 + i * 16, 92 * f, 7, 3));
-    },
-  }),
-
-  /* why: the way through, a workflow map with one failure path */
-  map: (host, inks) => ({
-    draw(o, w, h) {
-      dome(o, inks, w / 2, h * 1.02, h * 0.95, 0.5);
-      const cx = w / 2, nodes = [[cx - 150, 64], [cx - 46, 30], [cx - 46, 102], [cx + 58, 64]];
-      o.lineWidth = 4;
-      const wire = ([x1, y1], [x2, y2], color, dash) => {
-        o.strokeStyle = color; o.setLineDash(dash ? [8, 7] : []);
-        o.beginPath(); o.moveTo(x1 + 70, y1 + 16); o.bezierCurveTo(x1 + 88, y1 + 16, x2 - 18, y2 + 16, x2, y2 + 16); o.stroke();
-      };
-      wire(nodes[0], nodes[1], inks.ink); wire(nodes[0], nodes[2], inks.ink); wire(nodes[1], nodes[3], inks.ink); wire(nodes[2], nodes[3], FAIL_INK, true);
-      o.setLineDash([]);
-      nodes.forEach(([x, y], i) => {
-        o.fillStyle = i === 2 ? FAIL_INK : inks.ink; rr(o, x, y, 70, 32, 6);
-        o.globalCompositeOperation = "destination-out"; o.fillStyle = "rgba(0,0,0,.55)"; rr(o, x + 12, y + 8, 50, 16, 3);
-        o.globalCompositeOperation = "source-over";
-      });
     },
   }),
 
@@ -518,8 +496,38 @@ function initDims() {
   if (document.fonts?.ready) document.fonts.ready.then(draw).catch(() => {});
 }
 
+/* ==========================================================================
+   PRODUCT SHOT
+   The way-through card shows the app's step cards at real size. The board
+   fits the window like the canvas zoom; on a phone it crops at 36% rather
+   than shrinking further. The hover light follows the pointer, as in the app.
+   ========================================================================== */
+
+function initShot() {
+  const body = document.querySelector(".shot-body");
+  const board = body?.querySelector(".sn-world");
+  const zoom = body?.querySelector(".sn-zoom");
+  if (!body || !board || !zoom) return;
+  const fit = () => {
+    const k = Math.max(0.36, Math.min(0.62, (body.clientWidth - 40) / board.offsetWidth));
+    board.style.scale = String(k);
+    board.style.left = `${Math.max(16, (body.clientWidth - board.offsetWidth * k) / 2)}px`;
+    zoom.textContent = `${Math.round(k * 100)}%`;
+  };
+  fit();
+  new ResizeObserver(fit).observe(body);
+  board.addEventListener("pointermove", (event) => {
+    const card = event.target.closest(".sn-card");
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${((event.clientX - r.left) / r.width) * 100}%`);
+    card.style.setProperty("--my", `${((event.clientY - r.top) / r.height) * 100}%`);
+  });
+}
+
 /* ---- boot ---- */
 initWalkthrough();
 initUI();
 initPrints();
 initDims();
+initShot();

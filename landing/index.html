@@ -203,7 +203,25 @@
           <p>Walls of markdown. Accurate maybe, but no shape, and out of date by the next merge.</p>
         </article>
         <article class="fork-row is-live reveal">
-          <div class="print" data-print="map" aria-hidden="true"><span class="print-cap">THE WAY THROUGH // 1 MAP</span></div>
+          <!-- a screenshot of the product: the app's own step cards (StepNode) in the Sorbet scene -->
+          <div class="print" aria-hidden="true"><span class="print-cap">THE WAY THROUGH // 1 MAP</span>
+          <div class="shot"><div class="shot-bar"><i></i><i></i><i></i><span class="shot-title"><b>HQ</b>hqflow / <strong>Checkout</strong></span><span class="shot-live">Live</span></div>
+          <div class="shot-body">
+            <div class="sn-world">
+              <svg class="sn-edges" viewBox="0 0 1050 352" width="1050" height="352" aria-hidden="true"><defs><marker id="sn-arr-ok" viewBox="0 0 10 10" refX="6.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5 L9,5 L1,8.5 Z" class="ok"></path></marker><marker id="sn-arr-fail" viewBox="0 0 10 10" refX="6.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M1,1.5 L9,5 L1,8.5 Z" class="fail"></path></marker><mask id="sn-gap" maskUnits="userSpaceOnUse" x="0" y="0" width="1050" height="352"><rect width="1050" height="352" fill="#fff"></rect><rect x="633" y="162" width="76" height="20" fill="#000"></rect></mask></defs><g class="sn-edge ok" marker-end="url(#sn-arr-ok)"><path d="M310 68 H368"></path><path d="M680 68 H738"></path><path d="M895 136 V214"></path><path d="M680 284 H738"></path></g><path class="sn-edge fail" mask="url(#sn-gap)" marker-end="url(#sn-arr-fail)" d="M817 136 C817 176, 525 176, 525 202 V214"></path></svg>
+              <div class="sn-card" style="left:0px;top:0px;--c:var(--sn-entry)"><div class="sn-body"><div class="sn-header"><span class="sn-index">01</span><span class="sn-name">POST /api/checkout</span></div><p class="sn-purpose">Receives the cart from the client and checks the session before any work starts.</p><div class="sn-footer"><span class="sn-cat">Entry</span></div></div></div>
+              <div class="sn-card" style="left:370px;top:0px;--c:var(--sn-logic)"><div class="sn-body"><div class="sn-header"><span class="sn-index">02</span><span class="sn-name">Create order</span></div><p class="sn-purpose">Writes a pending order with the cart's items, totals, and the shipping address.</p><div class="sn-footer"><span class="sn-cat">Logic</span></div></div></div>
+              <div class="sn-card" style="left:740px;top:0px;--c:var(--sn-external)"><div class="sn-body"><div class="sn-header"><span class="sn-index">03</span><span class="sn-name">Charge card</span></div><p class="sn-purpose">Charges the saved card through Stripe and stores the payment intent on the order.</p><div class="sn-footer"><span class="sn-cat">External</span></div></div></div>
+              <div class="sn-card" style="left:370px;top:216px;--c:var(--sn-logic)"><div class="sn-body"><div class="sn-header"><span class="sn-index">04</span><span class="sn-name">Retry charge</span></div><p class="sn-purpose">On a declined or timed-out charge, waits two seconds and tries the card once more.</p><div class="sn-footer"><span class="sn-cat">Logic</span></div></div></div>
+              <div class="sn-card" style="left:740px;top:216px;--c:var(--sn-output)"><div class="sn-body"><div class="sn-header"><span class="sn-index">05</span><span class="sn-name">Send receipt</span></div><p class="sn-purpose">Emails the receipt and marks the order paid so fulfilment can pick it up.</p><div class="sn-footer"><span class="sn-cat">Output</span></div></div></div>
+              <i class="sn-port ok" style="left:310px;top:68px" aria-hidden="true"></i>
+              <i class="sn-port ok" style="left:680px;top:68px" aria-hidden="true"></i>
+              <i class="sn-port ok" style="left:895px;top:136px" aria-hidden="true"></i>
+              <i class="sn-port fail" style="left:817px;top:136px" aria-hidden="true"></i>
+              <i class="sn-port ok" style="left:680px;top:284px" aria-hidden="true"></i>
+              <span class="sn-label" style="left:671px;top:172px" aria-hidden="true">declined</span>
+            </div><div class="shot-dock"><span>−</span><span class="sn-zoom">51%</span><span>+</span><span>⤓</span></div></div></div>
+          </div>
           <h3>See the system</h3>
           <p>A map of the real workflows: where each one starts, where it branches, what it touches, and where it can fail.</p>
           <span class="fork-arrow" aria-hidden="true">→</span>
