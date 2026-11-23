@@ -339,22 +339,28 @@ main { position: relative; }
 
 /* ==========================================================================
    MAP: the map shown as what it is on disk: files that ride along in a pull
-   request, floating in a dotted dome.
+   request, tipped back in 3D over a printed shadow.
    ========================================================================== */
 
 .lives { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(32px, 4vw, 56px); align-items: center; }
-.lives-copy, .pr { position: relative; z-index: 1; }
+.lives-copy { position: relative; z-index: 1; }
 .lives-copy > p { max-width: 46ch; margin-top: 18px; color: var(--ink-2); }
 .lives-list { display: grid; gap: 0; margin-top: 22px; padding: 0; list-style: none; }
 .lives-list li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 16px; padding-block: 11px; border-top: 1px solid var(--line); font-size: 14.5px; line-height: 1.5; }
 .lives-list li:last-child { border-bottom: 1px solid var(--line); }
 .lives-key { justify-self: start; align-self: start; padding: 1px 7px; border: 1px solid rgb(var(--ink-rgb) / .4); color: var(--ink); background: rgb(var(--accent-rgb) / .06); font: 11px/1.5 var(--mono); }
 .lives-list li > span:last-child { color: var(--ink-2); }
-.map-dome { position: absolute; z-index: 0; top: 50%; right: 0; width: 640px; height: 640px; color: rgb(var(--accent-rgb) / .16); pointer-events: none; translate: 8% -50%; }
-.map-dome :is(svg, canvas) { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* the card tips back; hovering lays it flat to read */
+.pr-tilt { position: relative; z-index: 1; isolation: isolate; min-width: 0; padding-bottom: 40px; perspective: 1400px; }
+.pr-tilt .pr { transform: rotateX(14deg) rotateY(-16deg) rotateZ(2deg); transform-origin: 50% 60%; transition: transform 260ms var(--snap); }
+@media (hover: hover) and (pointer: fine) {
+  .pr-tilt:hover .pr { transform: none; }
+}
+.pr-shadow { position: absolute; z-index: -1; right: 0; bottom: 0; left: 0; height: 140px; pointer-events: none; }
+.pr-shadow canvas { position: absolute; top: 0; left: 0; }
 
 /* a pull request in miniature: the code and its map change together */
-.pr { overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: rgb(255 255 255 / .86); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); box-shadow: var(--shadow-card); }
+.pr { position: relative; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 4px; background: rgb(255 255 255 / .86); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); box-shadow: 0 2px 4px rgb(0 0 0 / .06), 0 50px 60px -40px rgb(0 0 0 / .45); }
 .pr-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .pr-head strong { overflow: hidden; min-width: 0; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .pr-state { flex: none; padding: 2px 8px; border-radius: 999px; color: white; background: var(--ink); font: 600 11px/1.6 var(--sans); }
@@ -523,7 +529,6 @@ main { position: relative; }
   .fork { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
   .fork-row.is-live { grid-column: 1; grid-row: auto; }
   .fork-arrow { top: -24px; left: 50%; rotate: 90deg; translate: -50% 0; }
-  .map-dome { display: none; }
   .release { grid-template-columns: 1fr; }
   .release-meta { flex-direction: row; align-items: center; gap: 10px; padding-top: 0; }
   .changelog { --node-top: 4px; }
@@ -581,4 +586,5 @@ main { position: relative; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1 !important; translate: none !important; transition: none !important; animation: none !important; }
+  .pr-tilt .pr { transition: none; }
 }

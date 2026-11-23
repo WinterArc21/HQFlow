@@ -145,8 +145,16 @@ const PRINTS = {
     },
   }),
 
-  /* map: the dome the pull request floats in */
-  dome: (host, inks) => ({ width: 640, height: 640, step: 6, draw: (o) => dome(o, inks, 320, 360, 290, 0.75) }),
+  /* map: the shadow under the tipped pull request, a flat disc seen low */
+  shadow: () => ({
+    step: 6,
+    draw(o, w, h) {
+      o.save(); o.translate(w / 2, h / 2); o.scale(1, h / w);
+      const g = o.createRadialGradient(0, 0, w * 0.1, 0, 0, w / 2);
+      g.addColorStop(0, "rgba(10,10,10,.5)"); g.addColorStop(1, "rgba(10,10,10,0)");
+      o.fillStyle = g; o.beginPath(); o.arc(0, 0, w / 2, 0, Math.PI * 2); o.fill(); o.restore();
+    },
+  }),
 
   /* trust: the host's own icon, printed large */
   icon: (host, inks) => {

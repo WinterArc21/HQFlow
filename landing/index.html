@@ -215,10 +215,6 @@
     <section class="section" id="map">
       <div class="section-rule" aria-hidden="true"><i></i><span>03 / THE MAP</span><i></i></div>
       <div class="lives">
-        <div class="map-dome" data-print="dome" aria-hidden="true">
-          <svg viewBox="0 0 640 640"><g fill="none" stroke="currentColor"><ellipse cx="320" cy="400" rx="330" ry="56"/><ellipse cx="320" cy="400" rx="420" ry="74"/><ellipse cx="320" cy="400" rx="520" ry="92"/></g></svg>
-        </div>
-
         <div class="lives-copy reveal">
           <h2 class="section-title">The map lives in your repo.</h2>
           <p>No database and no account. It is plain JSON next to the code it explains, so it moves through the same review as the code.</p>
@@ -230,7 +226,10 @@
           </ul>
         </div>
 
-        <div class="pr reveal" aria-label="Example pull request that changes code and its map together">
+        <!-- the pull request, tipped back over its printed shadow; it lies flat while you read it -->
+        <div class="pr-tilt reveal">
+          <div class="pr-shadow" data-print="shadow" aria-hidden="true"></div>
+        <div class="pr" aria-label="Example pull request that changes code and its map together">
           <div class="pr-head">
             <span class="pr-state">Open</span>
             <strong>Retry failed card payments once</strong>
@@ -248,6 +247,7 @@
           </div>
 <pre class="pr-diff"><span class="ctx">    { "from": "charge-card", "to": "send-receipt" },</span><span class="del">-   { "from": "charge-card", "to": "show-error", "type": "failure" }</span><span class="add">+   { "from": "charge-card", "to": "retry-charge", "type": "failure" },</span><span class="add">+   { "from": "retry-charge", "to": "send-receipt" },</span><span class="add">+   { "from": "retry-charge", "to": "show-error", "type": "failure" }</span></pre>
           <p class="pr-note">The reviewer sees the new failure path, not only the new lines.</p>
+        </div>
         </div>
       </div>
     </section>
