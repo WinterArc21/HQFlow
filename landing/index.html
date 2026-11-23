@@ -18,6 +18,9 @@
   <meta name="twitter:description" content="Agents ship faster than you can reread the repo. HQFlow maps what they built, entry point to failure path." />
   <meta name="twitter:image" content="https://hqflow.vercel.app/og.jpg" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23111111'/%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='6' width='7.5' height='7.5' rx='1.5'/%3E%3Crect x='18.5' y='18.5' width='7.5' height='7.5' rx='1.5'/%3E%3Cpath d='M9.75 13.5V22.25H18.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -29,18 +32,17 @@
     <div class="head-inner">
       <a class="brand" href="#top">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1"/><path d="M4.25 6.5V11.75H9.5"/></svg></span>
-        <span class="brand-word">
-          <strong>HQFlow</strong>
-          <span class="brand-sub">workflow maps</span>
-        </span>
+        <span class="brand-word"><strong>HQFlow</strong></span>
       </a>
 
       <nav class="head-nav" aria-label="Primary">
+        <a href="#canvas">Demo</a>
+        <a href="#install">Install</a>
         <a href="changelog">Changelog</a>
+        <a href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">GitHub</a>
       </nav>
 
       <div class="head-right">
-        <span class="head-note">local / private</span>
         <a class="star-link" href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer" aria-label="Star HQFlow on GitHub">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
           <span class="star-label">Star</span>
@@ -53,16 +55,12 @@
 
   <main id="top">
 
-    <!-- the spine: one continuous line, drawn in the product's own notation -->
-    <svg class="spine" id="spine" aria-hidden="true" focusable="false"></svg>
-
     <!-- ============ hero ============ -->
     <section class="hero">
       <div class="hero-inner">
         <h1 class="hero-title">
           <span class="t-dim reveal">Agents ship the code.</span>
-          <span class="reveal">HQFlow shows you the system.</span>
-          <span class="sp-node is-entry" data-sp="origin" aria-hidden="true"></span>
+          <span class="reveal">HQFlow shows you the <em class="hero-sys">system</em>.</span>
         </h1>
 
         <div class="hero-lede">
@@ -80,7 +78,53 @@
           </div>
         </div>
 
-        <div class="product-tour reveal" id="canvas" data-sp="canvas-frame">
+        <!-- an exploded view of the product: source, the JSON your agent writes, the canvas -->
+        <div class="hero-art">
+          <div class="hero-halo" data-print="halo" aria-hidden="true">
+            <svg viewBox="0 0 900 900"><g fill="none" stroke="currentColor"><ellipse cx="450" cy="560" rx="400" ry="70"/><ellipse cx="450" cy="560" rx="480" ry="86"/><ellipse cx="450" cy="560" rx="560" ry="102"/></g></svg>
+          </div>
+          <div class="iso" role="img" aria-label="Exploded view: your source code, the workflow JSON your agent writes, and the canvas HQFlow draws from it">
+            <div class="iso-stack">
+              <div class="iso-layer src" style="--z:0px;--d:80ms"><span class="c">// src/checkout/route.ts</span>
+<span class="k">export async function</span> <span class="f">POST</span>(req) {
+  <span class="k">const</span> order = <span class="k">await</span> <span class="f">createOrder</span>(cart)
+<span class="hl">  <span class="k">const</span> charge = <span class="k">await</span> <span class="f">stripe.charge</span>(order)</span>  <span class="k">if</span> (!charge.ok) <span class="k">return</span> <span class="f">retry</span>(order)
+  <span class="k">await</span> <span class="f">sendReceipt</span>(order.email)
+  <span class="k">return</span> <span class="s">"ok"</span>
+}</div>
+              <div class="iso-layer json" style="--z:140px;--d:200ms">{ <span class="p">"id"</span>: <span class="v">"checkout"</span>,
+  <span class="p">"steps"</span>: [
+    { <span class="p">"id"</span>: <span class="v">"create-order"</span>, <span class="p">"category"</span>: <span class="v">"logic"</span> },
+    { <span class="p">"id"</span>: <span class="v">"charge-card"</span>, <span class="p">"category"</span>: <span class="v">"external"</span> },
+    { <span class="p">"id"</span>: <span class="v">"send-receipt"</span>, <span class="p">"category"</span>: <span class="v">"output"</span> }
+  ],
+  <span class="p">"connections"</span>: [
+    { <span class="p">"from"</span>: <span class="v">"charge-card"</span>,
+      <span class="p">"to"</span>: <span class="v">"retry-charge"</span>,
+      <span class="p">"type"</span>: <span class="x">"failure"</span> }
+  ] }</div>
+              <div class="iso-layer cvs" style="--z:280px;--d:320ms">
+                <svg viewBox="0 0 300 300" aria-hidden="true">
+                  <g fill="none" stroke="#5a5a54" stroke-width="1.4"><path d="M81 68 V104"/><path d="M140 127 H160"/><path d="M219 150 V188"/></g>
+                  <path d="M180 150 Q150 172 110 188" fill="none" stroke="#a23b30" stroke-width="1.4" stroke-dasharray="4 3"/>
+                </svg>
+                <div class="iso-node" style="left:22px;top:22px;--c:var(--go)"><small>ENTRY</small><strong>POST /api/checkout</strong></div>
+                <div class="iso-node" style="left:22px;top:104px;--c:var(--cyan)"><small>LOGIC</small><strong>Create order</strong></div>
+                <div class="iso-node" style="left:160px;top:104px;--c:var(--violet-ink)"><small>EXTERNAL</small><strong>Charge card</strong></div>
+                <div class="iso-node" style="left:22px;top:190px;--c:var(--fail)"><small>FAILURE</small><strong>Retry once</strong></div>
+                <div class="iso-node" style="left:160px;top:190px;--c:var(--go)"><small>OUTPUT</small><strong>Send receipt</strong></div>
+              </div>
+              <span class="iso-post" style="left:0;top:0"></span><span class="iso-post" style="left:300px;top:0"></span>
+              <span class="iso-post" style="left:0;top:300px"></span><span class="iso-post" style="left:300px;top:300px"></span>
+            </div>
+
+            <div class="iso-note n1" style="--x:70%;--y:13%;--len:96px;--d:900ms"><span class="tag">03</span><strong>The canvas</strong><small>Drawn on localhost, step by step, as the file lands.</small></div>
+            <div class="iso-note n2" style="--x:76%;--y:44%;--len:80px;--d:1020ms"><span class="tag">02</span><strong>.codehq/*.json</strong><small>Written by your agent. Reviewed in the same PR.</small></div>
+            <div class="iso-note n3" style="--x:72%;--y:75%;--len:56px;--d:1140ms"><span class="tag">01</span><strong>Your source</strong><small>Read where it lives. Never uploaded.</small></div>
+          </div>
+        </div>
+
+        <div class="product-tour reveal" id="canvas">
           <div class="tour-tabs" role="tablist" aria-label="HQFlow feature walkthrough">
             <button class="tour-tab is-active" type="button" role="tab" aria-selected="true" data-tour-step="draw">
               <span class="tour-number">01</span>
@@ -140,37 +184,43 @@
       </div>
     </section>
 
-    <!-- ============ why: the spine forks, two branches die ============ -->
+    <!-- ============ why: two dead ends, one way through ============ -->
     <section class="section" id="why">
-      <header class="section-head">
+      <div class="section-rule" aria-hidden="true"><i></i><span>02 / WHY</span><i></i></div>
+      <header class="section-head is-centered">
         <h2 class="section-title reveal">Ship with agents. Still understand the architecture.</h2>
         <p class="section-lede reveal">Every feature your agent ships moves the architecture a little. A diff shows you lines. It does not show you the system.</p>
       </header>
 
       <div class="fork">
         <article class="fork-row is-dead reveal">
-          <span class="sp-node is-dead" data-sp="why-1" aria-hidden="true"></span>
+          <div class="print" data-print="code" aria-hidden="true"><span class="print-cap is-dead">DEAD END</span></div>
           <h3>Read the code</h3>
           <p>The agent wrote it in an afternoon. Reading it back takes a week.</p>
         </article>
         <article class="fork-row is-dead reveal">
-          <span class="sp-node is-dead" data-sp="why-2" aria-hidden="true"></span>
+          <div class="print" data-print="docs" aria-hidden="true"><span class="print-cap is-dead">DEAD END</span></div>
           <h3>Read the docs</h3>
           <p>Walls of markdown. Accurate maybe, but no shape, and out of date by the next merge.</p>
         </article>
         <article class="fork-row is-live reveal">
-          <span class="sp-node is-out" data-sp="why-3" aria-hidden="true"></span>
+          <div class="print" data-print="map" aria-hidden="true"><span class="print-cap">THE WAY THROUGH // 1 MAP</span></div>
           <h3>See the system</h3>
           <p>A map of the real workflows: where each one starts, where it branches, what it touches, and where it can fail.</p>
+          <span class="fork-arrow" aria-hidden="true">→</span>
         </article>
       </div>
     </section>
 
     <!-- ============ map: the map is files that ride along in a pull request ============ -->
     <section class="section" id="map">
+      <div class="section-rule" aria-hidden="true"><i></i><span>03 / THE MAP</span><i></i></div>
       <div class="lives">
+        <div class="map-dome" data-print="dome" aria-hidden="true">
+          <svg viewBox="0 0 640 640"><g fill="none" stroke="currentColor"><ellipse cx="320" cy="400" rx="330" ry="56"/><ellipse cx="320" cy="400" rx="420" ry="74"/><ellipse cx="320" cy="400" rx="520" ry="92"/></g></svg>
+        </div>
+
         <div class="lives-copy reveal">
-          <span class="sp-node" data-sp="map-node" aria-hidden="true"></span>
           <h2 class="section-title">The map lives in your repo.</h2>
           <p>No database and no account. It is plain JSON next to the code it explains, so it moves through the same review as the code.</p>
           <ul class="lives-list">
@@ -205,23 +255,24 @@
 
     <!-- ============ trust: why it is safe to point at your repo ============ -->
     <section class="section trust-band" aria-label="Why you can trust it">
+      <div class="section-rule" aria-hidden="true"><i></i><span>04 / TRUST</span><i></i></div>
       <div class="trust">
         <article class="trust-item reveal">
-          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+          <div class="print" data-print="icon" aria-hidden="true"><svg viewBox="0 0 24 24" stroke-width="1.7"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
           <div>
             <h3>Local-first, no LLM inside</h3>
             <p>No model, no API keys, no accounts, no telemetry. HQFlow uses the agent you already have, and your code never leaves your machine.</p>
           </div>
         </article>
         <article class="trust-item reveal">
-          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span>
+          <div class="print" data-print="icon" aria-hidden="true"><svg viewBox="0 0 24 24" stroke-width="1.7"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
           <div>
             <h3>Evidence attached</h3>
             <p>Every step carries its real files, symbols, inputs, outputs, edge cases, and tests. Check any claim in one click.</p>
           </div>
         </article>
         <article class="trust-item reveal">
-          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/></svg></span>
+          <div class="print" data-print="icon" aria-hidden="true"><svg viewBox="0 0 24 24" stroke-width="1.7"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/></svg></div>
           <div>
             <h3>Open source, MIT</h3>
             <p>Read every line. Fork it, audit it, run it offline.</p>
@@ -230,10 +281,13 @@
       </div>
     </section>
 
-    <!-- ============ install: everything converges ============ -->
+    <!-- ============ install ============ -->
     <section class="section install" id="install">
-      <header class="section-head">
-        <span class="sp-node is-terminal" data-sp="install-node" aria-hidden="true"></span>
+      <div class="install-orbit" aria-hidden="true">
+        <svg viewBox="0 0 1200 420" preserveAspectRatio="none"><g fill="none" stroke="currentColor"><ellipse cx="600" cy="150" rx="420" ry="70"/><ellipse cx="600" cy="150" rx="540" ry="98"/><ellipse cx="600" cy="150" rx="660" ry="126"/></g></svg>
+      </div>
+      <div class="section-rule" aria-hidden="true"><i></i><span>05 / INSTALL</span><i></i></div>
+      <header class="section-head is-centered">
         <h2 class="section-title reveal">Point it at your repo.</h2>
         <p class="section-lede reveal">Two commands and one prompt. HQFlow draws each workflow while your agent writes it.</p>
       </header>
@@ -268,24 +322,32 @@
 
   <!-- ============ footer ============ -->
   <footer class="site-foot">
+    <div class="foot-word" data-print="word" aria-hidden="true"></div>
     <div class="foot-inner">
-      <div class="foot-brand">
-        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1"/><path d="M4.25 6.5V11.75H9.5"/></svg></span>
+      <p class="foot-status"><i></i>Watching .codehq/workflows · 0 B uploaded · no telemetry</p>
+      <div class="foot-top">
         <div>
-          <strong>HQFlow</strong> <span class="dim">/ workflow maps</span>
-          <p class="foot-tag">built local. stays local.</p>
+          <a class="foot-brand" href="#top">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="4.5" height="4.5" rx="1"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1"/><path d="M4.25 6.5V11.75H9.5"/></svg></span>
+            <span><strong>HQFlow</strong><small>workflow maps</small></span>
+          </a>
+          <p class="foot-tag">Local-first workflow maps for coding agents. Your agent writes the map, HQFlow draws it, and your code never leaves your machine.</p>
         </div>
+        <nav class="foot-col" aria-label="Product">
+          <p class="foot-h">Product</p>
+          <a href="#canvas">Demo</a>
+          <a href="#install">Install</a>
+          <a href="changelog">Changelog</a>
+        </nav>
+        <nav class="foot-col" aria-label="Project">
+          <p class="foot-h">Project</p>
+          <a href="https://github.com/WinterArc21/HQFlow" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://www.npmjs.com/package/hqflow" target="_blank" rel="noopener noreferrer">npm</a>
+          <a href="https://github.com/WinterArc21/HQFlow/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+          <a href="https://github.com/WinterArc21/HQFlow/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+        </nav>
       </div>
-      <nav class="foot-links" aria-label="Footer">
-        <a href="#install">Install</a>
-        <a href="changelog">Changelog</a>
-        <a
-          href="https://github.com/WinterArc21/HQFlow"
-          target="_blank"
-          rel="noopener noreferrer"
-        >GitHub</a>
-      </nav>
-      <p class="foot-c">© 2026 · open source, local-first</p>
+      <div class="foot-base"><span>© 2026 HQFlow · MIT licensed</span><span>Built local. Stays local.</span></div>
     </div>
   </footer>
 

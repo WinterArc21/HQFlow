@@ -3,180 +3,214 @@
 
    Two pieces:
      1. the feature walkthrough around the embedded production canvas
-     2. the spine, one continuous line connecting the whole page
+     2. the halftone prints: each section's figure, printed in dots
    ========================================================================== */
 
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const NS = "http://www.w3.org/2000/svg";
 
 /* ==========================================================================
-   2. THE SPINE
-   One line down the page in the canvas notation. It enters the canvas, forks
-   where the argument forks, passes the map section, and terminates at the
-   install step.
+   HALFTONE PRINTS
+   Each [data-print] host gets one canvas: a drawing painted offscreen, then
+   printed as dots whose size follows the painted alpha. Inks come from the
+   --print-* tokens in styles.css. The prints are static, so reduced motion
+   needs nothing special; they redraw when the layout width changes.
    ========================================================================== */
 
-function initSpine() {
-  const main = document.querySelector("main");
-  const svg = document.getElementById("spine");
-  if (!main || !svg) return;
+const FAIL_INK = "#cf5a4c"; // failure stays red: red means failure in the product
 
-  let M = null;
-  const box = (name) => {
-    const el = main.querySelector(`[data-sp="${name}"]`);
-    if (!el) return null;
-    /* Offsets ignore transforms, so a row still mid scroll-in (shifted down by
-       its reveal) is measured where it comes to rest. */
-    let x = 0, y = 0, n = el;
-    while (n && n !== main) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
-    const w = el.offsetWidth, h = el.offsetHeight;
-    if (n !== main) {
-      const r = el.getBoundingClientRect();
-      x = r.left - M.left; y = r.top - M.top;
-    }
-    if (!w && !h) return null;
-    return { x, y, w, h, cx: x + w / 2, cy: y + h / 2, right: x + w, bottom: y + h };
+function readInks() {
+  const css = getComputedStyle(document.documentElement);
+  const get = (name) => css.getPropertyValue(name).trim();
+  return {
+    ink: get("--print-ink"),
+    grey: get("--print-grey"),
+    soft: get("--print-soft-rgb").split(/[\s,]+/).join(","),
+    night: get("--print-night"),
   };
+}
 
-  /* rounded orthogonal elbows. the corner radius shrinks rather than
-     overshooting when the rail and the target are close together. */
-  const corner = (span, max) => Math.max(2, Math.min(max, Math.abs(span) * 0.45));
+function dotPrint({ width, height, step = 5, draw, fade }) {
+  const w = Math.max(1, Math.round(width)), h = Math.max(1, Math.round(height));
+  const off = document.createElement("canvas");
+  off.width = w; off.height = h;
+  const o = off.getContext("2d", { willReadFrequently: true });
+  draw(o, w, h);
+  const data = o.getImageData(0, 0, w, h).data;
 
-  const elbowRight = (x, fromY, toY, toX, max = 14) => {
-    const r = corner(Math.min(toX - x, toY - fromY), max);
-    return `M ${x} ${fromY} V ${toY - r} Q ${x} ${toY} ${x + r} ${toY} H ${toX}`;
-  };
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + "px"; canvas.style.height = h + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
 
-  const elbowLeft = (fromX, y, x, toY, max = 14) => {
-    const r = corner(Math.min(fromX - x, toY - y), max);
-    return `M ${fromX} ${y} H ${x + r} Q ${x} ${y} ${x} ${y + r} V ${toY}`;
-  };
-
-  const build = () => {
-    M = main.getBoundingClientRect();
-    const W = main.offsetWidth, H = main.offsetHeight;
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("width", String(W));
-    svg.setAttribute("height", String(H));
-
-    const origin = box("origin");
-    if (!origin) return;
-    const railX = Math.round(origin.cx) + 0.5;
-
-    const segs = [];
-    const push = (sec, d, cls = "", draw = true, arrow = false) => segs.push({ sec, d, cls, draw, arrow });
-    const dots = [];
-
-    const why1 = box("why-1"), why2 = box("why-2"), why3 = box("why-3");
-    const frame = box("canvas-frame");
-    const lives = box("map-node");
-    const term = box("install-node");
-
-    /* The playable canvas follows the hero before the argument continues. */
-    if (frame && why3) {
-      push("canvas", elbowRight(railX, origin.bottom + 6, frame.y + 46, frame.x - 4), "", true, true);
-      push("canvas", elbowLeft(frame.x - 3, frame.bottom - 46, railX, frame.bottom + 34));
-      push("why", `M ${railX} ${frame.bottom + 34} V ${why3.cy}`);
-    }
-
-    /* two branches peel off and dead-end, the trunk continues.
-       when the layout is too narrow to fit a branch, the red marker on the
-       node carries the meaning on its own. */
-    for (const b of [why1, why2]) {
-      if (!b || b.x - 4 <= railX + 12) continue;
-      push("why", elbowRight(railX, b.cy - 26, b.cy, b.x + 1, 12), "is-fail", false);
-      dots.push({ sec: "why", x: railX, y: b.cy - 26 });
-    }
-
-    /* the trunk passes the map-in-your-repo node and ends at one terminal node */
-    if (why3 && lives) push("map", `M ${railX} ${why3.cy} V ${lives.cy}`);
-    if (lives && term) push("install", `M ${railX} ${lives.cy} V ${term.y - 4}`);
-
-    /* render */
-    svg.replaceChildren();
-
-    const defs = document.createElementNS(NS, "defs");
-    defs.innerHTML = `
-      <marker id="sp-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-        <path d="M0 0 L8 4 L0 8 z" fill="oklch(0.52 0 0)"/>
-      </marker>`;
-    svg.appendChild(defs);
-
-    const groups = new Map();
-    const groupFor = (sec) => {
-      let g = groups.get(sec);
-      if (!g) {
-        g = document.createElementNS(NS, "g");
-        g.setAttribute("class", "sp-group");
-        g.dataset.sec = sec;
-        groups.set(sec, g);
-        svg.appendChild(g);
-      }
-      return g;
-    };
-
-    for (const seg of segs) {
-      const path = document.createElementNS(NS, "path");
-      path.setAttribute("d", seg.d);
-      path.setAttribute("pathLength", "1");
-      path.setAttribute("class", `sp-path ${seg.cls} ${seg.draw ? "is-draw" : "is-fade"}`.trim());
-      if (seg.arrow) path.setAttribute("marker-end", "url(#sp-arr)");
-      groupFor(seg.sec).appendChild(path);
-    }
-    for (const c of dots) {
-      const el = document.createElementNS(NS, "circle");
-      el.setAttribute("cx", String(c.x));
-      el.setAttribute("cy", String(c.y));
-      el.setAttribute("r", "3");
-      el.setAttribute("class", "sp-dot");
-      groupFor(c.sec).appendChild(el);
-    }
-    return groups;
-  };
-
-  let groups = build();
-
-  /* draw each section's segments as that section arrives */
-  const drawn = new Set(REDUCED ? ["why", "canvas", "map", "install"] : []);
-  const applyDrawn = () => {
-    if (!groups) return;
-    for (const [sec, g] of groups) g.classList.toggle("in", drawn.has(sec));
-  };
-  applyDrawn();
-
-  if (!REDUCED) {
-    const io = new IntersectionObserver((entries) => {
-      let changed = false;
-      for (const en of entries) {
-        if (!en.isIntersecting) continue;
-        const id = en.target.id || "why";
-        if (!drawn.has(id)) { drawn.add(id); changed = true; }
-        io.unobserve(en.target);
-      }
-      if (changed) applyDrawn();
-    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.02 });
-
-    for (const id of ["why", "canvas", "map", "install"]) {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
+  const paths = new Map();
+  for (let row = 0, y = step / 2; y < h; y += step, row++) {
+    for (let x = row % 2 ? step : step / 2; x < w; x += step) {
+      const i = ((y | 0) * w + (x | 0)) * 4;
+      const a = data[i + 3] / 255;
+      if (a < 0.04) continue;
+      const r = step * 0.5 * Math.sqrt(a) * 0.92 * (fade ? fade(x, y, w, h) : 1);
+      if (r < 0.45) continue;
+      const key = `rgb(${data[i]},${data[i + 1]},${data[i + 2]})`;
+      if (!paths.has(key)) paths.set(key, new Path2D());
+      const p = paths.get(key);
+      p.moveTo(x + r, y);
+      p.arc(x, y, r, 0, Math.PI * 2);
     }
   }
+  for (const [color, p] of paths) { ctx.fillStyle = color; ctx.fill(p); }
+  return canvas;
+}
 
-  let raf = 0;
-  const rebuild = () => {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => {
-      groups = build();
-      applyDrawn();
-    });
+/* Strokes an inline icon SVG (path, rect, circle children) onto a canvas at (x, y), `size` wide. */
+function drawSVG(o, svg, x, y, size, color, weight = 1) {
+  const vb = (svg.getAttribute("viewBox") || "0 0 24 24").trim().split(/[\s,]+/).map(Number);
+  const s = size / vb[2];
+  o.save();
+  o.translate(x, y);
+  o.scale(s, s);
+  o.translate(-vb[0], -vb[1]);
+  o.strokeStyle = color;
+  o.lineWidth = Number(svg.getAttribute("stroke-width") || 1.5) * weight;
+  o.lineCap = "round";
+  o.lineJoin = "round";
+  const num = (node, attr) => Number(node.getAttribute(attr) || 0);
+  for (const node of svg.querySelectorAll("path, rect, circle")) {
+    const p = new Path2D();
+    if (node.tagName === "path") p.addPath(new Path2D(node.getAttribute("d")));
+    else if (node.tagName === "rect") p.roundRect(num(node, "x"), num(node, "y"), num(node, "width"), num(node, "height"), num(node, "rx"));
+    else p.arc(num(node, "cx"), num(node, "cy"), num(node, "r"), 0, Math.PI * 2);
+    o.stroke(p);
+  }
+  o.restore();
+}
+
+const rr = (o, x, y, w, h, r) => { o.beginPath(); o.roundRect(x, y, w, h, r); o.fill(); };
+
+const dome = (o, inks, cx, cy, R, alpha) => {
+  const g = o.createRadialGradient(cx - R * 0.2, cy - R * 0.45, R * 0.05, cx, cy, R);
+  g.addColorStop(0, `rgba(${inks.soft},${alpha * 0.25})`);
+  g.addColorStop(0.75, `rgba(${inks.soft},${alpha * 0.45})`);
+  g.addColorStop(0.97, `rgba(${inks.soft},${alpha})`);
+  g.addColorStop(1, `rgba(${inks.soft},0)`);
+  o.fillStyle = g;
+  o.beginPath(); o.arc(cx, cy, R, 0, Math.PI * 2); o.fill();
+};
+
+/* One recipe per data-print value: the print's size and step, and what it draws. */
+const PRINTS = {
+  /* behind the hero's exploded view */
+  halo: (host, inks) => ({ width: 560, height: 560, step: 6, draw: (o) => dome(o, inks, 280, 300, 250, 0.7) }),
+
+  /* why: a wall of code */
+  code: (host, inks) => ({
+    draw(o, w) {
+      o.fillStyle = inks.grey;
+      const s = Math.min(1, w / 168); // the card's print panel narrows on a phone
+      const lines = [[0, .5], [1, .72], [1, .44], [2, .64], [2, .36], [1, .56], [0, .3], [1, .68], [2, .5]];
+      lines.forEach(([ind, f], i) => rr(o, (30 + ind * 22) * s, 20 + i * 15, (w - 90 * s) * f, 9, 4));
+    },
+    fade: (x, y, w, h) => 1 - (y / h) * 0.7,
+  }),
+
+  /* why: a stack of docs */
+  docs: (host, inks) => ({
+    draw(o, w, h) {
+      const x = w / 2 - 60;
+      [[x - 26, 34, .35], [x - 13, 22, .6], [x, 10, 1]].forEach(([px, py, a]) => {
+        o.globalAlpha = a; o.fillStyle = inks.grey; rr(o, px, py, 120, h - 30, 6);
+        o.globalCompositeOperation = "destination-out"; rr(o, px + 4, py + 4, 112, h - 38, 4);
+        o.globalCompositeOperation = "source-over";
+      });
+      o.globalAlpha = 1; o.fillStyle = inks.grey;
+      [.8, .6, .75, .5, .7, .4].forEach((f, i) => rr(o, x + 14, 26 + i * 16, 92 * f, 7, 3));
+    },
+  }),
+
+  /* why: the way through, a workflow map with one failure path */
+  map: (host, inks) => ({
+    draw(o, w, h) {
+      dome(o, inks, w / 2, h * 1.02, h * 0.95, 0.5);
+      const cx = w / 2, nodes = [[cx - 150, 64], [cx - 46, 30], [cx - 46, 102], [cx + 58, 64]];
+      o.lineWidth = 4;
+      const wire = ([x1, y1], [x2, y2], color, dash) => {
+        o.strokeStyle = color; o.setLineDash(dash ? [8, 7] : []);
+        o.beginPath(); o.moveTo(x1 + 70, y1 + 16); o.bezierCurveTo(x1 + 88, y1 + 16, x2 - 18, y2 + 16, x2, y2 + 16); o.stroke();
+      };
+      wire(nodes[0], nodes[1], inks.ink); wire(nodes[0], nodes[2], inks.ink); wire(nodes[1], nodes[3], inks.ink); wire(nodes[2], nodes[3], FAIL_INK, true);
+      o.setLineDash([]);
+      nodes.forEach(([x, y], i) => {
+        o.fillStyle = i === 2 ? FAIL_INK : inks.ink; rr(o, x, y, 70, 32, 6);
+        o.globalCompositeOperation = "destination-out"; o.fillStyle = "rgba(0,0,0,.55)"; rr(o, x + 12, y + 8, 50, 16, 3);
+        o.globalCompositeOperation = "source-over";
+      });
+    },
+  }),
+
+  /* map: the dome the pull request floats in */
+  dome: (host, inks) => ({ width: 640, height: 640, step: 6, draw: (o) => dome(o, inks, 320, 360, 290, 0.75) }),
+
+  /* trust: the host's own icon, printed large */
+  icon: (host, inks) => {
+    const icon = host.querySelector("svg");
+    return {
+      step: 4,
+      draw(o, w, h) {
+        dome(o, inks, w / 2, h * 1.05, h * 0.82, 0.45);
+        drawSVG(o, icon, w / 2 - 46, h / 2 - 50, 92, inks.ink, 1.7);
+      },
+    };
+  },
+
+  /* footer: the wordmark, at most ~80% of the footer's width so it never crops on a phone */
+  word: (host, inks) => {
+    const size = Math.round(Math.min(230, host.clientWidth / 4.4));
+    const font = `600 ${size}px "Inter Tight"`;
+    return {
+      font,
+      width: host.clientWidth, height: size, step: size < 120 ? 4 : 6,
+      draw(o, w, h) {
+        o.font = font; o.textAlign = "center"; o.textBaseline = "alphabetic"; o.fillStyle = inks.night;
+        o.fillText("HQFlow", w / 2, h * 0.85);
+      },
+      fade: (x, y, w, h) => 0.35 + 0.65 * (1 - y / h),
+    };
+  },
+};
+
+function initPrints() {
+  const hosts = Array.from(document.querySelectorAll("[data-print]"));
+  if (!hosts.length) return;
+
+  const printAll = () => {
+    const inks = readInks();
+    for (const host of hosts) {
+      const recipe = PRINTS[host.dataset.print]?.(host, inks);
+      if (!recipe) continue;
+      const paint = () => {
+        const canvas = dotPrint({ width: host.clientWidth, height: host.clientHeight, step: 5, ...recipe });
+        host.querySelector(":scope > canvas")?.remove();
+        host.append(canvas);
+      };
+      if (recipe.font) document.fonts.load(recipe.font).then(paint, paint);
+      else paint();
+    }
   };
-  new ResizeObserver(rebuild).observe(main);
-  window.addEventListener("orientationchange", rebuild);
-  if (document.fonts?.ready) document.fonts.ready.then(rebuild).catch(() => {});
+  printAll();
+
+  /* Redraw only when the width changes: mobile browsers resize the height as their toolbars move. */
+  let width = window.innerWidth, timer = 0;
+  window.addEventListener("resize", () => {
+    if (window.innerWidth === width) return;
+    width = window.innerWidth;
+    clearTimeout(timer);
+    timer = window.setTimeout(printAll, 150);
+  });
 }
 
 /* ==========================================================================
-   3. FEATURE WALKTHROUGH
+   FEATURE WALKTHROUGH
    ========================================================================== */
 
 const TOUR_INSTRUCTIONS = {
@@ -427,4 +461,4 @@ async function initStarCount() {
 /* ---- boot ---- */
 initWalkthrough();
 initUI();
-initSpine();
+initPrints();
