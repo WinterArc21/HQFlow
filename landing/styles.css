@@ -470,16 +470,14 @@ main { position: relative; }
 .install .star-inline { display: flex; width: max-content; margin: 36px auto 0; }
 
 /* ==========================================================================
-   FOOTER: the page ends on night; the wordmark glows in dots above a
-   status line.
+   FOOTER: the page ends on night; the wordmark glows in dots above the
+   links.
    ========================================================================== */
 
 .site-foot { position: relative; z-index: 1; color: #fff; background: var(--dark); }
 .foot-word { overflow: hidden; border-bottom: 1px solid rgb(255 255 255 / .08); }
 .foot-word canvas { display: block; margin-inline: auto; }
 .foot-inner { padding-block: 52px 28px; }
-.foot-status { margin-bottom: 34px; color: var(--soft); font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
-.foot-status i { display: inline-block; width: 6px; height: 6px; margin-right: 10px; border-radius: 50%; background: var(--print-night); box-shadow: 0 0 0 3px rgb(127 224 168 / .18); vertical-align: 1px; }
 .foot-top { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 40px; align-items: start; }
 .foot-brand { display: inline-flex; align-items: center; gap: 10px; }
 .foot-brand .brand-mark { width: 32px; height: 32px; color: var(--dark); background: #fff; }
