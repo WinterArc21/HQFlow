@@ -186,7 +186,9 @@ main { position: relative; }
    HERO
    The headline on the left; on the right an exploded view of the product:
    your source at the bottom, the JSON your agent writes in the middle, the
-   canvas on top, inside a dotted dome. The playable canvas follows below.
+   canvas on top, drawn like a technical drawing: registration marks on each
+   layer and a dimension rail that names the gaps. The playable canvas
+   follows below.
    ========================================================================== */
 
 .hero-inner { position: relative; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: clamp(20px, 2.2vw, 32px) 24px; align-items: start; padding-block: clamp(56px, 6vw, 88px) clamp(24px, 2.4vw, 36px); }
@@ -204,14 +206,24 @@ main { position: relative; }
 
 /* the exploded view */
 .hero-art { --go: #1f7a4c; --cyan: #0f7f7a; --violet-ink: #6a4fb0; --fail: #a23b30; position: relative; grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: -24px; }
-.hero-halo { position: absolute; top: 260px; left: 34%; width: 560px; height: 560px; color: rgb(var(--accent-rgb) / .16); pointer-events: none; translate: -50% -50%; }
-.hero-halo svg { position: absolute; top: -170px; left: -170px; width: 900px; height: 900px; max-width: none; -webkit-mask-image: linear-gradient(90deg, transparent 18%, #000 42%); mask-image: linear-gradient(90deg, transparent 18%, #000 42%); }
-.hero-halo canvas { position: absolute; inset: 0; }
+/* main.js draws the dimension rail once the layers have landed */
+.hero-dims { position: absolute; z-index: 2; inset: 0; color: var(--ink-2); opacity: 0; pointer-events: none; transition: opacity 300ms ease-out; }
+.hero-dims.is-in { opacity: 1; }
+.hero-dims svg { position: absolute; top: 0; left: 0; overflow: visible; max-width: none; }
+.hero-dims path { fill: none; stroke: currentColor; stroke-width: 1; }
+.hero-dims .lead { stroke: var(--line-strong); stroke-dasharray: 3 3; }
+.hero-dims text { fill: var(--accent); font: 9.5px var(--mono); letter-spacing: .12em; text-anchor: middle; dominant-baseline: middle; }
 
 .iso { position: relative; height: 520px; }
 .iso-stack { position: absolute; top: 64%; left: 34%; width: 300px; height: 300px; margin: -150px 0 0 -150px; transform: rotateX(57deg) rotateZ(-40deg); transform-style: preserve-3d; }
 .iso-layer { position: absolute; inset: 0; border: 1px solid rgb(var(--ink-rgb) / .28); box-shadow: 0 40px 50px -30px rgb(var(--shadow-rgb) / .35); transform: translateZ(var(--z)); transition: transform 420ms var(--snap), box-shadow 420ms var(--snap); }
 .iso:has(.n1:hover) .cvs, .iso:has(.n2:hover) .json, .iso:has(.n3:hover) .src { box-shadow: 0 0 0 2px var(--accent), 0 60px 60px -30px rgb(var(--shadow-rgb) / .4); transform: translateZ(calc(var(--z) + 28px)); }
+/* registration crosses at each layer's corners, in the layer's own plane */
+.iso-reg { position: absolute; inset: -1px; pointer-events: none; }
+.iso-reg i { position: absolute; width: 0; height: 0; }
+.iso-reg i::before, .iso-reg i::after { content: ""; position: absolute; background: var(--ink-2); }
+.iso-reg i::before { top: -9px; left: -.5px; width: 1px; height: 18px; }
+.iso-reg i::after { top: -.5px; left: -9px; width: 18px; height: 1px; }
 .iso-post { position: absolute; width: 0; height: 280px; border-left: 1px dashed rgb(var(--ink-rgb) / .3); transform: rotateX(90deg); transform-origin: top; }
 
 .iso-layer.src { padding: 22px 20px; color: var(--dark-text); background: var(--dark); font: 10.5px/1.75 var(--mono); white-space: pre; }
@@ -231,7 +243,7 @@ main { position: relative; }
 .iso-node small { display: block; color: var(--c); font: 600 7px var(--mono); letter-spacing: .12em; }
 .iso-node strong { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
 
-.iso-note { position: absolute; top: var(--y); left: var(--x); width: 200px; padding-left: 12px; border-left: 1px solid var(--ink); cursor: default; }
+.iso-note { position: absolute; top: var(--y); left: var(--x); width: min(200px, calc(100% - var(--x) + 24px)); padding-left: 12px; border-left: 1px solid var(--ink); cursor: default; }
 .iso-note::before { content: ""; position: absolute; top: 9px; right: 100%; width: var(--len); border-top: 1px solid var(--ink); }
 .iso-note::after { content: ""; position: absolute; top: 6px; right: calc(100% + var(--len) - 3px); width: 7px; height: 7px; border-radius: 50%; background: var(--ink); }
 .iso-note .tag { display: inline-block; padding: 1px 5px; border: 1px solid var(--ink); color: var(--ink); background: white; font: 9.5px var(--mono); transition: color 150ms ease-out, background-color 150ms ease-out; }
@@ -499,11 +511,15 @@ main { position: relative; }
   :root { --rail-gap: 84px; }
 }
 
+/* the rail needs the gap beside the headline; between the one-column and full layouts there is none */
+@media (min-width: 961px) and (max-width: 1180px) {
+  .hero-dims { display: none; }
+}
+
 @media (max-width: 960px) {
   .hero-inner { grid-template-columns: minmax(0, 1fr); }
   .hero-art { grid-column: 1; grid-row: auto; overflow: hidden; height: 400px; margin-top: 0; }
   .iso { width: 143%; transform: scale(.7); transform-origin: top left; }
-  .hero-halo { display: none; }
   .fork { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
   .fork-row.is-live { grid-column: 1; grid-row: auto; }
   .fork-arrow { top: -24px; left: 50%; rotate: 90deg; translate: -50% 0; }

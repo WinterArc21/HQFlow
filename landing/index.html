@@ -80,9 +80,7 @@
 
         <!-- an exploded view of the product: source, the JSON your agent writes, the canvas -->
         <div class="hero-art">
-          <div class="hero-halo" data-print="halo" aria-hidden="true">
-            <svg viewBox="0 0 900 900"><g fill="none" stroke="currentColor"><ellipse cx="450" cy="560" rx="400" ry="70"/><ellipse cx="450" cy="560" rx="480" ry="86"/><ellipse cx="450" cy="560" rx="560" ry="102"/></g></svg>
-          </div>
+          <div class="hero-dims" aria-hidden="true"></div>
           <div class="iso" role="img" aria-label="Exploded view: your source code, the workflow JSON your agent writes, and the canvas HQFlow draws from it">
             <div class="iso-stack">
               <div class="iso-layer src" style="--z:0px;--d:80ms"><span class="c">// src/checkout/route.ts</span>
@@ -91,7 +89,7 @@
 <span class="hl">  <span class="k">const</span> charge = <span class="k">await</span> <span class="f">stripe.charge</span>(order)</span>  <span class="k">if</span> (!charge.ok) <span class="k">return</span> <span class="f">retry</span>(order)
   <span class="k">await</span> <span class="f">sendReceipt</span>(order.email)
   <span class="k">return</span> <span class="s">"ok"</span>
-}</div>
+}<span class="iso-reg" aria-hidden="true"><i style="left:0;top:0"></i><i style="left:100%;top:0"></i><i style="left:0;top:100%"></i><i style="left:100%;top:100%"></i></span></div>
               <div class="iso-layer json" style="--z:140px;--d:200ms">{ <span class="p">"id"</span>: <span class="v">"checkout"</span>,
   <span class="p">"steps"</span>: [
     { <span class="p">"id"</span>: <span class="v">"create-order"</span>, <span class="p">"category"</span>: <span class="v">"logic"</span> },
@@ -102,7 +100,7 @@
     { <span class="p">"from"</span>: <span class="v">"charge-card"</span>,
       <span class="p">"to"</span>: <span class="v">"retry-charge"</span>,
       <span class="p">"type"</span>: <span class="x">"failure"</span> }
-  ] }</div>
+  ] }<span class="iso-reg" aria-hidden="true"><i style="left:0;top:0"></i><i style="left:100%;top:0"></i><i style="left:0;top:100%"></i><i style="left:100%;top:100%"></i></span></div>
               <div class="iso-layer cvs" style="--z:280px;--d:320ms">
                 <svg viewBox="0 0 300 300" aria-hidden="true">
                   <g fill="none" stroke="#5a5a54" stroke-width="1.4"><path d="M81 68 V104"/><path d="M140 127 H160"/><path d="M219 150 V188"/></g>
@@ -113,6 +111,7 @@
                 <div class="iso-node" style="left:160px;top:104px;--c:var(--violet-ink)"><small>EXTERNAL</small><strong>Charge card</strong></div>
                 <div class="iso-node" style="left:22px;top:190px;--c:var(--fail)"><small>FAILURE</small><strong>Retry once</strong></div>
                 <div class="iso-node" style="left:160px;top:190px;--c:var(--go)"><small>OUTPUT</small><strong>Send receipt</strong></div>
+                <span class="iso-reg" aria-hidden="true"><i style="left:0;top:0"></i><i style="left:100%;top:0"></i><i style="left:0;top:100%"></i><i style="left:100%;top:100%"></i></span>
               </div>
               <span class="iso-post" style="left:0;top:0"></span><span class="iso-post" style="left:300px;top:0"></span>
               <span class="iso-post" style="left:0;top:300px"></span><span class="iso-post" style="left:300px;top:300px"></span>

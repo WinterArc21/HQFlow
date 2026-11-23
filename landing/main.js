@@ -100,9 +100,6 @@ const dome = (o, inks, cx, cy, R, alpha) => {
 
 /* One recipe per data-print value: the print's size and step, and what it draws. */
 const PRINTS = {
-  /* behind the hero's exploded view */
-  halo: (host, inks) => ({ width: 560, height: 560, step: 6, draw: (o) => dome(o, inks, 280, 300, 250, 0.7) }),
-
   /* why: a wall of code */
   code: (host, inks) => ({
     draw(o, w) {
@@ -458,7 +455,63 @@ async function initStarCount() {
   }
 }
 
+/* ==========================================================================
+   HERO DIMENSIONS
+   A dimension rail beside the exploded view that names the gaps between the
+   layers. The registration marks at each layer's corners tell us where the
+   projected corners are, so the rail follows the 3D transform exactly.
+   ========================================================================== */
+
+function initDims() {
+  const art = document.querySelector(".hero-art");
+  const dims = art?.querySelector(".hero-dims");
+  const sets = Array.from(document.querySelectorAll(".iso-layer .iso-reg")); // source, JSON, canvas
+  if (!dims || sets.length !== 3) return;
+
+  let landed = false;
+  const draw = () => {
+    if (!landed) return;
+    const A = art.getBoundingClientRect();
+    // the leftmost corner of each layer, where its leader line starts
+    const corners = sets.map((set) => Array.from(set.children, (i) => {
+      const r = i.getBoundingClientRect();
+      return [r.left - A.left, r.top - A.top];
+    }).reduce((a, b) => (b[0] < a[0] ? b : a)));
+    const rail = Math.round(Math.min(...corners.map(([x]) => x)) - 30) + 0.5;
+    const [src, json, cvs] = corners.map(([x, y]) => [x, Math.round(y) + 0.5]);
+    const leader = ([x, y]) => `<path class="lead" d="M${x - 6} ${y} H${rail + 8}"/>`;
+    const tick = ([, y]) => `<path d="M${rail - 5} ${y} H${rail + 5}"/>`;
+    const span = (a, b) => `<path d="M${rail} ${a[1] + 3} V${b[1] - 3}" marker-start="url(#dim-arr)" marker-end="url(#dim-arr)"/>`;
+    const label = (a, b, text) => {
+      const y = (a[1] + b[1]) / 2;
+      return `<text x="${rail - 9}" y="${y}" transform="rotate(-90 ${rail - 9} ${y})">${text}</text>`;
+    };
+    dims.innerHTML = `<svg width="${A.width}" height="${A.height}">
+      <defs><marker id="dim-arr" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 1 L4 7 L8 1" fill="none" stroke="currentColor"/></marker></defs>
+      ${[src, json, cvs].map(leader).join("")}
+      ${span(cvs, json)}${span(json, src)}
+      ${[src, json, cvs].map(tick).join("")}
+      ${label(json, cvs, "HQFLOW DRAWS")}${label(src, json, "AGENT WRITES")}
+    </svg>`;
+    dims.classList.add("is-in");
+  };
+
+  /* Draw once the layers have dropped into place, then follow them: a note's hover lifts its layer. */
+  const landing = document.getAnimations().filter((a) => a.effect?.target?.closest?.(".iso"));
+  Promise.allSettled(landing.map((a) => a.finished)).then(() => { landed = true; draw(); });
+
+  let raf = 0, moving = 0;
+  const follow = () => { draw(); if (moving) raf = requestAnimationFrame(follow); };
+  const stack = document.querySelector(".iso-stack");
+  stack?.addEventListener("transitionrun", () => { if (!moving++) raf = requestAnimationFrame(follow); });
+  stack?.addEventListener("transitionend", () => { moving = Math.max(0, moving - 1); if (!moving) { cancelAnimationFrame(raf); draw(); } });
+  stack?.addEventListener("transitioncancel", () => { moving = Math.max(0, moving - 1); });
+  window.addEventListener("resize", draw);
+  if (document.fonts?.ready) document.fonts.ready.then(draw).catch(() => {});
+}
+
 /* ---- boot ---- */
 initWalkthrough();
 initUI();
 initPrints();
+initDims();
