@@ -187,9 +187,8 @@ main { position: relative; }
    HERO
    The headline on the left; on the right an exploded view of the product:
    your source at the bottom, the JSON your agent writes in the middle, the
-   canvas on top, drawn like a technical drawing: registration marks on each
-   layer and a dimension rail that names the gaps. The playable canvas
-   follows below.
+   canvas on top, drawn like a technical drawing with registration marks on
+   each layer. The playable canvas follows below.
    ========================================================================== */
 
 .hero-inner { position: relative; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: clamp(20px, 2.2vw, 32px) 24px; align-items: start; padding-block: clamp(56px, 6vw, 88px) clamp(24px, 2.4vw, 36px); }
@@ -207,13 +206,6 @@ main { position: relative; }
 
 /* the exploded view */
 .hero-art { --go: #1f7a4c; --cyan: #0f7f7a; --violet-ink: #6a4fb0; --fail: #a23b30; position: relative; grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: -24px; }
-/* main.js draws the dimension rail once the layers have landed */
-.hero-dims { position: absolute; z-index: 2; inset: 0; color: var(--ink-2); opacity: 0; pointer-events: none; transition: opacity 300ms ease-out; }
-.hero-dims.is-in { opacity: 1; }
-.hero-dims svg { position: absolute; top: 0; left: 0; overflow: visible; max-width: none; }
-.hero-dims path { fill: none; stroke: currentColor; stroke-width: 1; }
-.hero-dims .lead { stroke: var(--line-strong); stroke-dasharray: 3 3; }
-.hero-dims text { fill: var(--accent); font: 9.5px var(--mono); letter-spacing: .12em; text-anchor: middle; dominant-baseline: middle; }
 
 .iso { position: relative; height: 520px; }
 .iso-stack { position: absolute; top: 64%; left: 38%; width: 300px; height: 300px; margin: -150px 0 0 -150px; transform: scale(.88) rotateX(57deg) rotateZ(-40deg); transform-style: preserve-3d; }
@@ -574,11 +566,6 @@ main { position: relative; }
 
 @media (max-width: 1080px) {
   :root { --rail-gap: 84px; }
-}
-
-/* the rail needs the gap beside the headline, and at one column the scaled-down stack leaves no room for its labels */
-@media (max-width: 1180px) {
-  .hero-dims { display: none; }
 }
 
 @media (max-width: 960px) {
