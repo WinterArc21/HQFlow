@@ -380,7 +380,8 @@ main { position: relative; }
 .sn-cat { color: color-mix(in srgb, var(--c) 85%, var(--sn-text)); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 /* in the hero's canvas layer the cards are a picture at 40%: no hover, no blur inside the 3D stack, lines thick enough to survive the scale */
 .sn-world.is-iso { top: 0; left: 0; width: 750px; height: 750px; scale: .4; pointer-events: none; }
-.is-iso .sn-card { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* the tilt shortens a card's height more than its width (2.51:1 on screen for a 310x136 card); 150px tall reads as the real 2.28:1 */
+.is-iso .sn-card { height: 150px; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .is-iso .sn-edge.ok path { stroke-width: 3.5; }
 .is-iso .sn-edge.fail { stroke-width: 3; stroke-dasharray: 12 9; }
 .is-iso .sn-port { width: 13px; height: 13px; border-radius: 2.5px; }
