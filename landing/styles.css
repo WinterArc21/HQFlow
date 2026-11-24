@@ -229,8 +229,10 @@ main { position: relative; }
 .cvs svg { position: absolute; inset: 0; overflow: visible; }
 
 .iso-note { position: absolute; top: var(--y); left: var(--x); width: min(200px, calc(100% - var(--x) + 24px)); padding-left: 12px; border-left: 1px solid var(--ink); cursor: default; }
-.iso-note::before { content: ""; position: absolute; top: 9px; right: 100%; width: var(--len); border-top: 1px solid var(--ink); }
-.iso-note::after { content: ""; position: absolute; top: 6px; right: calc(100% + var(--len) - 3px); width: 7px; height: 7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--paper); }
+/* main.js sets --len so the line reaches its layer's front edge, where the ring sits */
+.iso-note::before { content: ""; position: absolute; top: 9px; right: 100%; width: calc(var(--len) - 6px); border-top: 1px solid var(--ink); transition: border-color 150ms ease-out; }
+.iso-note::after { content: ""; position: absolute; top: 3.5px; right: calc(100% + var(--len) - 6px); width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); transition: border-color 150ms ease-out; }
+.iso-note:hover::before, .iso-note:hover::after { border-color: var(--accent); }
 .iso-note .tag { display: inline-block; padding: 1px 5px; border: 1px solid var(--ink); color: var(--ink); background: white; font: 9.5px var(--mono); transition: color 150ms ease-out, background-color 150ms ease-out; }
 .iso-note:hover .tag { color: white; background: var(--ink); }
 .iso-note strong { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; }
@@ -565,6 +567,11 @@ main { position: relative; }
 
 @media (max-width: 1080px) {
   :root { --rail-gap: 84px; }
+}
+
+/* between the one-column and full layouts the notes move in close to the stack, too narrow for their lines */
+@media (min-width: 961px) and (max-width: 1180px) {
+  .iso-note small { display: none; }
 }
 
 @media (max-width: 960px) {

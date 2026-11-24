@@ -480,10 +480,12 @@ function initShot() {
 
 /* ==========================================================================
    HERO NOTES
-   Each note's leader ends in a dot the same distance inside its layer's right
-   edge. The registration marks give the projected corners, so the leader
-   length follows the 3D transform: as the layers land, when a note's hover
-   lifts its layer, and at every width.
+   Each note's leader is one level line that ends on a ring sitting on its
+   layer's front edge. The notes stand in a column right of the stack, each
+   level with a point on its own layer's front edge, so the lines differ in
+   length instead of bending. The registration marks give the projected
+   corners, with the drop-in skipped to its end; a hover lift is a transition,
+   so its ring slides along the edge while the line stays level.
    ========================================================================== */
 
 function initNotes() {
@@ -491,41 +493,58 @@ function initNotes() {
   const pairs = [["n1", "cvs"], ["n2", "json"], ["n3", "src"]]
     .map(([note, layer]) => [iso?.querySelector(`.iso-note.${note}`), iso?.querySelector(`.iso-layer.${layer} > .iso-reg`)]);
   if (!iso || pairs.some(([note, reg]) => !note || !reg)) return;
-  const INSET = 18; // px from the layer's edge to the dot's centre
+  const notes = pairs.map(([note]) => note);
+
+  /* measure the layers where the drop-in leaves them; a lift (a transition) still counts */
+  const atRest = (measure) => {
+    const drops = iso.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation && a.effect?.target?.closest?.(".iso-stack"));
+    const times = drops.map((a) => a.currentTime);
+    for (const a of drops) a.currentTime = a.effect.getComputedTiming().endTime;
+    try { return measure(); } finally { drops.forEach((a, i) => { a.currentTime = times[i]; }); }
+  };
+  /* each layer's right and bottom corners, in the view's own pixels (the phone layouts scale it down) */
+  const edges = () => atRest(() => {
+    const box = iso.getBoundingClientRect(), k = box.width / iso.offsetWidth;
+    return pairs.map(([, reg]) => {
+      const c = Array.from(reg.children, (i) => { const r = i.getBoundingClientRect(); return [(r.left - box.left) / k, (r.top - box.top) / k]; });
+      return { right: c.reduce((a, b) => (b[0] > a[0] ? b : a)), bottom: c.reduce((a, b) => (b[1] > a[1] ? b : a)) };
+    });
+  });
+
+  /* the line runs from the note's rule to where its height meets the layer's front-right edge */
+  const reach = () => edges().forEach(({ right, bottom }, i) => {
+    const y = notes[i].offsetTop + 9.5;
+    const t = Math.min(1, Math.max(0, (y - right[1]) / (bottom[1] - right[1])));
+    notes[i].style.setProperty("--len", `${notes[i].offsetLeft - (right[0] + (bottom[0] - right[0]) * t)}px`);
+  });
 
   const place = () => {
-    const box = iso.getBoundingClientRect();
-    const k = box.width / iso.offsetWidth; // the phone layouts scale the whole view down
-    for (const [note, reg] of pairs) {
-      // corners in the layer's own order (top-left, top-right, bottom-left, bottom-right), walked round the edge
-      const [tl, tr, bl, br] = Array.from(reg.children, (i) => {
-        const r = i.getBoundingClientRect();
-        return [(r.left - box.left) / k, (r.top - box.top) / k];
-      });
-      const y = note.offsetTop + 9.5; // the leader's line
-      let edge = -Infinity;
-      for (const [[ax, ay], [bx, by]] of [[tl, tr], [tr, br], [br, bl], [bl, tl]]) {
-        if (ay === by || y < Math.min(ay, by) || y > Math.max(ay, by)) continue;
-        edge = Math.max(edge, ax + ((y - ay) * (bx - ax)) / (by - ay));
-      }
-      if (Number.isFinite(edge)) note.style.setProperty("--len", `${Math.max(24, note.offsetLeft - (edge - INSET) - 0.5)}px`);
-    }
+    const g = edges();
+    const box = iso.getBoundingClientRect(), k = box.width / iso.offsetWidth;
+    const room = (iso.parentElement.getBoundingClientRect().right - box.left) / k; // what the hero shows
+    const corner = Math.max(...g.map(({ right }) => right[0]));
+    const x = corner + Math.max(16, Math.min(64, room - corner - 150)); // closer in when narrow, so a title keeps ~150px
+    const mid = g[1].right[1] + (g[1].bottom[1] - g[1].right[1]) * 0.3; // note 02 sits level with this point on the JSON edge
+    notes.forEach((note, i) => {
+      const { right, bottom } = g[i];
+      note.style.setProperty("--x", `${x}px`);
+      note.style.width = `${Math.min(200, room - x - 4)}px`;
+      let y = Math.min(bottom[1] - 14, Math.max(right[1] + 14, mid + (i - 1) * 124));
+      if (i) y = Math.max(y, notes[i - 1].offsetTop + notes[i - 1].offsetHeight + 16 + 9.5); // the note above wrapped
+      note.style.setProperty("--y", `${y - 9.5}px`);
+    });
+    reach();
   };
 
   let raf = 0, moving = 0;
-  const follow = () => { place(); raf = moving ? requestAnimationFrame(follow) : 0; };
-  const start = () => { if (!moving++ && !raf) raf = requestAnimationFrame(follow); };
-  const stop = () => { moving = Math.max(0, moving - 1); if (!moving) place(); };
-
-  /* follow the layers while they drop in, then whenever one lifts */
-  const landing = document.getAnimations().filter((a) => a.effect?.target?.closest?.(".iso-stack"));
-  start();
-  Promise.allSettled(landing.map((a) => a.finished)).then(stop);
+  const follow = () => { reach(); raf = moving ? requestAnimationFrame(follow) : 0; };
   const stack = iso.querySelector(".iso-stack");
-  stack.addEventListener("transitionrun", start);
-  stack.addEventListener("transitionend", stop);
-  stack.addEventListener("transitioncancel", stop);
+  stack.addEventListener("transitionrun", () => { if (!moving++ && !raf) raf = requestAnimationFrame(follow); });
+  stack.addEventListener("transitionend", () => { moving = Math.max(0, moving - 1); if (!moving) reach(); });
+  stack.addEventListener("transitioncancel", () => { moving = Math.max(0, moving - 1); if (!moving) reach(); });
+  place();
   window.addEventListener("resize", place);
+  document.fonts?.ready.then(place).catch(() => {});
 }
 
 /* ---- boot ---- */
