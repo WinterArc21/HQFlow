@@ -201,7 +201,7 @@ main { position: relative; }
 .hero-trust { margin-top: 12px; color: var(--ink-3); font-size: var(--small); }
 
 /* the exploded view */
-.hero-art { --go: #1f7a4c; --cyan: #0f7f7a; --violet-ink: #6a4fb0; --fail: #a23b30; position: relative; grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: -24px; }
+.hero-art { --go: #1f7a4c; --fail: #a23b30; position: relative; grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: -24px; }
 
 .iso { position: relative; height: 520px; }
 .iso-stack { position: absolute; top: 64%; left: 38%; width: 300px; height: 300px; margin: -150px 0 0 -150px; transform: scale(.88) rotateX(57deg) rotateZ(-40deg); transform-style: preserve-3d; }
@@ -227,10 +227,6 @@ main { position: relative; }
 .json .x { color: var(--fail); }
 .iso-layer.cvs { background: #fff radial-gradient(circle, rgb(var(--accent-rgb) / .22) 1px, transparent 1.3px) 0 0 / 14px 14px; }
 .cvs svg { position: absolute; inset: 0; overflow: visible; }
-.iso-node { position: absolute; width: 118px; height: 46px; padding: 7px 9px 0 12px; border: 1px solid var(--line); border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
-.iso-node::before { content: ""; position: absolute; top: -1px; bottom: -1px; left: -1px; width: 3px; border-radius: 4px 0 0 4px; background: var(--c); }
-.iso-node small { display: block; color: var(--c); font: 600 7px var(--mono); letter-spacing: .12em; }
-.iso-node strong { display: block; margin-top: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
 
 .iso-note { position: absolute; top: var(--y); left: var(--x); width: min(200px, calc(100% - var(--x) + 24px)); padding-left: 12px; border-left: 1px solid var(--ink); cursor: default; }
 .iso-note::before { content: ""; position: absolute; top: 9px; right: 100%; width: var(--len); border-top: 1px solid var(--ink); }
@@ -382,6 +378,12 @@ main { position: relative; }
 .sn-purpose { display: -webkit-box; overflow: hidden; flex-shrink: 0; max-height: 48px; margin: 12px 12px 0; color: var(--sn-text-2); font-size: 12px; line-height: 16px; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .sn-footer { display: flex; flex-shrink: 0; align-items: center; height: 30px; margin-top: auto; padding: 0 12px; background: color-mix(in srgb, var(--sn-inset) 30%, transparent); }
 .sn-cat { color: color-mix(in srgb, var(--c) 85%, var(--sn-text)); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+/* in the hero's canvas layer the cards are a picture at 40%: no hover, no blur inside the 3D stack, lines thick enough to survive the scale */
+.sn-world.is-iso { top: 0; left: 0; width: 750px; height: 750px; scale: .4; pointer-events: none; }
+.is-iso .sn-card { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.is-iso .sn-edge.ok path { stroke-width: 3.5; }
+.is-iso .sn-edge.fail { stroke-width: 3; stroke-dasharray: 12 9; }
+.is-iso .sn-port { width: 13px; height: 13px; border-radius: 2.5px; }
 /* the live card's own paragraph rule must not reach into the step cards */
 .fork-row.is-live .sn-purpose { max-width: none; margin: 12px 12px 0; padding: 0; font-size: 12px; line-height: 16px; }
 
