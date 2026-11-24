@@ -408,36 +408,44 @@ function initUI() {
     document.querySelectorAll(".section .reveal").forEach((el) => io.observe(el));
   }
 
-  initStarCount();
+  initDownloads();
 
   const progress = document.querySelector(".progress");
   if (progress && REDUCED) progress.remove();
 }
 
-/* The star count beside the GitHub link. It is a nicety: on any failure (offline, rate
-   limited) the button simply reads "Star" without a number. Cached for the session so
-   moving between pages does not spend the 60-per-hour anonymous API budget. */
-async function initStarCount() {
-  const slots = document.querySelectorAll("[data-stars]");
+/* The npm download total beside the Get started button. The HTML holds a floor that only
+   goes stale low, since downloads never fall; on any failure that floor stays. npm caps one
+   range at 18 months, so the total since launch is summed over 500-day ranges. Cached for
+   the session so moving between pages does not ask again. */
+async function initDownloads() {
+  const slots = document.querySelectorAll("[data-downloads]");
   if (!slots.length) return;
-  const KEY = "hqflow.stars";
-  let stars = Number(sessionStorage.getItem(KEY));
-  if (!stars) {
+  const KEY = "hqflow.downloads";
+  let total = Number(sessionStorage.getItem(KEY));
+  if (!total) {
+    const day = 864e5, end = Date.now(), ranges = [];
+    for (let from = Date.parse("2026-08-01"); from <= end; from += 500 * day) {
+      const to = Math.min(from + 499 * day, end);
+      ranges.push(`${new Date(from).toISOString().slice(0, 10)}:${new Date(to).toISOString().slice(0, 10)}`);
+    }
     try {
-      const response = await fetch("https://api.github.com/repos/WinterArc21/HQFlow", { headers: { Accept: "application/vnd.github+json" } });
-      if (!response.ok) return;
-      stars = Number((await response.json()).stargazers_count);
-      if (!Number.isFinite(stars) || stars <= 0) return;
-      sessionStorage.setItem(KEY, String(stars));
+      const counts = await Promise.all(ranges.map(async (range) => {
+        const response = await fetch(`https://api.npmjs.org/downloads/point/${range}/hqflow`);
+        if (!response.ok) throw new Error(String(response.status));
+        return Number((await response.json()).downloads);
+      }));
+      total = counts.reduce((a, b) => a + b, 0);
+      if (!Number.isFinite(total) || total <= 0) return;
+      sessionStorage.setItem(KEY, String(total));
     } catch {
       return;
     }
   }
-  const label = stars >= 1000 ? `${(stars / 1000).toFixed(stars >= 10000 ? 0 : 1)}k` : String(stars);
+  const label = total >= 1000 ? `${(Math.floor(total / 100) * 100).toLocaleString("en-US")}+` : String(total);
   for (const slot of slots) {
     slot.textContent = label;
-    slot.hidden = false;
-    slot.closest("a")?.setAttribute("aria-label", `Star HQFlow on GitHub (${stars} stars)`);
+    slot.closest("a")?.setAttribute("aria-label", `HQFlow on npm: ${label} downloads`);
   }
 }
 

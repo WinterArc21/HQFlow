@@ -137,14 +137,10 @@ h1, h2, h3 { font-family: var(--display); }
 .head-right .btn-solid { height: 38px; padding: 0 15px; border-radius: 9px; font-size: 13.5px; }
 
 /* The GitHub link doubles as the star prompt: icon and the live count. */
-.star-link { display: inline-flex; height: 34px; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: var(--ink-2); font-size: 13px; font-weight: 500; transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out; }
-.star-link svg { flex: none; }
-.star-link:hover { border-color: var(--line); color: var(--ink); background: rgb(var(--accent-rgb) / .05); }
-.star-label { display: none; }
-.star-count { color: var(--ink-3); font: 500 12px var(--mono); }
-.star-count[hidden] { display: none; }
-.star-count::before { content: "★"; margin-right: 4px; color: var(--amber); }
-.star-link:hover .star-count::before { color: var(--amber-ink); }
+.dl-link { display: inline-flex; height: 34px; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid transparent; border-radius: 6px; color: var(--ink-3); font-size: 13px; white-space: nowrap; transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out; }
+.dl-link svg { flex: none; color: var(--ink); }
+.dl-link b { color: var(--ink); font: 500 12.5px var(--mono); }
+.dl-link:hover { border-color: var(--line); color: var(--ink-2); background: rgb(var(--accent-rgb) / .05); }
 
 .star-inline { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; color: var(--ink-2); font-size: 14px; }
 .star-inline svg { color: var(--amber); transition: transform 220ms var(--ease); }
@@ -621,6 +617,7 @@ main { position: relative; }
 }
 
 @media (max-width: 520px) {
+  .dl-word { display: none; }
   .fork-row.is-dead { grid-template-columns: 112px minmax(0, 1fr); }
 }
 
