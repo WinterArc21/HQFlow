@@ -163,9 +163,10 @@ main { position: relative; }
 /* a diamond rule opens each section */
 .section-rule { display: flex; align-items: center; gap: 18px; margin-bottom: clamp(40px, 4vw, 56px); color: var(--accent); font: 11px var(--mono); letter-spacing: .14em; }
 .section-rule i { position: relative; flex: 1; height: 1px; background: var(--line-strong); }
-.section-rule i::after { content: ""; position: absolute; top: -4px; width: 7px; height: 7px; border: 1px solid var(--line-strong); background: var(--paper); transform: rotate(45deg); }
-.section-rule i:first-child::after { right: -4px; }
-.section-rule i:last-child::after { left: -4px; }
+/* each diamond is centred on its line's end, so the line meets its corner */
+.section-rule i::after { content: ""; position: absolute; top: 50%; width: 7px; height: 7px; border: 1px solid var(--line-strong); background: var(--paper); transform: translate(-50%, -50%) rotate(45deg); }
+.section-rule i:first-child::after { left: 100%; }
+.section-rule i:last-child::after { left: 0; }
 
 .section-head { position: relative; margin-bottom: clamp(40px, 4.5vw, 60px); }
 .section-head.is-centered { text-align: center; }
@@ -455,8 +456,9 @@ main { position: relative; }
    ========================================================================== */
 
 .install-steps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; max-width: 1040px; margin: 0 auto; padding: 0; list-style: none; }
-.install-steps::before { content: ""; position: absolute; top: 6px; right: calc(100% / 6); left: calc(100% / 6); height: 1.5px; background: var(--wire); }
 .install-step { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 34px; text-align: center; }
+/* the wire runs node edge to node edge, one segment per step; 6px keeps it on whole pixels across the 13px nodes */
+.install-step:not(:last-child)::before { content: ""; position: absolute; top: 6px; left: calc(50% + 6.5px); width: calc(100% + 28px - 13px); height: 1.5px; background: var(--wire); }
 .step-node { position: absolute; top: 0; left: 50%; width: 13px; height: 13px; border: 1px solid var(--wire); border-radius: 2px; background: var(--paper); box-shadow: 0 1px 3px rgb(0 0 0 / .14); translate: -50% 0; }
 .step-node::after { content: ""; position: absolute; inset: 3px; border-radius: 1px; background: var(--line-strong); }
 .step-node:is(.is-entry, .is-out) { border-color: var(--accent); }
@@ -594,7 +596,7 @@ main { position: relative; }
 
 @media (max-width: 860px) {
   .install-steps { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-left: 34px; }
-  .install-steps::before { top: 6px; right: auto; bottom: 0; left: 6px; width: 1.5px; height: auto; }
+  .install-step:not(:last-child)::before { top: 13px; bottom: -36px; left: -28px; width: 1.5px; height: auto; }
   .install-step { align-items: flex-start; padding-top: 0; text-align: left; }
   .step-node { left: -34px; translate: 0 0; }
 }
