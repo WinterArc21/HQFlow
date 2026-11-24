@@ -478,8 +478,59 @@ function initShot() {
   });
 }
 
+/* ==========================================================================
+   HERO NOTES
+   Each note's leader ends in a dot the same distance inside its layer's right
+   edge. The registration marks give the projected corners, so the leader
+   length follows the 3D transform: as the layers land, when a note's hover
+   lifts its layer, and at every width.
+   ========================================================================== */
+
+function initNotes() {
+  const iso = document.querySelector(".iso");
+  const pairs = [["n1", "cvs"], ["n2", "json"], ["n3", "src"]]
+    .map(([note, layer]) => [iso?.querySelector(`.iso-note.${note}`), iso?.querySelector(`.iso-layer.${layer} > .iso-reg`)]);
+  if (!iso || pairs.some(([note, reg]) => !note || !reg)) return;
+  const INSET = 18; // px from the layer's edge to the dot's centre
+
+  const place = () => {
+    const box = iso.getBoundingClientRect();
+    const k = box.width / iso.offsetWidth; // the phone layouts scale the whole view down
+    for (const [note, reg] of pairs) {
+      // corners in the layer's own order (top-left, top-right, bottom-left, bottom-right), walked round the edge
+      const [tl, tr, bl, br] = Array.from(reg.children, (i) => {
+        const r = i.getBoundingClientRect();
+        return [(r.left - box.left) / k, (r.top - box.top) / k];
+      });
+      const y = note.offsetTop + 9.5; // the leader's line
+      let edge = -Infinity;
+      for (const [[ax, ay], [bx, by]] of [[tl, tr], [tr, br], [br, bl], [bl, tl]]) {
+        if (ay === by || y < Math.min(ay, by) || y > Math.max(ay, by)) continue;
+        edge = Math.max(edge, ax + ((y - ay) * (bx - ax)) / (by - ay));
+      }
+      if (Number.isFinite(edge)) note.style.setProperty("--len", `${Math.max(24, note.offsetLeft - (edge - INSET) - 0.5)}px`);
+    }
+  };
+
+  let raf = 0, moving = 0;
+  const follow = () => { place(); raf = moving ? requestAnimationFrame(follow) : 0; };
+  const start = () => { if (!moving++ && !raf) raf = requestAnimationFrame(follow); };
+  const stop = () => { moving = Math.max(0, moving - 1); if (!moving) place(); };
+
+  /* follow the layers while they drop in, then whenever one lifts */
+  const landing = document.getAnimations().filter((a) => a.effect?.target?.closest?.(".iso-stack"));
+  start();
+  Promise.allSettled(landing.map((a) => a.finished)).then(stop);
+  const stack = iso.querySelector(".iso-stack");
+  stack.addEventListener("transitionrun", start);
+  stack.addEventListener("transitionend", stop);
+  stack.addEventListener("transitioncancel", stop);
+  window.addEventListener("resize", place);
+}
+
 /* ---- boot ---- */
 initWalkthrough();
 initUI();
 initPrints();
 initShot();
+initNotes();
